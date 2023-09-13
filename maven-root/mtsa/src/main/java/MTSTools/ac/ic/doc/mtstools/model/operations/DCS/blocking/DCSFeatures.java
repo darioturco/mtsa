@@ -1,9 +1,9 @@
-package MTSTools.ac.ic.doc.mtstools.model.operations.DCS.nonblocking;
+package MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking;
 
 import MTSTools.ac.ic.doc.commons.relations.BinaryRelation;
 import MTSTools.ac.ic.doc.commons.relations.Pair;
-import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.nonblocking.abstraction.HAction;
-import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.nonblocking.abstraction.HDist;
+import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.HAction;
+////import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.abstraction.HDist;
 import ltsa.lts.CompactState;
 import ltsa.lts.CompositeState;
 
@@ -14,6 +14,7 @@ import java.util.*;
 
 import static org.junit.Assert.assertFalse;
 
+//public class DCSFeatures {
 public class DCSFeatures<State, Action> {
     public int n_features;
     public boolean using_labelsThatReach_feature;
@@ -27,17 +28,17 @@ public class DCSFeatures<State, Action> {
     boolean using_visits_feature;
     boolean only_boolean;
 
-
     public int max_frontier;
     public LinkedList<ComputeFeature<State, Action>> methodFeatures;
 
     public HashMap<String, Integer> labels_idx = new HashMap<>();
 
     public HashMap<Compostate<State, Action>,HashSet<String>> labelsThatReach;
-
+    /*
     public ComponentWiseFeatures component_wise_features;
 
     public int philosopher_num_states = 0;
+
 
     public class ComponentWiseFeatures{
         HashMap<String, Integer> machine_name_to_dcs_state_index;
@@ -91,9 +92,9 @@ public class DCSFeatures<State, Action> {
 
         ComponentWiseFeatures(){}
     };
-
+    */
     DCSFeatures(String features_path, String labels_path, int max_frontier, CompositeState componentwise_info){
-        HashMap<String, Integer> feature_values = null;
+        /*HashMap<String, Integer> feature_values = null;
         if(features_path != null){
             feature_values = readFeatures(features_path);
             if(labels_path != null){
@@ -117,7 +118,7 @@ public class DCSFeatures<State, Action> {
         this.max_frontier = max_frontier;
         this.methodFeatures = new LinkedList<>();
 
-        /* this order is maintained for backward compatibility */
+        // this order is maintained for backward compatibility
         if(using_ra_feature) methodFeatures.add(this.ra_feature);
         if(using_context_features) methodFeatures.add(this.context_feature);
         if(state_labels_n > 0) methodFeatures.add(this.state_labels_feature);
@@ -167,8 +168,9 @@ public class DCSFeatures<State, Action> {
             s += f.size();
         }
         this.n_features = s;
-
+    */
     }
+    /*
 
 
     public void update_child_labelsThatReach(Compostate<State, Action> state, HAction<State, Action> action, Compostate<State, Action> child) {
@@ -206,7 +208,7 @@ public class DCSFeatures<State, Action> {
         }
 
     }
-
+    */
     interface ComputeFeature<State, Action> {
         void compute(FeatureBasedExplorationHeuristic<State, Action> h, ActionWithFeatures<State, Action> a, int start_idx);
         int size();
@@ -223,7 +225,7 @@ public class DCSFeatures<State, Action> {
         else if(n > 10) return 0.66f;
         else return 0.33f;
     }
-
+    /*
     // todo: test whether ra feature still works after refactor, and possibly adapt it to only boolean version
     private final ComputeFeature<State, Action> ra_feature = new ComputeFeature<>() {
         public void compute(FeatureBasedExplorationHeuristic<State, Action> h, ActionWithFeatures<State, Action> a, int i) {
@@ -389,13 +391,6 @@ public class DCSFeatures<State, Action> {
     private final ComputeFeature<State,Action> labelsThatReach_feature = new ComputeFeature<State, Action>() {
         @Override
         public void compute(FeatureBasedExplorationHeuristic<State, Action> h, ActionWithFeatures<State, Action> a, int start_idx) {
-
-            /* if(h.debugging) {
-                System.out.println("action");
-                System.out.println(a.action.toString());
-
-                System.out.println("labels that reach it:");
-            } */
 
             HashSet labels = getLabelsThatReach(a.state);
 
@@ -570,5 +565,5 @@ public class DCSFeatures<State, Action> {
             labels_idx.put(action, idx);
             idx += 1;
         }
-    }
+    }*/
 }

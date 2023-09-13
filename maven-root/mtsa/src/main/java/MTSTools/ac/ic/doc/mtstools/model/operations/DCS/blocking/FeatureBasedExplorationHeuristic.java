@@ -1,7 +1,7 @@
-package MTSTools.ac.ic.doc.mtstools.model.operations.DCS.nonblocking;
+package MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking;
 
 import MTSTools.ac.ic.doc.commons.relations.Pair;
-import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.nonblocking.abstraction.*;
+import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.abstraction.*;
 import ai.onnxruntime.*;
 import jargs.gnu.CmdLineParser;
 import ltsa.dispatcher.TransitionSystemDispatcher;
@@ -19,9 +19,9 @@ import static org.junit.Assert.assertTrue;
 
 public class FeatureBasedExplorationHeuristic<State, Action> implements ExplorationHeuristic<State, Action> {
     FloatBuffer input_buffer;
-    DirectedControllerSynthesisNonBlocking<State, Action> dcs;
+    DirectedControllerSynthesisBlocking<State, Action> dcs;
 
-    /* Feature variables */
+    //Feature variables
     public int goals_found = 0;
     public int marked_states_found = 0;
     public int known_transitions = 0;
@@ -33,6 +33,44 @@ public class FeatureBasedExplorationHeuristic<State, Action> implements Explorat
     List<HashMap<State, Integer>> visitCounts;
     public float explorationPercentage = 0;
     public int problem_n, problem_k;
+
+    public static Pair<CompositeState, LTSOutput> compileFSP(String filename){
+        String currentDirectory = null;
+        try {
+            currentDirectory = (new File(".")).getCanonicalPath();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        LTSInput input = new LTSInputString(readFile(filename));
+        LTSOutput output = new StandardOutput();
+
+        LTSCompiler compiler = new LTSCompiler(input, output, currentDirectory);
+        compiler.compile();
+        CompositeState c = compiler.continueCompilation("DirectedController");
+
+        TransitionSystemDispatcher.parallelComposition(c, output);
+
+        return new Pair<>(c, output);
+    }
+
+    public static String readFile(String filename) {
+        String result = null;
+        try {
+            BufferedReader file = new BufferedReader(new FileReader(filename));
+            String thisLine;
+            StringBuffer buff = new StringBuffer();
+            while ((thisLine = file.readLine()) != null)
+                buff.append(thisLine+"\n");
+            file.close();
+            result = buff.toString();
+        } catch (Exception e) {
+            System.err.print("Error reading FSP file " + filename + ": " + e);
+            System.exit(1);
+        }
+        return result;
+    }
+
 
     public void setFeaturesBuffer(FloatBuffer featuresBuffer){
         this.input_buffer = featuresBuffer;
@@ -63,7 +101,7 @@ public class FeatureBasedExplorationHeuristic<State, Action> implements Explorat
         if(debugging) printFeatures();
 
     }
-
+    /*
     public FloatBuffer getActionsAt(int start, int n){
         this.input_buffer.position(start);
         this.input_buffer.limit(n*featureMaker.n_features);
@@ -135,24 +173,28 @@ public class FeatureBasedExplorationHeuristic<State, Action> implements Explorat
         this.explorationPercentage /= totalStates;
     }
 
-    /** List of actions available for expanding **/
+
+     */
+    // List of actions available for expanding
     public ArrayList<ActionWithFeatures<State, Action>> explorationFrontier;
 
     ReadyAbstraction<State, Action> ra;
 
-    /** Environment for running the neural network of the agent **/
+    // Environment for running the neural network of the agent
     OrtSession session;
     OrtEnvironment ortEnv;
 
-    /** Path to the saved neural network **/
+    // Path to the saved neural network
     public String model_path;
 
-    /** If true, prints features observed and values of the model at each step **/
+    // If true, prints features observed and values of the model at each step
     public boolean debugging = false;
 
     public int max_frontier = 1000000;
 
-    /** Only used with random agent **/
+    // Only used with random agent
+
+
     Random rand = new Random();
 
     public DCSFeatures<State, Action> featureMaker;
@@ -163,17 +205,20 @@ public class FeatureBasedExplorationHeuristic<State, Action> implements Explorat
         this.debugging = debugging;
     }
 
+
     public void set_nk(int n, int k){
         problem_n = n;
         problem_k = k;
     }
 
-    public void startSynthesis(DirectedControllerSynthesisNonBlocking<State, Action> dcs) {
-        dcs.analyzeReachability();
+
+    public void startSynthesis(DirectedControllerSynthesisBlocking<State, Action> dcs) {
+        //dcs.analyzeReachability(); Descomentar
         this.dcs = dcs;
 
-        if(featureMaker.using_ra_feature)
-            this.ra = new ReadyAbstraction<>(dcs.ltss, dcs.defaultTargets, dcs.alphabet);
+        //if(featureMaker.using_ra_feature)
+        //    this.ra = new ReadyAbstraction<>(dcs.ltss, dcs.defaultTargets, dcs.alphabet);
+        // Decomentar
 
         if(model_path.equals("python")){ // the buffer is created from python
             this.session = null;
@@ -204,6 +249,7 @@ public class FeatureBasedExplorationHeuristic<State, Action> implements Explorat
         return explorationFrontier.size();
     }
 
+
     void filterFrontier(){
         for(int i = 0; i < explorationFrontier.size();) {
             if (!explorationFrontier.get(i).state.isStatus(Status.NONE)) {
@@ -214,7 +260,7 @@ public class FeatureBasedExplorationHeuristic<State, Action> implements Explorat
             }
         }
     }
-
+    /*
     public Pair<Compostate<State, Action>, HAction<State, Action>> getNextAction() {
         filterFrontier();
         ActionWithFeatures<State, Action> stateAction;
@@ -334,12 +380,14 @@ public class FeatureBasedExplorationHeuristic<State, Action> implements Explorat
     public boolean somethingLeftToExplore() {
         return !explorationFrontier.isEmpty();
     }
-
-    public void updateUnexploredTransitions(Compostate<State, Action> state, HAction<State, Action> action) {
+    */
+    ////public void updateUnexploredTransitions(Compostate<State, Action> state, HAction<State, Action> action) {
+    public void updateUnexploredTransitions(Compostate<State, Action> state, HAction<Action> action) {////
         state.unexploredTransitions--;
         if(!action.isControllable())
             state.uncontrollableUnexploredTransitions--;
     }
+    /*
 
 
     public void notifyStateSetErrorOrGoal(Compostate<State, Action> state) {
@@ -400,7 +448,7 @@ public class FeatureBasedExplorationHeuristic<State, Action> implements Explorat
 
     }
 
-    /** Adds this state to the open queue (reopening it if was previously closed). */
+    // Adds this state to the open queue (reopening it if was previously closed).
     public void open(Compostate<State,Action> state) {
         // System.err.println("opening" + state);
         state.live = true;
@@ -472,7 +520,7 @@ public class FeatureBasedExplorationHeuristic<State, Action> implements Explorat
             }
         }
     }
-
+    */
     public ActionWithFeatures<State, Action> removeFromFrontier(int idx) {
         ActionWithFeatures<State, Action> stateAction = efficientRemove(idx);
 
@@ -492,42 +540,9 @@ public class FeatureBasedExplorationHeuristic<State, Action> implements Explorat
         return stateAction;
     }
 
-    public static Pair<CompositeState, LTSOutput> compileFSP(String filename){
-        String currentDirectory = null;
-        try {
-            currentDirectory = (new File(".")).getCanonicalPath();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
 
-        LTSInput input = new LTSInputString(readFile(filename));
-        LTSOutput output = new StandardOutput();
 
-        LTSCompiler compiler = new LTSCompiler(input, output, currentDirectory);
-        compiler.compile();
-        CompositeState c = compiler.continueCompilation("DirectedController");
 
-        TransitionSystemDispatcher.parallelComposition(c, output);
-
-        return new Pair<>(c, output);
-    }
-
-    public static String readFile(String filename) {
-        String result = null;
-        try {
-            BufferedReader file = new BufferedReader(new FileReader(filename));
-            String thisLine;
-            StringBuffer buff = new StringBuffer();
-            while ((thisLine = file.readLine()) != null)
-                buff.append(thisLine+"\n");
-            file.close();
-            result = buff.toString();
-        } catch (Exception e) {
-            System.err.print("Error reading FSP file " + filename + ": " + e);
-            System.exit(1);
-        }
-        return result;
-    }
 
     public void printFeatures(){
         System.out.println("--------------------------");
@@ -555,6 +570,7 @@ public class FeatureBasedExplorationHeuristic<State, Action> implements Explorat
         Boolean b = (Boolean)cmdParser.getOptionValue(opt);
         return b != null && b;
     }
+    /*
 
     public static void main(String[] args) {
         CmdLineParser cmdParser= new CmdLineParser();
@@ -600,5 +616,6 @@ public class FeatureBasedExplorationHeuristic<State, Action> implements Explorat
             System.out.println("OutOfMem error during exploration");
         }
     }
+    */
 }
 

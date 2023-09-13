@@ -41,10 +41,12 @@ public class Alphabet<Action> implements Iterable<HAction<Action>> {
         hactions = new ArrayList<>();
         codes = new HashMap<>();
         controlbits = new BitSet();
+
         Set<Action> actions1 = new HashSet<>();
         for (LTS<?, Action> actionLTS : ltss) {
             actions1.addAll(actionLTS.getActions());
         }
+
         List<Action> labels = new ArrayList<>(actions1.size());
         labels.addAll(actions1);
         labels.sort(Comparator.comparing(Object::toString));

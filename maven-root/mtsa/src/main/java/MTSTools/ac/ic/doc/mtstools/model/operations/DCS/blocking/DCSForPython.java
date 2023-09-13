@@ -1,15 +1,15 @@
-package MTSTools.ac.ic.doc.mtstools.model.operations.DCS.nonblocking;
+package MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking;
 
 import MTSTools.ac.ic.doc.commons.relations.Pair;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Random;
-import java.util.Set;
+import java.util.*;
 
+import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.DirectedControllerSynthesisBlocking;
+import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.abstraction.HEstimate;
+import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.abstraction.Recommendation;
 import ai.onnxruntime.OrtException;
 import ltsa.dispatcher.TransitionSystemDispatcher;
 import ltsa.lts.*;
@@ -20,14 +20,16 @@ import static org.junit.Assert.*;
 /** This class can be used from python with jpype */
 public class DCSForPython {
     private FeatureBasedExplorationHeuristic<Long, String> heuristic;
-    private DirectedControllerSynthesisNonBlocking<Long, String> dcs;
+    private DirectedControllerSynthesisBlocking<Long, String> dcs;
     public FloatBuffer input_buffer;
-    DCSFeatures<Long, String> featureMaker;
+    ////DCSFeatures<Long, String> featureMaker;
+    DCSFeatures featureMaker;////
 
     public boolean started_synthesis;
     public DCSForPython(String features_path, String labels_path, int max_frontier, CompositeState ltss_init){
 
-        this.featureMaker = new DCSFeatures<>(features_path, labels_path, max_frontier, ltss_init);
+        ////this.featureMaker = new DCSFeatures<>(features_path, labels_path, max_frontier, ltss_init);
+        this.featureMaker = new DCSFeatures(features_path, labels_path, max_frontier, ltss_init);////
         ByteBuffer bb = ByteBuffer.allocateDirect(featureMaker.n_features*4*max_frontier);
         bb.order(ByteOrder.nativeOrder());
         this.input_buffer = bb.asFloatBuffer();
@@ -38,12 +40,17 @@ public class DCSForPython {
     /** restarts synthesis for a given fsp */
     public void startSynthesis(String path) {
         String[] s = path.split("-");
+        // Descomentar y revisar
         int n = 3;//Integer.parseInt(s[s.length - 2]);
         int k = 3;//Integer.parseInt(s[s.length - 1].split("\\.")[0]);
 
         Pair<CompositeState, LTSOutput> c = FeatureBasedExplorationHeuristic.compileFSP(path);
+        // c.first es un objeto con la lista de automatas a componer y las goals
+        // c.second es la salida en la que se escriben los errores (mucho no importa)
 
-        DirectedControllerSynthesisNonBlocking<Long, String> dcs = TransitionSystemDispatcher.hcsInteractive(c.getFirst(), c.getSecond());
+
+        ////DirectedControllerSynthesisBlocking<Long, String> dcs = TransitionSystemDispatcher.hcsInteractive(c.getFirst(), c.getSecond());
+        DirectedControllerSynthesisBlocking<Long, String> dcs = new DirectedControllerSynthesisBlocking<>();////
         if(dcs == null) fail("Could not start DCS for the given fsp");
 
         this.heuristic = new FeatureBasedExplorationHeuristic<>("python", featureMaker, false);
@@ -104,7 +111,9 @@ public class DCSForPython {
     }
     public void expandAction(int idx){
         ActionWithFeatures<Long, String> stateAction = heuristic.removeFromFrontier(idx);
-        dcs.expand(stateAction.state, stateAction.action);
+
+        Recommendation<String> recommendation = new Recommendation(stateAction.action, new HEstimate(1));
+        dcs.expand(stateAction.state, recommendation);
         if(!dcs.isFinished()){
             this.heuristic.filterFrontier();
             this.heuristic.computeFeatures();
@@ -116,7 +125,7 @@ public class DCSForPython {
         int[] hashes= {this.heuristic.lastExpandedFrom.hashCode(),
                 this.heuristic.lastExpandedStateAction.action.hashCode(),
                 this.heuristic.lastExpandedTo.hashCode(),
-                this.heuristic.lastExpandedTo.marked? 1:0,
+                //this.heuristic.lastExpandedTo.marked? 1:0,
                 this.heuristic.lastExpandedStateAction.action.isControllable()? 1:0
         };
 
@@ -126,7 +135,7 @@ public class DCSForPython {
         String[] hashes= {this.heuristic.lastExpandedFrom.toString(),
                 this.heuristic.lastExpandedStateAction.action.toString(),
                 this.heuristic.lastExpandedTo.toString(),
-                this.heuristic.lastExpandedTo.marked? "1":"0",
+                //this.heuristic.lastExpandedTo.marked? "1":"0",
                 this.heuristic.lastExpandedStateAction.action.isControllable()? "1":"0"};
 
         return hashes;
@@ -134,8 +143,10 @@ public class DCSForPython {
 
     public static void main(String[] args) throws OrtException {
         //String FSP_path = "/home/dario/Documents/Tesis/mtsa/maven-root/mtsa/target/test-classes/Blocking/ControllableFSPs/GR1test1.lts"; // Falla porque tiene guiones
-        //String FSP_path = "/home/dario/Documents/Tesis/Learning-Synthesis/fsp/Blocking/ControllableFSPs/GR1test1.lts";
-        String FSP_path = "/home/dario/Documents/Tesis/Learning-Synthesis/fsp/DP/DP-2-2.fsp";
+        String FSP_path = "/home/dario/Documents/Tesis/Learning-Synthesis/fsp/Blocking/ControllableFSPs/GR1test1.lts";
+        //String FSP_path = "/home/dario/Documents/Tesis/Learning-Synthesis/fsp/DP/DP-2-2.fsp";
+
+
 
         // This main is for testing purposes only
         CompositeState ltss_init = FeatureBasedExplorationHeuristic.compileFSP(FSP_path).getFirst();
@@ -143,15 +154,16 @@ public class DCSForPython {
 
         Random rand = new Random();
 
-        for(int i = 0; i < 10; i++){
+        //for(int i = 0; i < 10; i++){
             env.startSynthesis(FSP_path);
             while (!env.isFinished()) {
-                /*for(ActionWithFeatures<Long, String> action : env.heuristic.explorationFrontier){
-                    System.out.println(action);
-                }*/
+                //for(ActionWithFeatures<Long, String> action : env.heuristic.explorationFrontier){
+                //    System.out.println(action);
+                //}
                 env.expandAction(rand.nextInt(env.frontierSize()));
             }
-        }
+        //}
+        System.out.println("End Run :)");
     }
 }
 

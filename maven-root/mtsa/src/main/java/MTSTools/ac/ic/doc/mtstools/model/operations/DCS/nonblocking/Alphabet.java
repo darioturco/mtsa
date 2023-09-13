@@ -54,6 +54,7 @@ public class Alphabet<State, Action> implements Iterable<HAction<State, Action>>
         Set<Action> actions = new HashSet<>();
         for (int i = 0; i < this.ltss.size(); ++i)
             actions.addAll(this.ltss.get(i).getActions());
+
         List<Action> labels = new ArrayList<>(actions.size());
         for (Action action : actions)
             labels.add(action);

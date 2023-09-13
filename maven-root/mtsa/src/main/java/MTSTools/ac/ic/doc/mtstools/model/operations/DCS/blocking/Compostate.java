@@ -6,6 +6,7 @@ import MTSTools.ac.ic.doc.commons.relations.Pair;
 import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.abstraction.HEstimate;
 import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.abstraction.Ranker;
 import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.abstraction.Recommendation;
+import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.nonblocking.ActionWithFeatures;
 
 import java.util.*;
 
@@ -79,6 +80,21 @@ public class Compostate<State, Action> implements Comparable<Compostate<State, A
 
     /** Stores target states (i.e., already visited marked states) to reach from this state. */
     private List<Set<State>> targets = emptyList();
+
+    /** Number of uncontrollable transitions */
+    public int uncontrollableTransitions;
+
+    /** Set of transitions that were not yet expanded by DCS */
+    public int unexploredTransitions;
+
+    /** Number of uncontrollable transitions that were not yet expanded by DCS */
+    int uncontrollableUnexploredTransitions;
+
+    ////Map<HAction<State, Action>, List<State>> actionChildStates;
+    Map<HAction<Action>, List<State>> actionChildStates; ////
+
+    ////HashMap<HAction<State, Action>, ActionWithFeatures<State, Action>> actionsWithFeatures;
+    HashMap<HAction<Action>, ActionWithFeatures<State, Action>> actionsWithFeatures;
 
     private boolean hasGoalChild = false;
     private boolean hasErrorChild = false;
@@ -542,5 +558,7 @@ public class Compostate<State, Action> implements Comparable<Compostate<State, A
     public String toString() {
         return states.toString();
     }
+
+
 
 }

@@ -268,10 +268,11 @@ public class DirectedControllerSynthesisNonBlocking<State, Action> extends Direc
 
         List<State> childStates = getChildStates(state, action);
         Compostate<State, Action> child = buildCompostate(childStates, state);
-        // System.err.println("Expanding "+state+" -> "+action+" -> "+child);
 
         state.addChild(action, child);
         child.addParent(action, state);
+
+
 
         statistics.startHeuristicTime();
         heuristic.notifyExpandingState(state, action, child);
@@ -1049,3 +1050,5 @@ public class DirectedControllerSynthesisNonBlocking<State, Action> extends Direc
     }
 
 }
+
+

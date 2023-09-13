@@ -1,19 +1,24 @@
-package MTSTools.ac.ic.doc.mtstools.model.operations.DCS.nonblocking;
+package MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking;
 
-import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.nonblocking.abstraction.HAction;
+import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.HAction;
+
+import java.util.LinkedList;
 import java.util.List;
 
 public class ActionWithFeatures<State, Action> {
-    HAction<State, Action> action;
+    ////HAction<State, Action> action;
+    HAction<Action> action;////
     Compostate<State, Action> state;
     Compostate<State, Action> child;
     List<State> childStates;
     FeatureBasedExplorationHeuristic<State, Action> heuristic;
     boolean childMarked;
 
+
     float[] feature_vector;
 
-    ActionWithFeatures(Compostate<State, Action> state, HAction<State, Action> action, FeatureBasedExplorationHeuristic<State, Action> heuristic) {
+    ////ActionWithFeatures(Compostate<State, Action> state, HAction<State, Action> action, FeatureBasedExplorationHeuristic<State, Action> heuristic) {
+    ActionWithFeatures(Compostate<State, Action> state, HAction<Action> action, FeatureBasedExplorationHeuristic<State, Action> heuristic) {
 
         feature_vector = new float[heuristic.featureMaker.n_features];
         this.heuristic = heuristic;
@@ -42,6 +47,7 @@ public class ActionWithFeatures<State, Action> {
             i += f.size();
         }
     }
+
 
     public String toString(){
         StringBuilder r = new StringBuilder(state.toString() + " | " + action.toString() + " | ");

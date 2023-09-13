@@ -107,6 +107,9 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
     /** Logger */
     private final Logger logger = Logger.getLogger(DirectedControllerSynthesisBlocking.class.getName());
 
+    /** Used Heuristic Object **/
+    public FeatureBasedExplorationHeuristic<Long, String> heuristic;
+
 
     /** This method starts the directed synthesis of a controller.
      *  @param ltss, a list of MarkedLTSs that compose the environment.
@@ -262,9 +265,11 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
     private Compostate<State, Action> buildCompostate(List<State> states) {
         Compostate<State, Action> result = compostates.get(states);
         if (result == null) {
+            statistics.incExpandedStates();
             result = new Compostate<>(this, states);
             compostates.put(states, result);
-            statistics.incExpandedStates();
+
+
         }
         return result;
     }
@@ -322,25 +327,30 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
 
     /** Expands a state following a given recommendation from a parent compostate.
      *  Internally this populates the transitions and expanded lists. */
-    private void expand(Compostate<State, Action> compostate, Recommendation<Action> recommendation) {
-    //void expand(Compostate<State, Action> state, HAction<State, Action> action) {
-        HAction<Action> action = recommendation.getAction();
-        Compostate<State, Action> childCompostate = buildCompostate(getChildStates(compostate, action));
+    void expand(Compostate<State, Action> state, Recommendation<Action> recommendation) {
         statistics.incExpandedTransitions();
-        compostate.addChild(action, childCompostate);
-        childCompostate.addParent(action, compostate);
 
-        childCompostate.setTargets(compostate.getTargets());
-        if (childCompostate.markedByGuarantee.size() > 0)
-            childCompostate.addTargets(childCompostate);
-        if (!childCompostate.isEvaluated())
-            abstraction.eval(childCompostate);
-        if (isError(childCompostate)){
-            setError(childCompostate);
-            logger.finer("Expanding child compostate " + childCompostate.toString() + " is an error");
+        HAction<Action> action = recommendation.getAction();
+
+        List<State> childStates = getChildStates(state, action);
+        Compostate<State, Action> child = buildCompostate(childStates);
+
+        state.addChild(action, child);
+        child.addParent(action, state);
+
+
+
+        child.setTargets(state.getTargets());
+        if (child.markedByGuarantee.size() > 0)
+            child.addTargets(child);
+        if (!child.isEvaluated())
+            abstraction.eval(child);
+        if (isError(child)){
+            setError(child);
+            logger.finer("Expanding child compostate " + child.toString() + " is an error");
         }
 
-        explore(compostate, recommendation, childCompostate);
+        explore(state, recommendation, child);
     }
 
     private List<State> getChildStates(Compostate<State, Action> compostate, HAction<Action> action) {
@@ -383,8 +393,6 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
                          Compostate<State, Action> child) {
         assert(!isError(parent) && !isGoal(parent));  //the parent should be NONE, otherwise exploring is useless
         logger.fine(parent.toString() + " -> " + recommendation.toString() + " -> " + child.toString());
-
-
         if (isError(child) ){
             propagateError(newHashSet(child), newHashSet(parent));
 
@@ -1244,4 +1252,16 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
     public void setHeuristic(ExplorationHeuristic<State, Action> heuristic){
 
     }
+
+    void setupInitialState(){
+        ////initial = buildInitialState();
+        ////heuristic.setInitialState(initial);
+        ////initial.setExpanded();
+    }
+
+    public boolean isFinished(){
+        ////return !isNone(initial);
+        return true; ////
+    }
+
 }
