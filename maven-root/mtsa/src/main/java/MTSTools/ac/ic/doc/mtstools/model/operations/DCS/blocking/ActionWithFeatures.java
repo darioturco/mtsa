@@ -6,8 +6,7 @@ import java.util.LinkedList;
 import java.util.List;
 
 public class ActionWithFeatures<State, Action> {
-    ////HAction<State, Action> action;
-    HAction<Action> action;////
+    HAction<Action> action;
     Compostate<State, Action> state;
     Compostate<State, Action> child;
     List<State> childStates;
@@ -17,7 +16,6 @@ public class ActionWithFeatures<State, Action> {
 
     float[] feature_vector;
 
-    ////ActionWithFeatures(Compostate<State, Action> state, HAction<State, Action> action, FeatureBasedExplorationHeuristic<State, Action> heuristic) {
     ActionWithFeatures(Compostate<State, Action> state, HAction<Action> action, FeatureBasedExplorationHeuristic<State, Action> heuristic) {
 
         feature_vector = new float[heuristic.featureMaker.n_features];

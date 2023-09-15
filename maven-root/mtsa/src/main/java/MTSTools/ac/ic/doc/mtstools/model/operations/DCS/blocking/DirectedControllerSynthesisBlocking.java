@@ -7,7 +7,9 @@ import MTSTools.ac.ic.doc.mtstools.model.impl.LTSImpl;
 import MTSTools.ac.ic.doc.mtstools.model.impl.MarkedLTSImpl;
 import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.DirectedControllerSynthesis;
 import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.abstraction.*;
+import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.DCSFeatures;
 import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.nonblocking.ExplorationHeuristic;
+//import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.OpenSetExplorationHeuristic;
 
 import java.util.*;
 
@@ -18,6 +20,7 @@ import java.util.logging.ConsoleHandler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+// Recordatorio: Revisar que los imports sean de Blocking
 
 /** This class contains the logic to synthesize a controller for
  *  a deterministic environment using an informed search procedure. */
@@ -54,7 +57,7 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
     public List<State> facilitators;
 
     /** Abstraction used to rank the transitions from a state. */
-    private Abstraction<State, Action> abstraction;
+    public Abstraction<State, Action> abstraction;
 
     /** Queue of open states, the most promising state should be expanded first. */
     public Queue<Compostate<State, Action>> open;
@@ -110,25 +113,12 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
     /** Used Heuristic Object **/
     public FeatureBasedExplorationHeuristic<Long, String> heuristic;
 
-
-    /** This method starts the directed synthesis of a controller.
-     *  @param ltss, a list of MarkedLTSs that compose the environment.
-     *  @param controllable, the set of controllable actions.
-     *  @param reachability, a boolean indicating whether to pursue reachability or liveness.
-     *  @param guarantees, a list of LTS Formulas representing guarantees
-     *  @param assumptions, a list of LTS Formulas representing assumptions
-     *  @return the controller for the environment in the form of an LTS that
-     *      when composed with the environment reaches the goal, only by
-     *      enabling or disabling controllable actions and monitoring
-     *      uncontrollable actions. Or null if no such controller exists. */
-    public LTS<Long,Action> synthesize(
-        List<LTS<State, Action>> ltss,
-        Set<Action> controllable,
-        boolean reachability,
-        HashMap<Integer, Integer> guarantees,
-        HashMap<Integer, Integer> assumptions)
-    {
-
+    /** Initialize the dcs for synthesis */
+    public void setupSynthesis(List<LTS<State, Action>> ltss,
+                               Set<Action> controllable,
+                               boolean reachability,
+                               HashMap<Integer, Integer> guarantees,
+                               HashMap<Integer, Integer> assumptions){
         //LOGGER
         //set logger formatter for more control over logs
         logger.setUseParentHandlers(false);
@@ -180,6 +170,27 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
         loopID = 1;
         stratY = new HashMap<>();
         stratX = new HashMap<>();
+    }
+
+    /** This method starts the directed synthesis of a controller.
+     *  @param ltss, a list of MarkedLTSs that compose the environment.
+     *  @param controllable, the set of controllable actions.
+     *  @param reachability, a boolean indicating whether to pursue reachability or liveness.
+     *  @param guarantees, a list of LTS Formulas representing guarantees
+     *  @param assumptions, a list of LTS Formulas representing assumptions
+     *  @return the controller for the environment in the form of an LTS that
+     *      when composed with the environment reaches the goal, only by
+     *      enabling or disabling controllable actions and monitoring
+     *      uncontrollable actions. Or null if no such controller exists. */
+    public LTS<Long,Action> synthesize(
+        List<LTS<State, Action>> ltss,
+        Set<Action> controllable,
+        boolean reachability,
+        HashMap<Integer, Integer> guarantees,
+        HashMap<Integer, Integer> assumptions)
+    {
+
+        setupSynthesis(ltss, controllable, reachability, guarantees, assumptions);
 
         // FIXME, this is only done here until it can be chosen from the FSP instead of hardcoded
         mode = AbstractionMode.Ready;
@@ -192,9 +203,10 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
         if(initial.isStatus(Status.NONE)) initial.open();
 
         while (!open.isEmpty() && initial.isStatus(Status.NONE)) {
-
+            //System.out.println(open);
             Compostate<State, Action> next = open.remove();
             evaluate(next);
+            //System.out.println(next);
             doOpen(next);
         }
 
@@ -1250,18 +1262,31 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
     }
 
     public void setHeuristic(ExplorationHeuristic<State, Action> heuristic){
-
+        /*if(heuristic == null) {
+            System.out.println("Heuristic was null, creating new heuristic.");
+            if (mode == DirectedControllerSynthesisNonBlocking.HeuristicMode.TrainedAgent) {
+                MTSTools.ac.ic.doc.mtstools.model.operations.DCS.nonblocking.DCSFeatures<State, Action> featureMaker = new DCSFeatures<>(null, null, 1000000, null);
+                this.heuristic = new MTSTools.ac.ic.doc.mtstools.model.operations.DCS.nonblocking.FeatureBasedExplorationHeuristic<>("random", featureMaker, false);
+            } else {
+                this.heuristic = new OpenSetExplorationHeuristic<>(mode);
+            }
+        } else {
+            this.heuristic = heuristic;
+        }*/
     }
 
     void setupInitialState(){
-        ////initial = buildInitialState();
-        ////heuristic.setInitialState(initial);
-        ////initial.setExpanded();
+        initial = buildInitialState();
+        heuristic.setInitialState((Compostate<Long, String>) initial) ;
+        initial.setExpanded();
+    }
+
+    private boolean isNone(Compostate<State,Action> state) {
+        return state.isStatus(MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.Status.NONE);
     }
 
     public boolean isFinished(){
-        ////return !isNone(initial);
-        return true; ////
+        return !isNone(initial);
     }
 
 }

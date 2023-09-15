@@ -46,7 +46,7 @@ public class Compostate<State, Action> implements Comparable<Compostate<State, A
     public Recommendation<Action> recommendation;
 
     /** Indicates whether the state is actively being used. */
-    private boolean live;
+    public boolean live;
 
     /** Indicates whether the state is in the open queue. */
     public boolean inOpen;
@@ -89,6 +89,9 @@ public class Compostate<State, Action> implements Comparable<Compostate<State, A
 
     /** Number of uncontrollable transitions that were not yet expanded by DCS */
     int uncontrollableUnexploredTransitions;
+
+    /** Indicates whether this state was expanded by DCS */
+    private boolean wasExpanded = false;
 
     ////Map<HAction<State, Action>, List<State>> actionChildStates;
     Map<HAction<Action>, List<State>> actionChildStates; ////
@@ -559,6 +562,12 @@ public class Compostate<State, Action> implements Comparable<Compostate<State, A
         return states.toString();
     }
 
+    public boolean wasExpanded() {
+        return wasExpanded;
+    }
 
+    public void setExpanded() {
+        wasExpanded = true;
+    }
 
 }

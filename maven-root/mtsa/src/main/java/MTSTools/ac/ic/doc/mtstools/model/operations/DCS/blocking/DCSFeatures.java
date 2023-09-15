@@ -14,7 +14,6 @@ import java.util.*;
 
 import static org.junit.Assert.assertFalse;
 
-//public class DCSFeatures {
 public class DCSFeatures<State, Action> {
     public int n_features;
     public boolean using_labelsThatReach_feature;

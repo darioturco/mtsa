@@ -213,12 +213,11 @@ public class FeatureBasedExplorationHeuristic<State, Action> implements Explorat
 
 
     public void startSynthesis(DirectedControllerSynthesisBlocking<State, Action> dcs) {
-        //dcs.analyzeReachability(); Descomentar
+        //dcs.analyzeReachability(); //Descomentar
         this.dcs = dcs;
 
         //if(featureMaker.using_ra_feature)
         //    this.ra = new ReadyAbstraction<>(dcs.ltss, dcs.defaultTargets, dcs.alphabet);
-        // Decomentar
 
         if(model_path.equals("python")){ // the buffer is created from python
             this.session = null;
@@ -387,12 +386,12 @@ public class FeatureBasedExplorationHeuristic<State, Action> implements Explorat
         if(!action.isControllable())
             state.uncontrollableUnexploredTransitions--;
     }
-    /*
+
 
 
     public void notifyStateSetErrorOrGoal(Compostate<State, Action> state) {
-        if(featureMaker.using_ra_feature)
-            state.live = false;
+        //if(featureMaker.using_ra_feature)
+        //    state.live = false;
         state.uncontrollableUnexploredTransitions = 0;
         state.unexploredTransitions = 0;
         if(featureMaker.using_context_features && state.isStatus(Status.GOAL)){
@@ -404,7 +403,7 @@ public class FeatureBasedExplorationHeuristic<State, Action> implements Explorat
         if(featureMaker.using_ra_feature)
             open(state);
     }
-
+    /*
     public void notifyStateIsNone(Compostate<State, Action> state) {
         if(featureMaker.using_ra_feature)
             if(!fullyExplored(state))
@@ -447,7 +446,7 @@ public class FeatureBasedExplorationHeuristic<State, Action> implements Explorat
             }
 
     }
-
+    */
     // Adds this state to the open queue (reopening it if was previously closed).
     public void open(Compostate<State,Action> state) {
         // System.err.println("opening" + state);
@@ -457,7 +456,7 @@ public class FeatureBasedExplorationHeuristic<State, Action> implements Explorat
                 state.inOpen = true;
             } else { // we are reopening a state, thus we reestablish it's exploredChildren instead
                 boolean openedChild = false;
-                for (Pair<HAction<State, Action>,Compostate<State, Action>> transition : state.getExploredChildren()) {
+                for (Pair<HAction<Action>, Compostate<State, Action>> transition : state.getExploredChildren()) {
                     Compostate<State, Action> child = transition.getSecond();
                     if (!child.isLive() && child.isStatus(Status.NONE) && !fullyExplored(child)) { // !isGoal(child)
                         open(child);
@@ -478,6 +477,7 @@ public class FeatureBasedExplorationHeuristic<State, Action> implements Explorat
     public boolean hasUncontrollableUnexplored(Compostate<State, Action> state) {
         return state.uncontrollableUnexploredTransitions > 0;
     }
+    /*
 
     public void initialize(Compostate<State, Action> state) {
         if(featureMaker.using_ra_feature){
