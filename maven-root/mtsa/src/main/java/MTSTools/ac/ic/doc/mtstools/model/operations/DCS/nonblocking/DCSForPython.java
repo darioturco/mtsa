@@ -53,9 +53,9 @@ public class DCSForPython {
         this.heuristic.set_nk(n, k);
         this.heuristic.setFeaturesBuffer(this.input_buffer);
 
-        this.heuristic.startSynthesis(this.dcs);
+        this.heuristic.startSynthesis(this.dcs); // inicializa la frontera como una lista vacia
 
-        this.dcs.setupInitialState();
+        this.dcs.setupInitialState(); // llena la lista de la frontera(explorationFrontier)
         this.heuristic.filterFrontier();
         this.heuristic.computeFeatures();
         this.started_synthesis = false;

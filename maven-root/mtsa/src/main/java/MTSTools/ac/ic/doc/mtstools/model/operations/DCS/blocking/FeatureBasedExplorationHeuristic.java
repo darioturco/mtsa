@@ -85,7 +85,7 @@ public class FeatureBasedExplorationHeuristic<State, Action> implements Explorat
     }
 
     public void computeFeatures(){
-        assertTrue("Frontier is empty. The synthesis algorithm has failed.",
+        /*assertTrue("Frontier is empty. The synthesis algorithm has failed.",
                 explorationFrontier.size() > 0);
         assertTrue("Frontier did not fit in the buffer. Size was "+explorationFrontier.size(),
                 explorationFrontier.size() <= max_frontier);
@@ -98,7 +98,7 @@ public class FeatureBasedExplorationHeuristic<State, Action> implements Explorat
         }
 
 
-        if(debugging) printFeatures();
+        if(debugging) printFeatures();*/
 
     }
     /*
@@ -303,20 +303,20 @@ public class FeatureBasedExplorationHeuristic<State, Action> implements Explorat
         }
         return new Pair<>(stateAction.state, stateAction.action);
     }
+    */
+    public void newState(Compostate<State, Action> state, List<State> childStates) {
+        //if (parent != null)
+        //    state.setTargets(parent.getTargets());
 
-    public void newState(Compostate<State, Action> state, Compostate<State, Action> parent, List<State> childStates) {
-        if (parent != null)
-            state.setTargets(parent.getTargets());
+        //if (state.marked) {
+        //    state.addTargets(state);
+        //    if(featureMaker.using_context_features){
+        //        marked_states_found ++;
+        //    }
+        //}
 
-        if (state.marked) {
-            state.addTargets(state);
-            if(featureMaker.using_context_features){
-                marked_states_found ++;
-            }
-        }
-
-        if(featureMaker.using_ra_feature)
-            ra.evalForHeuristic(state, this);
+        //if(featureMaker.using_ra_feature)
+        //    ra.evalForHeuristic(state, this);
 
         if(state.isStatus(Status.NONE))
             addTransitionsToFrontier(state);
@@ -333,7 +333,7 @@ public class FeatureBasedExplorationHeuristic<State, Action> implements Explorat
         state.unexploredTransitions = 0;
         state.uncontrollableUnexploredTransitions = 0;
         state.actionsWithFeatures = new HashMap<>();
-        for(HAction<State, Action> action : state.getTransitions()){
+        for(HAction<Action> action : state.getTransitions()){
             List<State> childStates = dcs.getChildStates(state, action);
             // assertTrue(!dcs.dcs.canReachMarkedFrom(childStates) == state.getEstimate(action).isConflict());
             if(dcs.canReachMarkedFrom(childStates)) {
@@ -352,18 +352,18 @@ public class FeatureBasedExplorationHeuristic<State, Action> implements Explorat
         if(featureMaker.using_context_features){
             known_transitions += state.unexploredTransitions;
         }
-        if(featureMaker.using_ra_feature && state.uncontrollableUnexploredTransitions > 0){
-            state.controlled = false;
-        }
+        ////if(featureMaker.using_ra_feature && state.uncontrollableUnexploredTransitions > 0){
+        ////    state.controlled = false;
+        ////}
         state.uncontrollableTransitions = state.uncontrollableUnexploredTransitions;
 
-        for(HAction<State, Action> action : state.getTransitions()){
+        for(HAction<Action> action : state.getTransitions()){
             ActionWithFeatures<State, Action> actionWF = new ActionWithFeatures<>(state, action, this);
             explorationFrontier.add(actionWF);
             state.actionsWithFeatures.put(action, actionWF);
         }
     }
-
+    /*
     public void notifyExpandingState(Compostate<State, Action> parent, HAction<State, Action> action, Compostate<State, Action> state) {
         if(state.wasExpanded()){ // todo: understand this, i am copying the behavior of the code pre refactor
             state.setTargets(parent.getTargets());
@@ -477,7 +477,8 @@ public class FeatureBasedExplorationHeuristic<State, Action> implements Explorat
     public boolean hasUncontrollableUnexplored(Compostate<State, Action> state) {
         return state.uncontrollableUnexploredTransitions > 0;
     }
-    /*
+
+
 
     public void initialize(Compostate<State, Action> state) {
         if(featureMaker.using_ra_feature){
@@ -487,11 +488,11 @@ public class FeatureBasedExplorationHeuristic<State, Action> implements Explorat
         }
 
         state.actionChildStates = new HashMap<>();
-        state.estimates = new HashMap<>();
+        //state.estimates = new HashMap<>();
         state.targets = emptyList();
         state.arrivingPaths = new HashSet<>();
     }
-
+    /*
     public void notifyClosedPotentiallyWinningLoop(Set<Compostate<State, Action>> loop) {
         closed_potentially_winning_loops ++;
 

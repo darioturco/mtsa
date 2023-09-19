@@ -29,21 +29,22 @@ public class ActionWithFeatures<State, Action> {
         for (int lts = 0; childMarked && lts < this.heuristic.dcs.ltssSize; ++lts)
             childMarked = this.heuristic.dcs.defaultTargets.get(lts).contains(childStates.get(lts));
 
-        int i = 0;
+        // No computo los features en java, eso lo hago luego en python
+        /*int i = 0;
         for(DCSFeatures.ComputeFeature<State, Action> f : heuristic.featureMaker.methodFeatures){
             f.compute(heuristic, this, i);
             i += f.size();
-        }
+        }*/
     }
 
     public void updateFeatures(){
-        int i = 0;
+        /*int i = 0;
         for(DCSFeatures.ComputeFeature<State, Action> f : heuristic.featureMaker.methodFeatures){
             if(f.requiresUpdate()){
                 f.compute(heuristic, this, i);
             }
             i += f.size();
-        }
+        }*/
     }
 
 

@@ -6,7 +6,7 @@ import MTSTools.ac.ic.doc.commons.relations.Pair;
 import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.abstraction.HEstimate;
 import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.abstraction.Ranker;
 import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.abstraction.Recommendation;
-import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.nonblocking.ActionWithFeatures;
+import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.ActionWithFeatures;
 
 import java.util.*;
 
@@ -28,7 +28,7 @@ public class Compostate<State, Action> implements Comparable<Compostate<State, A
     private HEstimate estimate;
 
     /** Indicates whether this state is a goal (1) or an error (-1) or not yet known (0). */
-    private Status status;
+    public Status status;
 
     /** The real distance to the goal state from this state. */
     private int distance;
@@ -52,7 +52,7 @@ public class Compostate<State, Action> implements Comparable<Compostate<State, A
     public boolean inOpen;
 
     /** Indicates whether the state is controlled or not. */
-    private boolean controlled;
+    public boolean controlled;
 
     /** Indicates what guarantees the compostate fulfills */
     public final Set<Integer> markedByGuarantee;
@@ -79,7 +79,7 @@ public class Compostate<State, Action> implements Comparable<Compostate<State, A
     private final Set<HAction<Action>> transitions;
 
     /** Stores target states (i.e., already visited marked states) to reach from this state. */
-    private List<Set<State>> targets = emptyList();
+    public List<Set<State>> targets = emptyList();
 
     /** Number of uncontrollable transitions */
     public int uncontrollableTransitions;
@@ -93,10 +93,18 @@ public class Compostate<State, Action> implements Comparable<Compostate<State, A
     /** Indicates whether this state was expanded by DCS */
     private boolean wasExpanded = false;
 
-    ////Map<HAction<State, Action>, List<State>> actionChildStates;
-    Map<HAction<Action>, List<State>> actionChildStates; ////
+    /** Indicates that the state has a uncontrollable conflincting action */
+    public boolean heuristicStronglySuggestsIsError = false;
 
-    ////HashMap<HAction<State, Action>, ActionWithFeatures<State, Action>> actionsWithFeatures;
+    /** Estimates of transitions, only used when using ra feature **/
+    //HashMap<HAction<State, Action>, HEstimate<State, Action>> estimates;
+
+
+
+    public HashSet<LinkedList<Integer>> arrivingPaths;
+
+    Map<HAction<Action>, List<State>> actionChildStates;
+
     HashMap<HAction<Action>, ActionWithFeatures<State, Action>> actionsWithFeatures;
 
     private boolean hasGoalChild = false;
@@ -142,6 +150,9 @@ public class Compostate<State, Action> implements Comparable<Compostate<State, A
         }
 
         this.transitions = buildTransitions();
+        if (directedControllerSynthesisBlocking.heuristic != null){
+            directedControllerSynthesisBlocking.heuristic.initialize((Compostate<Long, String>) this);
+        }
     }
 
 
@@ -316,6 +327,17 @@ public class Compostate<State, Action> implements Comparable<Compostate<State, A
     /** Returns whether the iterator points to a valid controllable recommendation. */
     public boolean hasValidControllableRecommendation() { //strongly relies on recommendations being uncontrollable first and controllable last
         return recommendation != null && recommendations.get(recommendations.size() - 1).getAction().isControllable();
+    }
+
+    /** Elimina una recomendacion de la lista de recomendacion y updatea las recomendaciones*/
+    public void removeRecommendation(ActionWithFeatures<Long, String> action) {
+        if (recommendit.hasNext()) {
+            //// Elimina la recomendacion que tiene como accion action
+
+
+            // updatea las variables de recomendaciones
+            updateRecommendation();
+        }
     }
 
     /** Advances the iterator to the next recommendation. */

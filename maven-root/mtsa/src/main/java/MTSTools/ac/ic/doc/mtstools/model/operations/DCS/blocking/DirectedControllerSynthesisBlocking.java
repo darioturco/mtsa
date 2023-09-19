@@ -102,7 +102,7 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
     public List<Set<State>> defaultTargets;
 
     /** Initial state. */
-    private Compostate<State, Action> initial;
+    public Compostate<State, Action> initial;
 
     /** Statistic information about the procedure. */
     private final Statistics statistics = new Statistics();
@@ -205,8 +205,8 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
         while (!open.isEmpty() && initial.isStatus(Status.NONE)) {
             //System.out.println(open);
             Compostate<State, Action> next = open.remove();
-            evaluate(next);
             //System.out.println(next);
+            evaluate(next);
             doOpen(next);
         }
 
@@ -281,7 +281,17 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
             result = new Compostate<>(this, states);
             compostates.put(states, result);
 
+            if(heuristic != null){
+                statistics.startHeuristicTime();
+                heuristic.newState((Compostate<Long, String>) result, (List<Long>) states);
+                statistics.endHeuristicTime();
+            }
 
+
+            // Estaba en el refactor ed non-blocking, no se si deberia estar aca o no
+            ////if (result.getStates().contains(-1L) || heuristic.fullyExplored(result)) {
+            ////    setError(result);
+            ////}
         }
         return result;
     }
@@ -330,6 +340,7 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
         assertTrue("compostate to open doesn't have valid recommendation", compostate.hasValidRecommendation());
         if (compostate.hasValidRecommendation()) {
             Recommendation<Action> recommendation = compostate.nextRecommendation();
+            System.out.println(compostate + " | " + recommendation.getAction());
             expand(compostate, recommendation);
             if (compostate.isControlled() && compostate.hasValidRecommendation() && compostate.isStatus(Status.NONE))
                 compostate.open();
@@ -365,7 +376,7 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
         explore(state, recommendation, child);
     }
 
-    private List<State> getChildStates(Compostate<State, Action> compostate, HAction<Action> action) {
+    List<State> getChildStates(Compostate<State, Action> compostate, HAction<Action> action) {
         List<State> parentStates = compostate.getStates();
         int size = parentStates.size();
         for (int i = 0; i < size; ++i) {
@@ -1282,11 +1293,21 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
     }
 
     private boolean isNone(Compostate<State,Action> state) {
-        return state.isStatus(MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.Status.NONE);
+        return state.isStatus(Status.NONE);
     }
 
     public boolean isFinished(){
         return !isNone(initial);
+    }
+
+    public boolean canReachMarkedFrom(List<State> childStates){
+        /*if(canReachMarkedInLts == null) return true;
+        for(int i = 0; i < childStates.size(); i++){
+            if (!canReachMarkedInLts.get(i).contains(childStates.get(i))) {
+                return false;
+            }
+        }*/
+        return true;
     }
 
 }

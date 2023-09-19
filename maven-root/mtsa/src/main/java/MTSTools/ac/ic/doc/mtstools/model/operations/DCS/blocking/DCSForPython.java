@@ -46,11 +46,7 @@ public class DCSForPython {
         // c.first es un objeto con la lista de automatas a componer y las goals
         // c.second es la salida en la que se escriben los errores (mucho no importa)
 
-
-
-        /// Primera parte dificil de cambiar e importante (preuntarle a Hernan)
         DirectedControllerSynthesisBlocking<Long, String> dcs = TransitionSystemDispatcher.hcsInteractiveForBlocking(c.getFirst(), c.getSecond());
-        //DirectedControllerSynthesisBlocking<Long, String> dcs = new DirectedControllerSynthesisBlocking<>();
         if(dcs == null) fail("Could not start DCS for the given fsp");
 
         this.heuristic = new FeatureBasedExplorationHeuristic<>("python", featureMaker, false);
@@ -112,6 +108,8 @@ public class DCSForPython {
     }
     public void expandAction(int idx){
         ActionWithFeatures<Long, String> stateAction = heuristic.removeFromFrontier(idx);
+        // Hacer algo asi como un removeRecommendation
+        stateAction.state.removeRecommendation(stateAction);
 
         Recommendation<String> recommendation = new Recommendation(stateAction.action, new HEstimate(1));
         dcs.expand(stateAction.state, recommendation);
@@ -144,7 +142,7 @@ public class DCSForPython {
 
     public static void main(String[] args) throws OrtException {
         //String FSP_path = "/home/dario/Documents/Tesis/mtsa/maven-root/mtsa/target/test-classes/Blocking/ControllableFSPs/GR1test1.lts"; // Falla porque tiene guiones
-        String FSP_path = "/home/dario/Documents/Tesis/Learning-Synthesis/fsp/Blocking/ControllableFSPs/GR1test1.lts";
+        String FSP_path = "/home/dario/Documents/Tesis/Learning-Synthesis/fsp/Blocking/ControllableFSPs/GR1Test10.lts";
         //String FSP_path = "/home/dario/Documents/Tesis/Learning-Synthesis/fsp/DP/DP-2-2.fsp";
 
 
@@ -154,14 +152,28 @@ public class DCSForPython {
         DCSForPython env = new DCSForPython(null, null,10000, ltss_init);
 
         Random rand = new Random();
-
+        List<Integer> list = Arrays.asList(0, 1, 1, 0, 0, 0, 0);
+        int idx = 0;
         //for(int i = 0; i < 10; i++){
             env.startSynthesis(FSP_path);
+            int i = 0;
             while (!env.isFinished()) {
-                //for(ActionWithFeatures<Long, String> action : env.heuristic.explorationFrontier){
-                //    System.out.println(action);
-                //}
-                env.expandAction(rand.nextInt(env.frontierSize()));
+                System.out.println("----------------------------------: " + i);
+                for(ActionWithFeatures<Long, String> action : env.heuristic.explorationFrontier){
+                    System.out.println(action);
+                }
+
+                if(i < list.size()){
+                    idx = list.get(i);
+                }else{
+                    idx = rand.nextInt(env.frontierSize());
+                }
+
+                System.out.println("Expandido: " + env.heuristic.explorationFrontier.get(idx));
+
+                //env.expandAction(rand.nextInt(env.frontierSize()));
+                env.expandAction(idx);
+                i = i + 1;
             }
         //}
         System.out.println("End Run :)");
