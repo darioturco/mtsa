@@ -331,12 +331,26 @@ public class Compostate<State, Action> implements Comparable<Compostate<State, A
 
     /** Elimina una recomendacion de la lista de recomendacion y updatea las recomendaciones*/
     public void removeRecommendation(ActionWithFeatures<Long, String> action) {
-        if (recommendit.hasNext()) {
+        if (recommendations.size() > 0) {
             //// Elimina la recomendacion que tiene como accion action
+            int idxToRemove = -1;
+            int i = 0;
+            for(Recommendation<Action> r : recommendations){
+                if(r.getAction() == action.action){
+                    idxToRemove = i;
+                }
+                i++;
+            }
+
+            // assert("idxToRemove no deveria ser -1 porque eso significa que action no esta en las recomendadas")
+            if(idxToRemove == -1){
+                System.out.println("idxToRemove = -1 / Esto no deveria pasar");
+            }
+            recommendations.remove(idxToRemove);
 
 
-            // updatea las variables de recomendaciones
-            updateRecommendation();
+            // Vuelve a iniciar el iterador y updatea las variables recomendation
+            initRecommendations();
         }
     }
 

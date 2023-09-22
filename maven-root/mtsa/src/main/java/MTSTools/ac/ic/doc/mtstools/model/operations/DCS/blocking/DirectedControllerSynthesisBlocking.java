@@ -203,25 +203,51 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
         if(initial.isStatus(Status.NONE)) initial.open();
 
         while (!open.isEmpty() && initial.isStatus(Status.NONE)) {
-            //System.out.println(open);
             Compostate<State, Action> next = open.remove();
-            //System.out.println(next);
             evaluate(next);
             doOpen(next);
         }
 
         assertFalse("Finished because open was empty, shouldn't be the case", initial.isStatus(Status.NONE));
-
         statistics.end();
-
         LTS<Long,Action> result;
-
         if(isGoal(initial)){
             result = buildController();
         } else {
             result = null;
         }
 
+        return result;
+    }
+
+    // TODO: escribir el comentario de esta funcion (inspirarse en el de synthetize)
+    public List<Pair<Compostate<State, Action>, HAction<Action>>> getTraceSynthesize(
+            List<LTS<State, Action>> ltss,
+            Set<Action> controllable,
+            boolean reachability,
+            HashMap<Integer, Integer> guarantees,
+            HashMap<Integer, Integer> assumptions,
+            Abstraction abstractiuonObj)
+    {
+
+        setupSynthesis(ltss, controllable, reachability, guarantees, assumptions);
+        abstraction = abstractiuonObj;
+        mode = AbstractionMode.Ready;
+
+        initial = buildInitialState();
+        if(initial.isStatus(Status.NONE)) initial.open();
+
+        Recommendation<Action> recommendation;
+        List<Pair<Compostate<State, Action>, HAction<Action>>> result = new ArrayList<>();
+        while (!open.isEmpty() && initial.isStatus(Status.NONE)) {
+            Compostate<State, Action> next = open.remove();
+            evaluate(next);
+            recommendation = doOpen(next);
+            result.add(new Pair<>(next, recommendation.getAction()));
+        }
+
+        assertFalse("Finished because open was empty, shouldn't be the case", initial.isStatus(Status.NONE));
+        statistics.end();
         return result;
     }
 
@@ -332,19 +358,19 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
      *  This avoids a DFS type of search. On the other hand, uncontrollable
      *  states are never left opened since all its exploredChildren need to be explored
      *  eventually, thus a DFS to a failure is used instead. */
-    private void doOpen(Compostate<State, Action> compostate) {
+    private Recommendation<Action> doOpen(Compostate<State, Action> compostate) {
         compostate.inOpen = false;
         if (!compostate.isLive() || compostate.getStates() == null) {
-            return;
+            return null;
         }
         assertTrue("compostate to open doesn't have valid recommendation", compostate.hasValidRecommendation());
-        if (compostate.hasValidRecommendation()) {
-            Recommendation<Action> recommendation = compostate.nextRecommendation();
-            System.out.println(compostate + " | " + recommendation.getAction());
-            expand(compostate, recommendation);
-            if (compostate.isControlled() && compostate.hasValidRecommendation() && compostate.isStatus(Status.NONE))
-                compostate.open();
-        }
+
+        Recommendation<Action> recommendation = compostate.nextRecommendation();
+        System.out.println(compostate + " | " + recommendation.getAction());
+        expand(compostate, recommendation);
+        if (compostate.isControlled() && compostate.hasValidRecommendation() && compostate.isStatus(Status.NONE))
+            compostate.open();
+        return recommendation;
     }
 
 
@@ -1012,7 +1038,6 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
         return compostate.isStatus(Status.ERROR) || compostate.getStates().contains(-1L) || compostate.isDeadlock();
     }
 
-
     /** Marks a given state as an error. */
     private void setError(Compostate<State, Action> state) {
         assertFalse(state.isStatus(Status.GOAL));
@@ -1032,7 +1057,7 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
 
 
     /** Returns whether a given state is a goal or not. */
-    private boolean isGoal(Compostate<State, Action> compostate) {
+    public boolean isGoal(Compostate<State, Action> compostate) {
         return compostate.isStatus(Status.GOAL);
     }
 

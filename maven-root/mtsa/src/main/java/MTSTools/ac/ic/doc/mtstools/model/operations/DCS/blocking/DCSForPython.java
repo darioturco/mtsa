@@ -21,13 +21,12 @@ import static org.junit.Assert.*;
 /** This class can be used from python with jpype */
 public class DCSForPython {
     private FeatureBasedExplorationHeuristic<Long, String> heuristic;
-    private DirectedControllerSynthesisBlocking<Long, String> dcs;
+    public DirectedControllerSynthesisBlocking<Long, String> dcs;
     public FloatBuffer input_buffer;
     DCSFeatures<Long, String> featureMaker;
 
     public boolean started_synthesis;
     public DCSForPython(String features_path, String labels_path, int max_frontier, CompositeState ltss_init){
-
         this.featureMaker = new DCSFeatures<>(features_path, labels_path, max_frontier, ltss_init);
         ByteBuffer bb = ByteBuffer.allocateDirect(featureMaker.n_features*4*max_frontier);
         bb.order(ByteOrder.nativeOrder());
@@ -110,7 +109,7 @@ public class DCSForPython {
         ActionWithFeatures<Long, String> stateAction = heuristic.removeFromFrontier(idx);
         // Hacer algo asi como un removeRecommendation
         stateAction.state.removeRecommendation(stateAction);
-
+        System.out.println(stateAction.state.toString() + " | " + stateAction.action);
         Recommendation<String> recommendation = new Recommendation(stateAction.action, new HEstimate(1));
         dcs.expand(stateAction.state, recommendation);
         if(!dcs.isFinished()){
@@ -140,9 +139,26 @@ public class DCSForPython {
         return hashes;
     }
 
+    public int getIndexOfStateAction(Pair<Compostate<Long, String>, HAction<String>> pairStateAction){
+        Compostate<Long, String> state = pairStateAction.getFirst();
+        HAction<String> action = pairStateAction.getSecond();
+        int idx = 0;
+        for(ActionWithFeatures<Long, String> actionWF : heuristic.explorationFrontier){
+            if(actionWF.action.toString().equals(action.toString()) && actionWF.state.toString().equals(state.toString())){
+                return idx;
+            }
+            idx++;
+        }
+
+
+        return -1;
+    }
+
     public static void main(String[] args) throws OrtException {
         //String FSP_path = "/home/dario/Documents/Tesis/mtsa/maven-root/mtsa/target/test-classes/Blocking/ControllableFSPs/GR1test1.lts"; // Falla porque tiene guiones
-        String FSP_path = "/home/dario/Documents/Tesis/Learning-Synthesis/fsp/Blocking/ControllableFSPs/GR1Test10.lts";
+        //String FSP_path = "F:\\UBA\\Tesis\\mtsa\\maven-root\\mtsa\\target\\test-classes\\Blocking\\ControllableFSPs\\GR1Test10.lts";
+        String FSP_path = "F:\\UBA\\Tesis\\mtsa\\maven-root\\mtsa\\target\\test-classes\\Blocking\\NoControllableFSPs\\GR1Test11.lts";
+        //String FSP_path = "/home/dario/Documents/Tesis/Learning-Synthesis/fsp/Blocking/ControllableFSPs/GR1Test10.lts";
         //String FSP_path = "/home/dario/Documents/Tesis/Learning-Synthesis/fsp/DP/DP-2-2.fsp";
 
 
@@ -152,30 +168,29 @@ public class DCSForPython {
         DCSForPython env = new DCSForPython(null, null,10000, ltss_init);
 
         Random rand = new Random();
-        List<Integer> list = Arrays.asList(0, 1, 1, 0, 0, 0, 0);
+        //List<Integer> list = Arrays.asList(0, 1, 1, 0, 0, 0, 0); // Lista para la intancia 10 Controlable
+        List<Integer> list = Arrays.asList(0, 1, 1); // Lista para la intancia 11 No Controlable
         int idx = 0;
-        //for(int i = 0; i < 10; i++){
-            env.startSynthesis(FSP_path);
-            int i = 0;
-            while (!env.isFinished()) {
-                System.out.println("----------------------------------: " + i);
-                for(ActionWithFeatures<Long, String> action : env.heuristic.explorationFrontier){
-                    System.out.println(action);
-                }
-
-                if(i < list.size()){
-                    idx = list.get(i);
-                }else{
-                    idx = rand.nextInt(env.frontierSize());
-                }
-
-                System.out.println("Expandido: " + env.heuristic.explorationFrontier.get(idx));
-
-                //env.expandAction(rand.nextInt(env.frontierSize()));
-                env.expandAction(idx);
-                i = i + 1;
+        env.startSynthesis(FSP_path);
+        int i = 0;
+        while (!env.isFinished()) {
+            System.out.println("----------------------------------: " + (i+1));
+            for(ActionWithFeatures<Long, String> action : env.heuristic.explorationFrontier){
+                System.out.println(action);
             }
-        //}
+
+            if(i < list.size()){
+                idx = list.get(i);
+            }else{
+                idx = rand.nextInt(env.frontierSize());
+            }
+
+            System.out.println("Expandido: " + env.heuristic.explorationFrontier.get(idx));
+
+            //env.expandAction(rand.nextInt(env.frontierSize()));
+            env.expandAction(idx);
+            i = i + 1;
+        }
         System.out.println("End Run :)");
     }
 }

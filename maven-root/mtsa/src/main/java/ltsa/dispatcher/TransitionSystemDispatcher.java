@@ -682,42 +682,52 @@ public class TransitionSystemDispatcher {
         }
     }
 
-    /*stats is meant to be modified with relevant data to output*/
-    public static void hcs(ExplorationHeuristic<Long, String> heuristic, CompositeState compositeState, final LTSOutput output, boolean useMonitorThread, Statistics... stats) {
-        ControllerGoal<String> goal = compositeState.goal;
+    public static boolean isLTSRefinement(CompactState refines, CompactState refined, LTSOutput output) {
+        LTSSimulationSemantics ss = new LTSSimulationSemantics(); // previously
+        // using
+        // emptySet
+        MTS<Long, String> refinedMTS = AutomataToMTSConverter.getInstance().convert(refined);
+        MTS<Long, String> refinesMTS = AutomataToMTSConverter.getInstance().convert(refines);
+        return isRefinement(refinesMTS, refines.name, refinedMTS, refined.name, ss, output);
+    }
 
-		if(!goal.getFaults().isEmpty()){
+    public static boolean checkGuaranteesAndAssumptions(ControllerGoal<String> goal, final LTSOutput output){
+        if(!goal.getFaults().isEmpty()){
             output.outln("Failure tag is not supported for heuristic analysis.");
-            return;
+            return true;
         }
 
-		if (!(goal.getGuarantees().isEmpty() ^ goal.getMarking().isEmpty())) {
-			output.outln("Marking or liveness requirements (only one of them) are required for heuristic analysis.");
-			return;
-		}
-		if (!goal.getMarking().isEmpty() && goal.getAssumptions().size() > 1) {
-			output.outln("Multiple assumptions are not supported by the heuristic analysis when using marking as goals.");
-			return;
-		}
+        if (!(goal.getGuarantees().isEmpty() ^ goal.getMarking().isEmpty())) {
+            output.outln("Marking or liveness requirements (only one of them) are required for heuristic analysis.");
+            return true;
+        }
 
-		// ltss
-		List<LTS<Long, String>> ltss = new ArrayList<>();
-		Set<String> actions = new HashSet<>();
-		for (CompactState automata : compositeState.getMachines()) {
-			LTS<Long, String> lts = new LTSAdapter<>(
-				AutomataToMTSConverter.getInstance().convert(automata),
-                    TransitionType.REQUIRED);
-			actions.addAll(lts.getActions());
-			ltss.add(lts);
-		}
+        if (!goal.getMarking().isEmpty() && goal.getAssumptions().size() > 1) {
+            output.outln("Multiple assumptions are not supported by the heuristic analysis when using marking as goals.");
+            return true;
+        }
+        return false;
+    }
 
-		// goal (marked or blocking)
-		FormulaToMarkedLTS ftm = new FormulaToMarkedLTS();
-		LTS<Long,String> formulaLTS;
+    public static Pair<List<LTS<Long, String>>, Set<String>> getLTSs(CompositeState compositeState){
+        List<LTS<Long, String>> ltss = new ArrayList<>();
+        Set<String> actions = new HashSet<>();
+        for (CompactState automata : compositeState.getMachines()) {
+            LTS<Long, String> lts = new LTSAdapter<>(
+                    AutomataToMTSConverter.getInstance().convert(automata), TransitionType.REQUIRED);
+            actions.addAll(lts.getActions());
+            ltss.add(lts);
+        }
+        return new Pair<>(ltss, actions);
+    }
+
+    public static Pair<HashMap<Integer, Integer>, HashMap<Integer, Integer>> getGuaranteesAndAssumptions(ControllerGoal<String> goal, List<LTS<Long, String>> ltss, Set<String> actions, final LTSOutput output){
+        FormulaToMarkedLTS ftm = new FormulaToMarkedLTS();
+        LTS<Long,String> formulaLTS;
         HashMap<Integer, Integer> guarantees = new HashMap<>(); // HashMap < guaranteeNumber, ltsIndexInLtss >
         HashMap<Integer, Integer> assumptions = new HashMap<>(); // HashMap < assumptionNumber, ltsIndexInLtss >
 
-		if (!goal.getGuarantees().isEmpty()) { // blocking
+        if (!goal.getGuarantees().isEmpty()) { // blocking
             for(int ai = 0; ai<goal.getAssumptions().size(); ai++){
                 Formula a = goal.getAssumptions().get(ai);
                 NotFormula notA = new NotFormula(a);
@@ -725,21 +735,21 @@ public class TransitionSystemDispatcher {
                 ltss.add(formulaLTS);
                 assumptions.put(ai, ltss.size()-1);
             }
-		    for(int gi = 0; gi<goal.getGuarantees().size(); gi++){
+            for(int gi = 0; gi<goal.getGuarantees().size(); gi++){
                 Formula g = goal.getGuarantees().get(gi);
                 formulaLTS = ftm.translate(g);
                 ltss.add(formulaLTS);
                 guarantees.put(gi, ltss.size()-1);
             }
-		} else { // non blocking
-			Set<MTSSynthesis.ar.dc.uba.model.language.Symbol> initiating = new HashSet<>(), terminating = new HashSet<>();
-			for (String action : actions)
-				(goal.getMarking().contains(action) ? initiating : terminating).add(new SingleSymbol(action));
-			formulaLTS = ftm.translate(new FluentPropositionalVariable(new FluentImpl("Goal", initiating, terminating, false)));
+        } else { // non blocking
+            Set<MTSSynthesis.ar.dc.uba.model.language.Symbol> initiating = new HashSet<>(), terminating = new HashSet<>();
+            for (String action : actions)
+                (goal.getMarking().contains(action) ? initiating : terminating).add(new SingleSymbol(action));
+            formulaLTS = ftm.translate(new FluentPropositionalVariable(new FluentImpl("Goal", initiating, terminating, false)));
             ltss.add(0,formulaLTS);
         }
 
-		if (!goal.getGuarantees().isEmpty() && goal.getFluents().stream().anyMatch(f -> f.getName().equals("tick_a"))) {
+        if (!goal.getGuarantees().isEmpty() && goal.getFluents().stream().anyMatch(f -> f.getName().equals("tick_a"))) {
             //remove potential unwanted "*" actions related to "tick". This is a hack to optimize cases translated from synchronous systems.
             for (int asm : assumptions.values()) {
                 if (ltss.get(asm).getActions().contains("*")) {
@@ -755,7 +765,11 @@ public class TransitionSystemDispatcher {
                     "systems, do not use other actions as events, since to optimize \"tick\", other actions" +
                     "will ignore actions of the plant not in the LTL_property.");
         }
+        return new Pair<>(guarantees, assumptions);
+    }
 
+    public static boolean filterActions(CompositeState compositeState, List<LTS<Long, String>> ltss, HashMap<Integer, Integer> assumptions, HashMap<Integer, Integer> guarantees, final LTSOutput output){
+        FormulaToMarkedLTS ftm = new FormulaToMarkedLTS();
         Set<String> propertiesActions = new HashSet<>();
         Set<String> plantActions = new HashSet<>();
         int plantComponents = compositeState.getMachines().size();
@@ -787,8 +801,35 @@ public class TransitionSystemDispatcher {
             output.outln("Assumptions and Guarantees cant include actions that are not permited by the plant");
             propertiesActions.removeAll(plantActions);
             output.outln("the actions missing from the plant are: " + propertiesActions.toString());
+            return true;
+        }
+        return false;
+    }
+
+    /*stats is meant to be modified with relevant data to output*/
+    public static void hcs(ExplorationHeuristic<Long, String> heuristic, CompositeState compositeState, final LTSOutput output, boolean useMonitorThread, Statistics... stats) {
+        ControllerGoal<String> goal = compositeState.goal;
+
+		if(checkGuaranteesAndAssumptions(goal, output)){
             return;
         }
+
+		// ltss
+        Pair<List<LTS<Long, String>>, Set<String>> p = getLTSs(compositeState);
+        List<LTS<Long, String>> ltss = p.getFirst();
+        Set<String> actions = p.getSecond();
+
+		// goal (marked or blocking)
+        Pair<HashMap<Integer, Integer>, HashMap<Integer, Integer>> pairGuaranteesAndAssumptions = getGuaranteesAndAssumptions(goal, ltss, actions, output);
+        HashMap<Integer, Integer> guarantees =  pairGuaranteesAndAssumptions.getFirst();
+        HashMap<Integer, Integer> assumptions = pairGuaranteesAndAssumptions.getSecond();
+
+        boolean hasInvalidAction = filterActions(compositeState, ltss, assumptions, guarantees, output);
+        if(hasInvalidAction){
+            return;
+        }
+
+
 
         DirectedControllerSynthesis<Long,String> dcs;
         if(goal.isNonBlocking()){
@@ -846,122 +887,32 @@ public class TransitionSystemDispatcher {
 		}
 	}
 
-    public static boolean isLTSRefinement(CompactState refines, CompactState refined, LTSOutput output) {
-        LTSSimulationSemantics ss = new LTSSimulationSemantics(); // previously
-        // using
-        // emptySet
-        MTS<Long, String> refinedMTS = AutomataToMTSConverter.getInstance().convert(refined);
-        MTS<Long, String> refinesMTS = AutomataToMTSConverter.getInstance().convert(refines);
-        return isRefinement(refinesMTS, refines.name, refinedMTS, refined.name, ss, output);
-    }
-
     /*stats is meant to be modified with relevant data to output*/
     public static DirectedControllerSynthesisNonBlocking<Long, String> hcsInteractive(CompositeState compositeState, final LTSOutput output, Statistics... stats) {
         ControllerGoal<String> goal = compositeState.goal;
 
-        if(!goal.getFaults().isEmpty()){
-            output.outln("Failure tag is not supported for heuristic analysis.");
-            return null;
-        }
-
-        if (!(goal.getGuarantees().isEmpty() ^ goal.getMarking().isEmpty())) {
-            output.outln("Marking or liveness requirements (only one of them) are required for heuristic analysis.");
-            return null;
-        }
-        if (!goal.getMarking().isEmpty() && goal.getAssumptions().size() > 1) {
-            output.outln("Multiple assumptions are not supported by the heuristic analysis when using marking as goals.");
+        if(checkGuaranteesAndAssumptions(goal, output)){
             return null;
         }
 
         // ltss
-        List<LTS<Long, String>> ltss = new ArrayList<>();
-        Set<String> actions = new HashSet<>();
-        for (CompactState automata : compositeState.getMachines()) {
-            LTS<Long, String> lts = new LTSAdapter<>(
-                    AutomataToMTSConverter.getInstance().convert(automata), TransitionType.REQUIRED);
-            actions.addAll(lts.getActions());
-            ltss.add(lts);
-        }
+        Pair<List<LTS<Long, String>>, Set<String>> p = getLTSs(compositeState);
+        List<LTS<Long, String>> ltss = p.getFirst();
+        Set<String> actions = p.getSecond();
 
         // goal (marked or blocking)
-        FormulaToMarkedLTS ftm = new FormulaToMarkedLTS();
-        LTS<Long,String> formulaLTS;
-        HashMap<Integer, Integer> guarantees = new HashMap<>(); // HashMap < guaranteeNumber, ltsIndexInLtss >
-        HashMap<Integer, Integer> assumptions = new HashMap<>(); // HashMap < assumptionNumber, ltsIndexInLtss >
+        Pair<HashMap<Integer, Integer>, HashMap<Integer, Integer>> pairGuaranteesAndAssumptions = getGuaranteesAndAssumptions(goal, ltss, actions, output);
+        HashMap<Integer, Integer> guarantees =  pairGuaranteesAndAssumptions.getFirst();
+        HashMap<Integer, Integer> assumptions = pairGuaranteesAndAssumptions.getSecond();
 
-        if (!goal.getGuarantees().isEmpty()) { // blocking
-            for(int ai = 0; ai<goal.getAssumptions().size(); ai++){
-                Formula a = goal.getAssumptions().get(ai);
-                NotFormula notA = new NotFormula(a);
-                formulaLTS = ftm.translate(notA); //states that negate an assumption are winning states
-                ltss.add(formulaLTS);
-                assumptions.put(ai, ltss.size()-1);
-            }
-            for(int gi = 0; gi<goal.getGuarantees().size(); gi++){
-                Formula g = goal.getGuarantees().get(gi);
-                formulaLTS = ftm.translate(g);
-                ltss.add(formulaLTS);
-                guarantees.put(gi, ltss.size()-1);
-            }
-        } else { // non blocking
-            Set<MTSSynthesis.ar.dc.uba.model.language.Symbol> initiating = new HashSet<>(), terminating = new HashSet<>();
-            for (String action : actions)
-                (goal.getMarking().contains(action) ? initiating : terminating).add(new SingleSymbol(action));
-            formulaLTS = ftm.translate(new FluentPropositionalVariable(new FluentImpl("Goal", initiating, terminating, false)));
-            ltss.add(0,formulaLTS);
-        }
-
-        if (!goal.getGuarantees().isEmpty() && goal.getFluents().stream().anyMatch(f -> f.getName().equals("tick_a"))) {
-            //remove potential unwanted "*" actions related to "tick". This is a hack to optimize cases translated from synchronous systems.
-            for (int asm : assumptions.values()) {
-                if (ltss.get(asm).getActions().contains("*")) {
-                    ltss.get(asm).removeAction("*");
-                }
-            }
-            for (int gar : guarantees.values()) {
-                if (ltss.get(gar).getActions().contains("*")) {
-                    ltss.get(gar).removeAction("*");
-                }
-            }
-            output.outln("CAREFUL: when using the \"tick\" action as an event while modeling synchronous" +
-                    "systems, do not use other actions as events, since to optimize \"tick\", other actions" +
-                    "will ignore actions of the plant not in the LTL_property.");
-        }
-
-        Set<String> propertiesActions = new HashSet<>();
-        Set<String> plantActions = new HashSet<>();
-        int plantComponents = compositeState.getMachines().size();
-        for (int ltsindex = 0; ltsindex < ltss.size(); ltsindex++){
-            if (ltsindex < plantComponents) {
-                plantActions.addAll(ltss.get(ltsindex).getActions());
-            }else{
-                propertiesActions.addAll(ltss.get(ltsindex).getActions());
-            }
-        }
-        plantActions.remove("tau");  //tau represents internal computation, it doesn't matter for these checks
-        propertiesActions.remove("tau");
-
-        if (propertiesActions.contains("*")) {
-            for (int asm : assumptions.values()) {
-                MarkedLTSImpl<Long, String> current = (MarkedLTSImpl<Long, String>) ltss.get(asm);
-                ftm.populateAsterisk(current, plantActions);
-                current.removeAction("*");
-            }
-            for (int gar : guarantees.values()) {
-                MarkedLTSImpl<Long, String> current = (MarkedLTSImpl<Long, String>) ltss.get(gar);
-                ftm.populateAsterisk(current, plantActions);
-                current.removeAction("*");
-            }
-            propertiesActions.remove("*");
-        }
-
-        if(!plantActions.containsAll(propertiesActions)) {
-            output.outln("Assumptions and Guarantees cant include actions that are not permited by the plant");
-            propertiesActions.removeAll(plantActions);
-            output.outln("the actions missing from the plant are: " + propertiesActions.toString());
+        boolean hasInvalidAction = filterActions(compositeState, ltss, assumptions, guarantees, output);
+        if(hasInvalidAction){
             return null;
         }
 
+
+
+        // TODO: Ver si hay que descomentar
         //Assert.assertTrue("Interactive synthesis not implemented for Blocking", goal.isNonBlocking());
         DirectedControllerSynthesisNonBlocking<Long,String> dcs = new DirectedControllerSynthesisNonBlocking<>();
 
@@ -974,109 +925,28 @@ public class TransitionSystemDispatcher {
         return dcs;
     }
 
+
+
     public static DirectedControllerSynthesisBlocking<Long, String> hcsInteractiveForBlocking(CompositeState compositeState, final LTSOutput output, Statistics... stats) {
         ControllerGoal<String> goal = compositeState.goal;
 
-        if(!goal.getFaults().isEmpty()){
-            output.outln("Failure tag is not supported for heuristic analysis.");
-            return null;
-        }
-
-        if (!(goal.getGuarantees().isEmpty() ^ goal.getMarking().isEmpty())) {
-            output.outln("Marking or liveness requirements (only one of them) are required for heuristic analysis.");
-            return null;
-        }
-        if (!goal.getMarking().isEmpty() && goal.getAssumptions().size() > 1) {
-            output.outln("Multiple assumptions are not supported by the heuristic analysis when using marking as goals.");
+        if(checkGuaranteesAndAssumptions(goal, output)){
             return null;
         }
 
         // ltss
-        List<LTS<Long, String>> ltss = new ArrayList<>();
-        Set<String> actions = new HashSet<>();
-        for (CompactState automata : compositeState.getMachines()) {
-            LTS<Long, String> lts = new LTSAdapter<>(
-                    AutomataToMTSConverter.getInstance().convert(automata), TransitionType.REQUIRED);
-            actions.addAll(lts.getActions());
-            ltss.add(lts);
-        }
+        Pair<List<LTS<Long, String>>, Set<String>> p = getLTSs(compositeState);
+        List<LTS<Long, String>> ltss = p.getFirst();
+        Set<String> actions = p.getSecond();
 
         // goal (marked or blocking)
         FormulaToMarkedLTS ftm = new FormulaToMarkedLTS();
-        LTS<Long,String> formulaLTS;
-        HashMap<Integer, Integer> guarantees = new HashMap<>(); // HashMap < guaranteeNumber, ltsIndexInLtss >
-        HashMap<Integer, Integer> assumptions = new HashMap<>(); // HashMap < assumptionNumber, ltsIndexInLtss >
+        Pair<HashMap<Integer, Integer>, HashMap<Integer, Integer>> pairGuaranteesAndAssumptions = getGuaranteesAndAssumptions(goal, ltss, actions, output);
+        HashMap<Integer, Integer> guarantees =  pairGuaranteesAndAssumptions.getFirst();
+        HashMap<Integer, Integer> assumptions = pairGuaranteesAndAssumptions.getSecond();
 
-        if (!goal.getGuarantees().isEmpty()) { // blocking
-            for(int ai = 0; ai<goal.getAssumptions().size(); ai++){
-                Formula a = goal.getAssumptions().get(ai);
-                NotFormula notA = new NotFormula(a);
-                formulaLTS = ftm.translate(notA); //states that negate an assumption are winning states
-                ltss.add(formulaLTS);
-                assumptions.put(ai, ltss.size()-1);
-            }
-            for(int gi = 0; gi<goal.getGuarantees().size(); gi++){
-                Formula g = goal.getGuarantees().get(gi);
-                formulaLTS = ftm.translate(g);
-                ltss.add(formulaLTS);
-                guarantees.put(gi, ltss.size()-1);
-            }
-        } else { // non blocking
-            Set<MTSSynthesis.ar.dc.uba.model.language.Symbol> initiating = new HashSet<>(), terminating = new HashSet<>();
-            for (String action : actions)
-                (goal.getMarking().contains(action) ? initiating : terminating).add(new SingleSymbol(action));
-            formulaLTS = ftm.translate(new FluentPropositionalVariable(new FluentImpl("Goal", initiating, terminating, false)));
-            ltss.add(0,formulaLTS);
-        }
-
-        if (!goal.getGuarantees().isEmpty() && goal.getFluents().stream().anyMatch(f -> f.getName().equals("tick_a"))) {
-            //remove potential unwanted "*" actions related to "tick". This is a hack to optimize cases translated from synchronous systems.
-            for (int asm : assumptions.values()) {
-                if (ltss.get(asm).getActions().contains("*")) {
-                    ltss.get(asm).removeAction("*");
-                }
-            }
-            for (int gar : guarantees.values()) {
-                if (ltss.get(gar).getActions().contains("*")) {
-                    ltss.get(gar).removeAction("*");
-                }
-            }
-            output.outln("CAREFUL: when using the \"tick\" action as an event while modeling synchronous" +
-                    "systems, do not use other actions as events, since to optimize \"tick\", other actions" +
-                    "will ignore actions of the plant not in the LTL_property.");
-        }
-
-        Set<String> propertiesActions = new HashSet<>();
-        Set<String> plantActions = new HashSet<>();
-        int plantComponents = compositeState.getMachines().size();
-        for (int ltsindex = 0; ltsindex < ltss.size(); ltsindex++){
-            if (ltsindex < plantComponents) {
-                plantActions.addAll(ltss.get(ltsindex).getActions());
-            }else{
-                propertiesActions.addAll(ltss.get(ltsindex).getActions());
-            }
-        }
-        plantActions.remove("tau");  //tau represents internal computation, it doesn't matter for these checks
-        propertiesActions.remove("tau");
-
-        if (propertiesActions.contains("*")) {
-            for (int asm : assumptions.values()) {
-                MarkedLTSImpl<Long, String> current = (MarkedLTSImpl<Long, String>) ltss.get(asm);
-                ftm.populateAsterisk(current, plantActions);
-                current.removeAction("*");
-            }
-            for (int gar : guarantees.values()) {
-                MarkedLTSImpl<Long, String> current = (MarkedLTSImpl<Long, String>) ltss.get(gar);
-                ftm.populateAsterisk(current, plantActions);
-                current.removeAction("*");
-            }
-            propertiesActions.remove("*");
-        }
-
-        if(!plantActions.containsAll(propertiesActions)) {
-            output.outln("Assumptions and Guarantees cant include actions that are not permited by the plant");
-            propertiesActions.removeAll(plantActions);
-            output.outln("the actions missing from the plant are: " + propertiesActions.toString());
+        boolean hasInvalidAction = filterActions(compositeState, ltss, assumptions, guarantees, output);
+        if(hasInvalidAction){
             return null;
         }
 
