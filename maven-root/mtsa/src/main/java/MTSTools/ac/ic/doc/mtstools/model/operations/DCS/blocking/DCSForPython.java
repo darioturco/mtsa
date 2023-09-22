@@ -20,7 +20,7 @@ import static org.junit.Assert.*;
 
 /** This class can be used from python with jpype */
 public class DCSForPython {
-    private FeatureBasedExplorationHeuristic<Long, String> heuristic;
+    public FeatureBasedExplorationHeuristic<Long, String> heuristic;
     public DirectedControllerSynthesisBlocking<Long, String> dcs;
     public FloatBuffer input_buffer;
     DCSFeatures<Long, String> featureMaker;
@@ -107,16 +107,17 @@ public class DCSForPython {
     }
     public void expandAction(int idx){
         ActionWithFeatures<Long, String> stateAction = heuristic.removeFromFrontier(idx);
-        // Hacer algo asi como un removeRecommendation
         stateAction.state.removeRecommendation(stateAction);
-        System.out.println(stateAction.state.toString() + " | " + stateAction.action);
+        //System.out.println(stateAction.state.toString() + " | " + stateAction.action);
         Recommendation<String> recommendation = new Recommendation(stateAction.action, new HEstimate(1));
-        dcs.expand(stateAction.state, recommendation);
+        Compostate<Long, String> child = dcs.expand(stateAction.state, recommendation);
         if(!dcs.isFinished()){
             this.heuristic.filterFrontier();
             this.heuristic.computeFeatures();
         }
         this.heuristic.lastExpandedStateAction = stateAction;
+        this.heuristic.expansionDone(stateAction.state, stateAction.action, child);
+
     }
 
     public int[] lastExpandedHashes(){

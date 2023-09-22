@@ -29,8 +29,8 @@ public class FeatureBasedExplorationHeuristic<State, Action> implements Explorat
     public Compostate<State, Action> lastExpandedTo = null;
     public Compostate<State, Action> lastExpandedFrom = null;
 
-    ActionWithFeatures<Long, String> lastExpandedStateAction = null;
-    List<HashMap<State, Integer>> visitCounts;
+    public ActionWithFeatures<Long, String> lastExpandedStateAction = null;
+    public List<HashMap<State, Integer>> visitCounts;
     public float explorationPercentage = 0;
     public int problem_n, problem_k;
 
@@ -425,20 +425,23 @@ public class FeatureBasedExplorationHeuristic<State, Action> implements Explorat
 
     }
 
-    public void expansionDone(Compostate<State, Action> state, HAction<State, Action> action, Compostate<State, Action> child) {
-        if(featureMaker.using_ra_feature)
+    */
+    public void expansionDone(Compostate<State, Action> state, HAction<Action> action, Compostate<State, Action> child) {
+        if(featureMaker.using_ra_feature) {
             if (state.isControlled() && state.isStatus(Status.NONE) && !fullyExplored(state)) {
                 open(state);
             }
+        }
         lastExpandedTo = child;
         lastExpandedFrom = state;
         state.actionsWithFeatures.remove(action);
-        if(featureMaker.using_visits_feature){
-            addVisit(child);
-        }
+        //if(featureMaker.using_visits_feature){
+        //    addVisit(child);
+        //}
 
     }
 
+    /*
     public void notifyExpansionDidntFindAnything(Compostate<State, Action> parent, HAction<State, Action> action, Compostate<State, Action> child) {
         if(featureMaker.using_ra_feature)
             if (!child.isLive() && !fullyExplored(child)) {

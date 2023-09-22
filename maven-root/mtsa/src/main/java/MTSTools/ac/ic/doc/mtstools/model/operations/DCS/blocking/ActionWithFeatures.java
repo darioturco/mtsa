@@ -6,15 +6,13 @@ import java.util.LinkedList;
 import java.util.List;
 
 public class ActionWithFeatures<State, Action> {
-    HAction<Action> action;
-    Compostate<State, Action> state;
-    Compostate<State, Action> child;
-    List<State> childStates;
-    FeatureBasedExplorationHeuristic<State, Action> heuristic;
-    boolean childMarked;
-
-
-    float[] feature_vector;
+    public HAction<Action> action;
+    public Compostate<State, Action> state;
+    public Compostate<State, Action> child;
+    public List<State> childStates;
+    public FeatureBasedExplorationHeuristic<State, Action> heuristic;
+    public boolean childMarked;
+    public float[] feature_vector;
 
     ActionWithFeatures(Compostate<State, Action> state, HAction<Action> action, FeatureBasedExplorationHeuristic<State, Action> heuristic) {
 

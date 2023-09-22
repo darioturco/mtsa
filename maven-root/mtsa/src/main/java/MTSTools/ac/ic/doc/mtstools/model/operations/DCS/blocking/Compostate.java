@@ -25,16 +25,16 @@ public class Compostate<State, Action> implements Comparable<Compostate<State, A
     private final List<State> states; // Note: should be a set of lists for non-deterministic LTSs
 
     /** The estimated distance to the goal from this state. */
-    private HEstimate estimate;
+    public HEstimate estimate;
 
     /** Indicates whether this state is a goal (1) or an error (-1) or not yet known (0). */
     public Status status;
 
     /** The real distance to the goal state from this state. */
-    private int distance;
+    public int distance;
 
     /** Depth at which this state has been expanded. */
-    private int depth;
+    public int depth;
 
     /** A ranking of the outgoing transitions from this state. */
     public List<Recommendation<Action>> recommendations;
@@ -88,7 +88,7 @@ public class Compostate<State, Action> implements Comparable<Compostate<State, A
     public int unexploredTransitions;
 
     /** Number of uncontrollable transitions that were not yet expanded by DCS */
-    int uncontrollableUnexploredTransitions;
+    public int uncontrollableUnexploredTransitions;
 
     /** Indicates whether this state was expanded by DCS */
     private boolean wasExpanded = false;

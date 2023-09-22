@@ -366,7 +366,7 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
         assertTrue("compostate to open doesn't have valid recommendation", compostate.hasValidRecommendation());
 
         Recommendation<Action> recommendation = compostate.nextRecommendation();
-        System.out.println(compostate + " | " + recommendation.getAction());
+        //System.out.println(compostate + " | " + recommendation.getAction());
         expand(compostate, recommendation);
         if (compostate.isControlled() && compostate.hasValidRecommendation() && compostate.isStatus(Status.NONE))
             compostate.open();
@@ -376,7 +376,7 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
 
     /** Expands a state following a given recommendation from a parent compostate.
      *  Internally this populates the transitions and expanded lists. */
-    void expand(Compostate<State, Action> state, Recommendation<Action> recommendation) {
+    Compostate<State, Action> expand(Compostate<State, Action> state, Recommendation<Action> recommendation) {
         statistics.incExpandedTransitions();
 
         HAction<Action> action = recommendation.getAction();
@@ -400,6 +400,7 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
         }
 
         explore(state, recommendation, child);
+        return child;
     }
 
     List<State> getChildStates(Compostate<State, Action> compostate, HAction<Action> action) {
