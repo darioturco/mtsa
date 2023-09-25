@@ -121,6 +121,7 @@ public class Compostate<State, Action> implements Comparable<Compostate<State, A
         this.live = false;
         this.inOpen = false;
         this.controlled = true; // we assume the state is controlled until an uncontrollable recommendation is obtained
+        this.estimate = new HEstimate(1);
         this.exploredChildren = new BinaryRelationImpl<>();
         this.childrenExploredThroughUncontrollable = new HashSet<>();
         this.childrenExploredThroughControllable = new HashSet<>();
