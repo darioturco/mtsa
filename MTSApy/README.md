@@ -19,3 +19,5 @@ The branch  ... del projecto de Marco
 ## How to install it ##
 
 Instalandolo
+
+[//]: <> (TODO: Terminar de completar este readme)

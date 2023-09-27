@@ -1,46 +1,71 @@
+
+### El enviroment debe tener:
+#  - una funcion de init
+#  - una funion "reset"
+#  - una funcion "step"
+
+"""
 class Environment:
-    def __init__(self, contexts, normalize_reward):
+    def __init__(self):
+        pass
+
+    def reset(self):
+        pass
+
+    def step(self, action):
+        # Assert
+        pass
+
+"""
+class Environment:
+    def __init__(self, context, normalize_reward):
         """Environment base class.
             TODO are contexts actually part of the concept of an RL environment?
             """
-        self.contexts = contexts
+        self.context = context
         self.normalize_reward = normalize_reward
+        self.info = context.composition.get_info()
 
-    def reset_from_copy(self):
-        # Descomentar
-        self.contexts = None #[CompositionAnalyzer(context.composition.reset_from_copy()) for context in self.contexts]
+    def reset(self):
+        # Reset the enviroment
+        self.context.composition = self.context.composition.reset_from_copy()
+        return self.actions()
 
-        return self
+    def get_context(self):
+        return self.context
 
-    def get_number_of_contexts(self):
-        return len(self.contexts)
-
-    def get_contexts(self):
-        return self.contexts
-
-    def step(self, action_idx, context_idx=0):
-        composition_graph = self.contexts[context_idx].composition
+    def step(self, action_idx):
+        composition_graph = self.context.composition
         composition_graph.expand(action_idx)  # TODO refactor. Analyzer should not be the expansion medium
-        if not composition_graph._javaEnv.isFinished():
+        if not composition_graph.javaEnv.isFinished():
             return self.actions(), self.reward(), False, {}
         else:
-            return None, self.reward(), True, self.get_results()
+            return None, self.reward(), True, self.get_info()
 
-    def get_results(self, context_idx=0):
-        composition_dg = self.contexts[context_idx].composition
+    def get_info(self):
+        composition_dg = self.context.composition
         return {
-            "synthesis time(ms)": float(composition_dg._javaEnv.getSynthesisTime()),
-            "expanded transitions": int(composition_dg._javaEnv.getExpandedTransitions()),
-            "expanded states": int(composition_dg._javaEnv.getExpandedStates())
+            "synthesis time(ms)": float(composition_dg.javaEnv.getSynthesisTime()),
+            "expanded transitions": int(composition_dg.javaEnv.getExpandedTransitions()),
+            "expanded states": int(composition_dg.javaEnv.getExpandedStates())
         }
 
     def reward(self):
-        # TODO ?normalize like Learning-Synthesis?
-        return -1
+        if self.normalize_reward:
+            # TODO: Implement the normalize reward
+            # return -1 / self.problem_size
+            raise NotImplementedError
+        else:
+            return -1
 
     def state(self):
         raise NotImplementedError
 
-    def actions(self, context_idx=0):
-        # TODO refactor
-        return self.contexts[context_idx].composition.getFrontier()
+    def actions(self):
+        return self.context.composition.getFrontier()
+
+    def get_nfeatures(self):
+        return self.context.get_transition_features_size()
+
+    def close(self):
+        pass

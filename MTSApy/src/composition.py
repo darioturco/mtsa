@@ -11,43 +11,59 @@ from MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking import DirectedCo
 #BENCHMARK_PROBLEMS = ["AT", "BW", "CM", "DP", "TA", "TL"]
 
 class CompositionGraph(nx.DiGraph):
-    def __init__(self, problem, n, k):
+    # The CompositionGraph requires the name of the problem, and its sizes
+    # The name can be:
+    #  - AT
+    #  - DP (Dinner Philosofers)
+    #  - ..
+    #  - ..
+    #  - ..
+    #  - ..
+    #  - Custom (n and k are ingnored and you can pass a custom path in the start_composition function)
+
+    def __init__(self, problem, n, k, fsp_path):
         super().__init__()
         self._problem, self._n, self._k = problem, n, k
+        self._fsp_path = fsp_path
         self._initial_state = None
         self._state_machines = []  # : list[nx.DiGraph]
         self._frontier = []
         self._started, self._completed = False, False
-        self._javaEnv = None
         self._alphabet = []
         self._no_indices_alphabet = []
         self._number_of_goals = 0
         self._expansion_order = []
+        self.javaEnv = None
         print("Warning: underlying Java code runs unused feature computations and buffers")
 
     def reset_from_copy(self):
-        return self.__class__(self._problem, self._n, self._k).start_composition()
+        return self.__class__(self._problem, self._n, self._k, self._fsp_path).start_composition()
 
-    def start_composition(self, fsp_path):
+    def start_composition(self):
         assert (self._initial_state is None)
         self._started = True
-        c = FeatureBasedExplorationHeuristic.compileFSP(f"{fsp_path}/{self._problem}/{self._problem}-{self._n}-{self._k}.fsp")
+        if self._problem == "Custom":
+            problem_path = self._fsp_path
+        else:
+            problem_path = f"{self._fsp_path}/{self._problem}/{self._problem}-{self._n}-{self._k}.fsp"
+        c = FeatureBasedExplorationHeuristic.compileFSP(problem_path)
         ltss_init = c.getFirst()
         # TODO: turn it into a dictionary that goes from the state machine name into its respective digraph
         self._state_machines = [m.name for m in ltss_init.machines]
-        self._javaEnv = DCSForPython(None, None, 10000, ltss_init)
-        self._javaEnv.startSynthesis(f"{fsp_path}/{self._problem}/{self._problem}-{self._n}-{self._k}.fsp")
-        assert (self._javaEnv is not None)
-        self._initial_state = self._javaEnv.dcs.initial
+        self.javaEnv = DCSForPython(None, None, 10000, ltss_init)
+        assert (self.javaEnv is not None)
+
+        self.javaEnv.startSynthesis(problem_path)
+        self._initial_state = self.javaEnv.dcs.initial
         self.add_node(self._initial_state)
-        self._alphabet = [e for e in self._javaEnv.dcs.alphabet.actions]
+        self._alphabet = [e for e in self.javaEnv.dcs.alphabet.actions]
         self._alphabet.sort()
         return self
 
     def expand(self, idx):
-        assert (not self._javaEnv.isFinished()), "Invalid expansion, composition is already solved"
+        assert (not self.javaEnv.isFinished()), "Invalid expansion, composition is already solved"
         assert (idx < len(self.getFrontier()) and idx >= 0), "Invalid index"
-        self._javaEnv.expandAction(idx)  # TODO check this is the same index as in the python frontier list
+        self.javaEnv.expandAction(idx)  # TODO check this is the same index as in the python frontier list
         new_state_action = self.getLastExpanded()
         controllability, label = self.getLastExpanded().action.isControllable(), self.getLastExpanded().action.toString()
         self.add_node(self.last_expansion_child_state())
@@ -56,14 +72,14 @@ class CompositionGraph(nx.DiGraph):
         self._expansion_order.append(self.getLastExpanded())
 
     def last_expansion_child_state(self):
-        return self._javaEnv.heuristic.lastExpandedTo
+        return self.javaEnv.heuristic.lastExpandedTo
 
     def last_expansion_source_state(self):
-        return self._javaEnv.heuristic.lastExpandedFrom
+        return self.javaEnv.heuristic.lastExpandedFrom
 
-    def getFrontier(self): return self._javaEnv.heuristic.explorationFrontier
+    def getFrontier(self): return self.javaEnv.heuristic.explorationFrontier
 
-    def getLastExpanded(self): return self._javaEnv.heuristic.lastExpandedStateAction
+    def getLastExpanded(self): return self.javaEnv.heuristic.lastExpandedStateAction
 
     def _check_no_repeated_states(self):
         raise NotImplementedError
@@ -85,7 +101,10 @@ class CompositionGraph(nx.DiGraph):
         raise NotImplementedError
 
     def finished(self):
-        return self._javaEnv.isFinished()
+        return self.javaEnv.isFinished()
+
+    def get_info(self):
+        return {"problem": self._problem, "n": self._n, "k": self._k}
 
 
 class CompositionAnalyzer:
@@ -93,7 +112,7 @@ class CompositionAnalyzer:
         TODO this class will be replaced by object-oriented Feature class
     """
 
-    def __init__(self, composition: CompositionGraph):
+    def __init__(self, composition):
         self.composition = composition
         assert (self.composition._started)
 
@@ -144,9 +163,9 @@ class CompositionAnalyzer:
         return [float(transition.childMarked)]
 
     def current_phase(self, transition):
-        return [float(self.composition._javaEnv.dcs.heuristic.goals_found > 0),
-                float(self.composition._javaEnv.dcs.heuristic.marked_states_found > 0),
-                float(self.composition._javaEnv.dcs.heuristic.closed_potentially_winning_loops > 0)]
+        return [float(self.composition.javaEnv.dcs.heuristic.goals_found > 0),
+                float(self.composition.javaEnv.dcs.heuristic.marked_states_found > 0),
+                float(self.composition.javaEnv.dcs.heuristic.closed_potentially_winning_loops > 0)]
 
     def child_node_state(self, transition):
         """Whether
@@ -192,31 +211,3 @@ class CompositionAnalyzer:
         for feature_method in self._feature_methods:
             res += feature_method(transition)
         return res
-
-
-
-
-
-if __name__ == "__main__":
-    d = CompositionGraph("AT", 3, 3)
-
-    d.start_composition()
-    da = CompositionAnalyzer(d)
-    k = 0
-    i = 100
-    while (i and not d._javaEnv.isFinished()):
-        print(d.getFrontier())
-        d.expand(0)
-        frontier_features = []
-        for trans in d.getFrontier():
-            feature = da.compute_features(trans)
-            frontier_features.append(feature)
-
-        # frontier_features = [(da.compute_features(trans)) for trans in d.getFrontier()]
-
-        assert (d._expansion_order[-1] in [e[2]["action_with_features"] for e in d.edges(data=True)])
-
-        # k+=sum([sum(da.isLastExpanded(trans[2]["action_with_features"])) for trans in d.edges(data=True)])
-        # i-=1
-
-    # print(k)
