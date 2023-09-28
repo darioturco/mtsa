@@ -3,10 +3,11 @@ import random
 
 
 class ReplayBuffer(object):
-    def __init__(self, size):
+    def __init__(self, env, size):
         self._storage = []
         self._maxsize = size
         self._next_idx = 0
+        self._env = env
 
     def __len__(self):
         return len(self._storage)
@@ -27,7 +28,8 @@ class ReplayBuffer(object):
             action_featuress.append(action_features)
             rewards.append(reward)
             obss.append(obs)
-        return action_featuress, np.array(rewards), obss
+
+        return self._env.actions_to_features(action_featuress), np.array(rewards), obss
 
     def sample(self, batch_size):
         idxes = [random.randint(0, len(self._storage) - 1) for _ in range(batch_size)]
@@ -36,11 +38,10 @@ class ReplayBuffer(object):
     def __repr__(self):
         return " - ".join([str(data[:2]) for data in self._storage])
 
-    @staticmethod
-    def get_experience_from_random_policy(env, total_steps, nstep=1):
+    def get_experience_from_random_policy(self, total_steps, nstep=1):
         """ A random policy is run for total_steps steps, saving the observations in the format of the replay buffer """
         states = []
-        obs = env.reset()
+        obs = self._env.reset()
         steps = 0
 
         last_steps = []
@@ -48,13 +49,13 @@ class ReplayBuffer(object):
             action = np.random.randint(len(obs))
             last_steps.append(obs[action])
 
-            obs2, reward, done, info = env.step(action)
+            obs2, reward, done, info = self._env.step(action)
 
             if done:
                 for j in range(len(last_steps)):
                     states.append((last_steps[j], -len(last_steps) + j, None))
                 last_steps = []
-                obs = env.reset()
+                obs = self._env.reset()
             else:
                 if len(last_steps) >= nstep:
                     states.append((last_steps[0], -nstep, obs2))

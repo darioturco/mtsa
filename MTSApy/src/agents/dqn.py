@@ -154,7 +154,7 @@ class NeuralNetwork(nn.Module):
 
     def forward(self, x):
         for layer in self.layers:
-            x = layer(x)
+            x = layer(x.to(torch.float))
         return x
 
     def reuse_onnx_model(self, onnx_path):
@@ -193,8 +193,8 @@ class DQN:
 
         print(f"Initializing buffer with {exp_per_instance} observations")
 
-        self.buffer = ReplayBuffer(self.args["buffer_size"])
-        random_experience = ReplayBuffer.get_experience_from_random_policy(self.env, total_steps=exp_per_instance, nstep=self.args["n_step"])
+        self.buffer = ReplayBuffer( self.env, self.args["buffer_size"])
+        random_experience = self.buffer.get_experience_from_random_policy(total_steps=exp_per_instance, nstep=self.args["n_step"])
         for action_features, reward, obs2 in random_experience:
             self.buffer.add(action_features, reward, obs2)
 
@@ -293,7 +293,8 @@ class DQN:
         if np.random.rand() <= epsilon:
             return np.random.randint(len(s))
         else:
-            return self.model.best(s)
+            features = self.env.actions_to_features(s)
+            return self.model.best(features)
 
     def update(self, obs, action, reward, obs2):
         """ Gets epsilon-greedy action using self.model """

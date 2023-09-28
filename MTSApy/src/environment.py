@@ -67,5 +67,8 @@ class Environment:
     def get_nfeatures(self):
         return self.context.get_transition_features_size()
 
+    def actions_to_features(self, actions):
+        # Ver bien que tipo de dato tiene que tirar
+        return [[0.0]*self.get_nfeatures() for action in actions]
     def close(self):
         pass

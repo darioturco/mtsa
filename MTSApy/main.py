@@ -57,7 +57,7 @@ def test_custom_instance_with_agent(path):
     neural_network = NeuralNetwork(nfeatures, args["nn_size"]).to("cpu")
     nn_model = TorchModel(nfeatures, network=neural_network, args=args)
     agent = DQN(env, nn_model, args, save_file=None, verbose=False)
-    agent.train()
+    agent.train(seconds=None, max_steps=None, max_eps=None, save_freq=200000, last_obs=None, early_stopping=False, save_at_end=False, results_path=None, top=10)
     finish = False
     rewards = []
     i = 0
@@ -68,10 +68,13 @@ def test_custom_instance_with_agent(path):
         rewards.append(reward)
         i = i + 1
 
+    #Warning: underlying Java code runs unused feature computations and buffers
+
     env.close()
 
 if __name__ == "__main__":
-    path = "/home/dario/Documents/Tesis/Learning-Synthesis/fsp/Blocking/ControllableFSPs/GR1Test10.lts"
+    path = "F:\\UBA\\Tesis\\MTSApy\\fsp\\Blocking\\ControllableFSPs\\GR1Test10.lts" # For Windows
+    #path = "/home/dario/Documents/Tesis/Learning-Synthesis/fsp/Blocking/ControllableFSPs/GR1Test10.lts" # For Linux
     #test_custom_instance(path, [0, 1, 1, 0, 0, 0, 0])
     test_custom_instance_with_agent(path)
 
