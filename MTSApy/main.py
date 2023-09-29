@@ -32,8 +32,8 @@ def test_custom_instance(path, idxs=None):
 
     env.close()
 
-def test_custom_instance_with_agent(path):
-    d = CompositionGraph("Custom", 1, 1, path)
+def test_custom_instance_with_agent(path, instance, n, k):
+    d = CompositionGraph(instance, n, k, path)
     d.start_composition()
     context = CompositionAnalyzer(d)
     env = Environment(context, False)
@@ -46,7 +46,7 @@ def test_custom_instance_with_agent(path):
             "weight_decay": 0.1,
             "first_epsilon": 0.5,
             "buffer_size": 500,
-            "n_step": 1000,
+            "n_step": 25,
             "last_epsilon": 0.001,
             "epsilon_decay_steps": 5,
             "exp_replay": 500,
@@ -54,6 +54,7 @@ def test_custom_instance_with_agent(path):
             "reset_target_freq": 50,
             "batch_size": 300
             }
+
     neural_network = NeuralNetwork(nfeatures, args["nn_size"]).to("cpu")
     nn_model = TorchModel(nfeatures, network=neural_network, args=args)
     agent = DQN(env, nn_model, args, save_file=None, verbose=False)
@@ -68,15 +69,14 @@ def test_custom_instance_with_agent(path):
         rewards.append(reward)
         i = i + 1
 
-    #Warning: underlying Java code runs unused feature computations and buffers
-
     env.close()
 
 if __name__ == "__main__":
-    path = "F:\\UBA\\Tesis\\MTSApy\\fsp\\Blocking\\ControllableFSPs\\GR1Test10.lts" # For Windows
-    #path = "/home/dario/Documents/Tesis/Learning-Synthesis/fsp/Blocking/ControllableFSPs/GR1Test10.lts" # For Linux
+    #path = "F:\\UBA\\Tesis\\MTSApy\\fsp\\Blocking\\ControllableFSPs\\GR1Test10.lts" # For Windows
+    path = "F:\\UBA\\Tesis\\MTSApy\\fsp"  # For Windows
+    #path = "/home/dario/Documents/Tesis/Learning-Synthesis/fsp/Blocking/ControllableFSPs/GR1Test1.lts" # For Linux
     #test_custom_instance(path, [0, 1, 1, 0, 0, 0, 0])
-    test_custom_instance_with_agent(path)
+    test_custom_instance_with_agent(path, "AT", 3, 3)
 
 
 

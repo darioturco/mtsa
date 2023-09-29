@@ -77,13 +77,8 @@ class TorchModel(Model):
         self.n, self.k = None, None
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        print("Using", self.device, "device")
         self.model = network
-        print(self.model)
-        print("Learning rate:", args["learning_rate"])
-
         self.loss_fn = nn.MSELoss()
-
         self.optimizer = torch.optim.SGD(self.model.parameters(),
                                          lr=args["learning_rate"],
                                          momentum=args["momentum"],
@@ -91,8 +86,11 @@ class TorchModel(Model):
                                          weight_decay=args["weight_decay"])
 
         self.has_learned_something = False
-
         self.losses = []
+
+        # print("Using", self.device, "device")
+        # print(self.model)
+        # print("Learning rate:", args["learning_rate"])
 
     def eval_batch(self, ss):
         return np.array([self.eval(s) for s in ss])
@@ -191,12 +189,14 @@ class DQN:
         """ Initialize replay buffer uniformly with experiences """
         exp_per_instance = self.args["buffer_size"]
 
-        print(f"Initializing buffer with {exp_per_instance} observations")
+        print(f"Initializing buffer with {exp_per_instance} observations...")
 
         self.buffer = ReplayBuffer( self.env, self.args["buffer_size"])
         random_experience = self.buffer.get_experience_from_random_policy(total_steps=exp_per_instance, nstep=self.args["n_step"])
         for action_features, reward, obs2 in random_experience:
             self.buffer.add(action_features, reward, obs2)
+
+
 
         print("Done.")
 
@@ -223,11 +223,11 @@ class DQN:
             if self.args["exp_replay"]:
                 if done:
                     for j in range(len(last_steps)):
-                        self.buffer.add(last_steps[j], -len(last_steps) + j, None)
+                        self.buffer.add(self.env.context.compute_features(last_steps[j]), -len(last_steps) + j, None)
                     last_steps = []
                 else:
                     if len(last_steps) >= self.args["n_step"]:
-                        self.buffer.add(last_steps[0], -self.args["n_step"], obs2)
+                        self.buffer.add(self.env.context.compute_features(last_steps[0]), -self.args["n_step"], obs2)
                     last_steps = last_steps[len(last_steps) - self.args["n_step"] + 1:]
                 self.batch_update()
             else:
@@ -238,14 +238,13 @@ class DQN:
                 if instance not in self.best_training_perf.keys() or \
                         info["expanded transitions"] < self.best_training_perf[instance]:
                     self.best_training_perf[instance] = info["expanded transitions"]
-                    print("New best at instance "+str(instance)+"!", self.best_training_perf[instance], "Steps:", self.training_steps)
+                    print(f"New best at instance {str(instance)}! {self.best_training_perf[instance]} Steps: {self.training_steps}")
                     self.last_best = self.training_steps
                 info.update({
                     "training time": time.time() - self.training_start,
                     "training steps": self.training_steps,
                     "instance": instance,
                     "loss": self.model.current_loss(),
-
                     })
                 self.training_data.append(info)
                 obs = self.env.reset()
@@ -254,13 +253,14 @@ class DQN:
 
             if self.training_steps % save_freq == 0 and results_path is not None:
                 self.save(self.env.info, path=results_path)
-                top -= 1
+
 
             if self.args["target_q"] and self.training_steps % self.args["reset_target_freq"] == 0:
                 if self.verbose:normalize_reward=False
             steps += 1
             self.training_steps += 1
             if done:
+                top -= 1
                 eps += 1
 
             if seconds is not None and time.time() - self.training_start > seconds:
@@ -286,7 +286,7 @@ class DQN:
         if results_path is not None and save_at_end:
             self.save(self.env.info, results_path)
 
-        return obs.copy()
+        return obs
 
     def get_action(self, s, epsilon):
         """ Gets epsilon-greedy action using self.model """

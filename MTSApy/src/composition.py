@@ -34,7 +34,6 @@ class CompositionGraph(nx.DiGraph):
         self._number_of_goals = 0
         self._expansion_order = []
         self.javaEnv = None
-        print("Warning: underlying Java code runs unused feature computations and buffers")
 
     def reset_from_copy(self):
         return self.__class__(self._problem, self._n, self._k, self._fsp_path).start_composition()
@@ -114,6 +113,7 @@ class CompositionAnalyzer:
 
     def __init__(self, composition):
         self.composition = composition
+        self.nfeatures = None
         assert (self.composition._started)
 
         self._no_indices_alphabet = list(set([self.remove_indices(str(e)) for e in composition._alphabet]))
@@ -128,7 +128,8 @@ class CompositionAnalyzer:
 
     def test_features_on_transition(self, transition):
         res = []
-        for compute_feature in self._feature_methods: res.extend(compute_feature(transition))
+        for compute_feature in self._feature_methods:
+            res += compute_feature(transition)
         return [float(e) for e in res]
 
     def event_label_feature(self, transition):
@@ -173,7 +174,7 @@ class CompositionAnalyzer:
         or not yet
         explored."""
         res = [0, 0, 0]
-        if (transition.child is not None):
+        if transition.child is not None:
             res = [float(transition.child.status.toString() == "GOAL"),
                    float(transition.child.status.toString() == "ERROR"),
                    float(transition.child.status.toString() == "NONE")]
@@ -188,9 +189,10 @@ class CompositionAnalyzer:
                 ]
 
     def explored_state_child(self, transition):
-        return [float(len(self.composition.out_edges(transition.state)) != transition.state.unexploredTransitions),
-                float(transition.child is not None and len(
-                    self.composition.out_edges(transition.child)) != transition.state.unexploredTransitions)]
+        aux = self.composition.out_edges(transition.state)
+        f1 = float(len(aux) != transition.state.unexploredTransitions)
+        f2 = float(transition.child is not None and len(self.composition.out_edges(transition.child)) != transition.state.unexploredTransitions)
+        return [f1, f2]
 
     def isLastExpanded(self, transition):
         return [float(self.composition.getLastExpanded() == transition)]
@@ -204,10 +206,16 @@ class CompositionAnalyzer:
         return res
 
     def get_transition_features_size(self):
-        return len(self.compute_features(self.composition.getFrontier()[0]))
+        if self.nfeatures is None:
+            return len(self.compute_features(self.composition.getFrontier()[0]))
+        else:
+            return self.nfeatures
 
     def compute_features(self, transition):
         res = []
         for feature_method in self._feature_methods:
             res += feature_method(transition)
+
+        if self.nfeatures is None:
+            self.nfeatures = len(res)
         return res
