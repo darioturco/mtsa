@@ -26,9 +26,12 @@ class Environment:
         self.normalize_reward = normalize_reward
         self.info = context.composition.get_info()
 
-    def reset(self):
+    def reset(self, new_composition=None):
         # Reset the enviroment
-        self.context.composition = self.context.composition.reset_from_copy()
+        if new_composition is None:
+            self.context.composition = self.context.composition.reset_from_copy()
+        else:
+            self.context.composition = new_composition.reset_from_copy()
         return self.actions()
 
     def get_context(self):
@@ -68,8 +71,7 @@ class Environment:
         return self.context.get_transition_features_size()
 
     def actions_to_features(self, actions):
-        # Ver bien que tipo de dato tiene que tirar
-        #return [[0.0]*self.get_nfeatures() for action in actions]
         return [self.context.compute_features(action) for action in actions]
+
     def close(self):
         pass

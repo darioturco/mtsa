@@ -6,5 +6,5 @@ class Agent(object):
     def train(self):
         pass
 
-    def predict(self, state):
+    def get_action(self, state):
         pass

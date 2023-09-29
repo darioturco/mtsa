@@ -23,6 +23,7 @@ import numpy as np
 import os
 
 from src.agents.replay_buffer import ReplayBuffer
+from src.agents.agent import Agent
 
 class Model:
     def __init__(self):
@@ -158,7 +159,7 @@ class NeuralNetwork(nn.Module):
     def reuse_onnx_model(self, onnx_path):
         raise NotImplementedError
 
-class DQN:
+class DQN(Agent):
     def __init__(self, env, nn_model, args, save_file=None, verbose=False):
         assert nn_model is not None
 
@@ -183,7 +184,7 @@ class DQN:
         self.best_training_perf = {}
         self.last_best = None
         self.converged = False
-        self.initializeBuffer()
+        #self.initializeBuffer()
 
     def initializeBuffer(self):
         """ Initialize replay buffer uniformly with experiences """
@@ -288,12 +289,14 @@ class DQN:
 
         return obs
 
-    def get_action(self, s, epsilon):
+    def get_action(self, s, epsilon, env=None):
         """ Gets epsilon-greedy action using self.model """
+        if env is None:
+            env = self.env
         if np.random.rand() <= epsilon:
             return np.random.randint(len(s))
         else:
-            features = self.env.actions_to_features(s)
+            features = env.actions_to_features(s)
             return self.model.best(features)
 
     def update(self, obs, action, reward, obs2):
