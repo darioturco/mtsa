@@ -184,7 +184,7 @@ class DQN(Agent):
         self.best_training_perf = {}
         self.last_best = None
         self.converged = False
-        #self.initializeBuffer()
+        self.initializeBuffer()
 
     def initializeBuffer(self):
         """ Initialize replay buffer uniformly with experiences """

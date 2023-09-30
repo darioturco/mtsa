@@ -142,7 +142,7 @@ class CompositionAnalyzer:
         return feature_vec_slice
 
     def _set_transition_type_bit(self, feature_vec_slice, transition):
-        no_idx_label = self.remove_indices(transition.toString())
+        no_idx_label = self.remove_indices(str(transition.toString()))
         feature_vec_slice_pos = self._fast_no_indices_alphabet_dict[no_idx_label]
         feature_vec_slice[feature_vec_slice_pos] = 1
 

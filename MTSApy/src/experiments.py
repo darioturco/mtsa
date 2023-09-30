@@ -109,16 +109,16 @@ class TrainSmallInstanceChackBigInstance(Experiment):
         neural_network = NeuralNetwork(nfeatures, args["nn_size"]).to("cpu")
         nn_model = TorchModel(nfeatures, network=neural_network, args=args)
         dqn_agent = DQN(env, nn_model, args, save_file=None, verbose=False)
-        #dqn_agent.train(seconds=None, max_steps=None, max_eps=None, save_freq=200000, last_obs=None, early_stopping=False,
-        #            save_at_end=False, results_path=None, top=1000)
+        dqn_agent.train(seconds=None, max_steps=None, max_eps=None, save_freq=200000, last_obs=None, early_stopping=False,
+                    save_at_end=False, results_path=None, top=1000)
         print(f"Trained in instance: {instance} {n_train}-{k_train}")
 
         env.reset(CompositionGraph(instance, n_test, k_test, path).start_composition())
         random_agent = RandomAgent()
 
-        #print(f"Runing Random Agent in instance: {instance} {n_test}-{k_test}")
-        #res = self.run_instance(env, random_agent)
-        #self.print_res("Random Agent: ", res)
+        print(f"Runing Random Agent in instance: {instance} {n_test}-{k_test}")
+        res = self.run_instance(env, random_agent)
+        self.print_res("Random Agent: ", res)
 
         print(f"Runing DQN Agent in instance: {instance} {n_test}-{k_test}")
         res = self.run_instance(env, dqn_agent)

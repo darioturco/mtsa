@@ -42,6 +42,6 @@ if __name__ == "__main__":
     #test_custom_instance(path, [0, 1, 1, 0, 0, 0, 0])
 
     #TestTrainInstance("Test").run(path, "DP", 2, 2)
-    TrainSmallInstanceChackBigInstance().run("AT", 2, 2, 5, 5)
+    TrainSmallInstanceChackBigInstance().run("AT", 2, 2, 6, 6)
 
 
