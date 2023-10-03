@@ -21,6 +21,7 @@ import json
 import time
 import numpy as np
 import os
+import onnx
 
 from src.agents.replay_buffer import ReplayBuffer
 from src.agents.agent import Agent
@@ -45,37 +46,11 @@ class Model:
         raise NotImplementedError()
 
 
-class OnnxModel(Model):
-    def __init__(self, model):
-        super().__init__()
-        assert model.has_learned_something
-
-        self.onnx_model, self.session = model.to_onnx()
-
-    def save(self, path):
-        onnx.save(self.onnx_model, path + ".onnx")
-
-    def predict(self, s):
-        if s is None:
-            return 0
-        return self.session.run(None, {'X': s})[0]
-
-    def eval_batch(self, ss):
-        return np.array([self.eval(s) for s in ss])
-
-    def eval(self, s):
-        return np.max(self.predict(s))
-
-    def current_loss(self):
-        raise NotImplementedError()
-
-
 
 class TorchModel(Model):
     def __init__(self, nfeatures, network, args):
         super().__init__()
         self.nfeatures = nfeatures
-        self.n, self.k = None, None
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.model = network
@@ -140,6 +115,26 @@ class TorchModel(Model):
         self.losses = []
         return avg_loss
 
+    def save(self, path):
+        x = torch.randn(1, self.nfeatures, device=self.device)
+        torch.onnx.export(self.model,
+                          x,
+                          path,
+                          export_params=True,
+                          opset_version=10,
+                          do_constant_folding=True,
+                          input_names=['X'],
+                          output_names=['output'],
+                          dynamic_axes={'X': {0: 'batch_size'},
+                                        'output': {0: 'batch_size'}}
+                          )
+    @classmethod
+    def load(cls, nfeatures, path, args):
+        network = onnx.load(path)
+        from onnx2pytorch import ConvertModel
+        network = ConvertModel(network)
+        return cls(nfeatures, network, args)
+
 
 class NeuralNetwork(nn.Module):
     def __init__(self, nfeatures, nnsize):
@@ -160,7 +155,7 @@ class NeuralNetwork(nn.Module):
         raise NotImplementedError
 
 class DQN(Agent):
-    def __init__(self, env, nn_model, args, save_file=None, verbose=False):
+    def __init__(self, env, nn_model, args, verbose=False):
         assert nn_model is not None
 
         self.env = env
@@ -170,8 +165,7 @@ class DQN(Agent):
         self.target = None
         self.buffer = None
 
-        self.save_file = save_file
-        self.save_idx = 0
+        self.trained = False
 
         self.training_start = None
         self.training_steps = 0
@@ -184,16 +178,15 @@ class DQN(Agent):
         self.best_training_perf = {}
         self.last_best = None
         self.converged = False
-        self.initializeBuffer()
 
     def initializeBuffer(self):
         """ Initialize replay buffer uniformly with experiences """
-        exp_per_instance = self.args["buffer_size"]
+        buffer_size = self.args["buffer_size"]
 
-        print(f"Initializing buffer with {exp_per_instance} observations...")
+        print(f"Initializing buffer with {buffer_size} observations...")
 
-        self.buffer = ReplayBuffer( self.env, self.args["buffer_size"])
-        random_experience = self.buffer.get_experience_from_random_policy(total_steps=exp_per_instance, nstep=self.args["n_step"])
+        self.buffer = ReplayBuffer( self.env, buffer_size)
+        random_experience = self.buffer.get_experience_from_random_policy(total_steps=buffer_size, nstep=self.args["n_step"])
         for action_features, reward, obs2 in random_experience:
             self.buffer.add(action_features, reward, obs2)
 
@@ -201,9 +194,8 @@ class DQN(Agent):
 
         print("Done.")
 
-    def train(self, seconds=None, max_steps=None, max_eps=None, save_freq=200000, last_obs=None,
-              early_stopping=False, save_at_end=False, results_path=None, top=1000):
-
+    def train(self, seconds=None, max_steps=None, max_eps=None, last_obs=None, early_stopping=False, top=1000):
+        self.initializeBuffer()
         if self.training_start is None:
             self.training_start = time.time()
             self.last_best = 0
@@ -252,12 +244,13 @@ class DQN(Agent):
             else:
                 obs = obs2
 
-            if self.training_steps % save_freq == 0 and results_path is not None:
-                self.save(self.env.info, path=results_path)
+            #if self.training_steps % save_freq == 0 and results_path is not None:
+            #    self.save(self.env.info, path=results_path)
 
 
             if self.args["target_q"] and self.training_steps % self.args["reset_target_freq"] == 0:
-                if self.verbose:normalize_reward=False
+                if self.verbose:
+                    normalize_reward=False
             steps += 1
             self.training_steps += 1
             if done:
@@ -284,9 +277,10 @@ class DQN(Agent):
             if self.epsilon > self.args["last_epsilon"] + 1e-10:
                 self.epsilon -= epsilon_step
 
-        if results_path is not None and save_at_end:
-            self.save(self.env.info, results_path)
+        #if results_path is not None and save_at_end:
+        #    self.save(self.env.info, results_path)
 
+        self.trained = True
         return obs
 
     def get_action(self, s, epsilon, env=None):
@@ -322,3 +316,12 @@ class DQN(Agent):
             print("Batch update. Values:", rewards+values)
 
         self.model.batch_update(np.array(action_featuress), rewards + values)
+
+
+    @staticmethod
+    def save(agent, path):
+        agent.model.save(path)
+        # Todo: guardar los parametros(args) y los atributos en un txt
+
+
+

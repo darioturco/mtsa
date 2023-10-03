@@ -3,8 +3,8 @@ import jpype.imports
 from bidict import bidict
 
 if not jpype.isJVMStarted():
-    #jpype.startJVM(f"C:\\Program Files\\Java\\jdk-21\\bin\\server\\jvm.dll", '-ea', classpath=['C:/Users/diort/Downloads/mtsa/maven-root/mtsa/target/mtsa.jar'])  # For Windows
-    jpype.startJVM(classpath=['mtsa.jar'])   # For Linux
+    jpype.startJVM(f"C:\\Program Files\\Java\\jdk-21\\bin\\server\\jvm.dll", '-ea', classpath=['C:/Users/diort/Downloads/mtsa/maven-root/mtsa/target/mtsa.jar'])  # For Windows
+    #jpype.startJVM(classpath=['mtsa.jar'])   # For Linux
 from MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking import DirectedControllerSynthesisBlocking, FeatureBasedExplorationHeuristic, DCSForPython
 
 #FSP_PATH = "../fsp"
@@ -15,10 +15,10 @@ class CompositionGraph(nx.DiGraph):
     # The name can be:
     #  - AT
     #  - DP (Dinner Philosofers)
-    #  - ..
-    #  - ..
-    #  - ..
-    #  - ..
+    #  - BW
+    #  - TL
+    #  - TA (Travel Agency)
+    #  - CM
     #  - Custom (n and k are ingnored and you can pass a custom path in the start_composition function)
 
     def __init__(self, problem, n, k, fsp_path):

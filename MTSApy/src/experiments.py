@@ -12,8 +12,9 @@ class Experiment(object):
     def __init__(self, name="Test"):
         self.name = name
         self.platform = sys.platform
-        random.seed(10)
-        np.random.seed(10)
+        self.seed = 14
+        random.seed(self.seed)
+        np.random.seed(self.seed)
 
 
     #def run(self):
@@ -53,15 +54,15 @@ class Experiment(object):
         return {"nn_size": [20],
                 "learning_rate": 1e-5,
                 "momentum": 0.9,
-                "nesterov": 0.1,        # True
+                "nesterov": True,
                 "weight_decay": 1e-4,
                 "first_epsilon": 1.0,
                 "buffer_size": 10000,
-                "n_step": 25,           # 1
+                "n_step": 5,           # 1
                 "last_epsilon": 0.01,
                 "epsilon_decay_steps": 250000,
-                "exp_replay": 500,      # True
-                "target_q": 0.1,        # True
+                "exp_replay": True,
+                "target_q": False,
                 "reset_target_freq": 10000,
                 "batch_size": 10
                 }
@@ -81,8 +82,7 @@ class TestTrainInstance(Experiment):
         neural_network = NeuralNetwork(nfeatures, args["nn_size"]).to("cpu")
         nn_model = TorchModel(nfeatures, network=neural_network, args=args)
         agent = DQN(env, nn_model, args, save_file=None, verbose=False)
-        agent.train(seconds=None, max_steps=None, max_eps=None, save_freq=200000, last_obs=None, early_stopping=False,
-                    save_at_end=False, results_path=None, top=10)
+        agent.train(seconds=None, max_steps=None, max_eps=None, last_obs=None, early_stopping=False, top=10)
         print("Trained :)\n")
 
         res = self.run_instance(env, agent)
@@ -90,11 +90,11 @@ class TestTrainInstance(Experiment):
 
 
 
-class TrainSmallInstanceChackBigInstance(Experiment):
+class TrainSmallInstanceCheckBigInstance(Experiment):
     def __init__(self, name="Test"):
         super().__init__(name)
 
-    def run(self, instance, n_train, k_train, n_test, k_test):
+    def run(self, instance, n_train, k_train, n_test, k_test, use_saved_agent=False):
         if "linux" in self.platform:
             path = "/home/dario/Documents/Tesis/Learning-Synthesis/fsp"  # For Linux
         else:
@@ -105,13 +105,19 @@ class TrainSmallInstanceChackBigInstance(Experiment):
         env = Environment(context, False)
         nfeatures = env.get_nfeatures()
         args = self.default_args()
+        onnx_path = f"results/models/{instance}/{instance}-{n_train}-{k_train}.onnx"
 
-        neural_network = NeuralNetwork(nfeatures, args["nn_size"]).to("cpu")
-        nn_model = TorchModel(nfeatures, network=neural_network, args=args)
-        dqn_agent = DQN(env, nn_model, args, save_file=None, verbose=False)
-        dqn_agent.train(seconds=None, max_steps=None, max_eps=None, save_freq=200000, last_obs=None, early_stopping=False,
-                    save_at_end=False, results_path=None, top=1000)
-        print(f"Trained in instance: {instance} {n_train}-{k_train}")
+        if use_saved_agent:
+            nn_model = TorchModel.load(nfeatures, onnx_path, args=args)
+            dqn_agent = DQN(env, nn_model, args, verbose=False)
+
+        else:
+            neural_network = NeuralNetwork(nfeatures, args["nn_size"]).to("cpu")
+            nn_model = TorchModel(nfeatures, network=neural_network, args=args)
+            dqn_agent = DQN(env, nn_model, args, verbose=False)
+            dqn_agent.train(seconds=None, max_steps=None, max_eps=None, last_obs=None, early_stopping=False, top=1000)
+            print(f"Trained in instance: {instance} {n_train}-{k_train}")
+            DQN.save(dqn_agent, onnx_path)
 
         env.reset(CompositionGraph(instance, n_test, k_test, path).start_composition())
         random_agent = RandomAgent()
@@ -124,4 +130,47 @@ class TrainSmallInstanceChackBigInstance(Experiment):
         res = self.run_instance(env, dqn_agent)
         self.print_res("DQN Agent: ", res)
 
+class TrainSmallerInstanceCheckInAll(Experiment):
+    def __init__(self, name="Test"):
+        super().__init__(name)
+
+    def run(self, instance, n_min, k_min, n_max, k_max, use_saved_agent=False):
+        if "linux" in self.platform:
+            path = "/home/dario/Documents/Tesis/Learning-Synthesis/fsp"  # For Linux
+        else:
+            path = "F:\\UBA\\Tesis\\MTSApy\\fsp"  # For Windows
+
+        d = CompositionGraph(instance, n_min, k_min, path).start_composition()
+        context = CompositionAnalyzer(d)
+        env = Environment(context, False)
+        nfeatures = env.get_nfeatures()
+        args = self.default_args()
+        onnx_path = f"results/models/{instance}/{instance}-{n_min}-{k_min}.onnx"
+
+        if use_saved_agent:
+            nn_model = TorchModel.load(nfeatures, onnx_path, args=args)
+            dqn_agent = DQN(env, nn_model, args, verbose=False)
+
+        else:
+            neural_network = NeuralNetwork(nfeatures, args["nn_size"]).to("cpu")
+            nn_model = TorchModel(nfeatures, network=neural_network, args=args)
+            dqn_agent = DQN(env, nn_model, args, verbose=False)
+            dqn_agent.train(seconds=None, max_steps=None, max_eps=None, last_obs=None, early_stopping=False, top=100000)
+            print(f"Trained in instance: {instance} {n_min}-{k_min}")
+            DQN.save(dqn_agent, onnx_path)
+
+        random_agent = RandomAgent()
+        instances = [(n, k) for n in range(n_min, n_max+1) for k in range(k_min, k_max+1)]
+        for n, k in instances:
+            env.reset(CompositionGraph(instance, n, k, path).start_composition())
+
+            print(f"\n----------------------------------------\n")
+
+            print(f"Runing Random Agent in instance: {instance} {n}-{k}")
+            res = self.run_instance(env, random_agent)
+            self.print_res("Random Agent: ", res)
+
+            print(f"Runing DQN Agent in instance: {instance} {n}-{k}")
+            res = self.run_instance(env, dqn_agent)
+            self.print_res("DQN Agent: ", res)
 

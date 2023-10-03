@@ -6,7 +6,13 @@
 
 ## Why MTSApy ##
 
-Because we need it
+MTSApy is a library that allows to use code of MTSA (Java) in Python.
+In this project MTSApy uses the API from the Java class DCSGR1ForPython to synthesize GR1 instances using the DCS algorithm.
+The code in python has to decide which action is the follow to expand, based on some heuristic.
+In this case the heuristics available in this repo are:
+    - Random
+    - Reinforcement Learning
+    - Ready Abstraction (TODO: Hacerla)
 
 ## What is made MTSApy for ##
 

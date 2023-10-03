@@ -32,6 +32,7 @@ class Environment:
             self.context.composition = self.context.composition.reset_from_copy()
         else:
             self.context.composition = new_composition.reset_from_copy()
+            self.info = new_composition.get_info()
         return self.actions()
 
     def get_context(self):
