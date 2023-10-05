@@ -557,7 +557,7 @@ public class FeatureBasedExplorationHeuristic<State, Action> implements Explorat
     }
 
     public static void main(String[] args) {
-        CmdLineParser cmdParser= new CmdLineParser();
+        CmdLineParser cmdParser = new CmdLineParser();
         CmdLineParser.Option fsp_path_opt = cmdParser.addStringOption('i', "file");
         CmdLineParser.Option model_path_opt = cmdParser.addStringOption('m', "model");
         CmdLineParser.Option features_path_opt = cmdParser.addStringOption('c', "features");

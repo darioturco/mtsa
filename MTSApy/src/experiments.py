@@ -5,6 +5,8 @@ from src.composition import CompositionGraph, CompositionAnalyzer
 from src.environment import Environment
 from src.agents.dqn import DQN, NeuralNetwork, TorchModel
 from src.agents.random import RandomAgent
+from src.agents.ready_abstraction import ReadyAbstraction
+from src.agents.debugging_abstraction import DebuggingAbstraction
 import cProfile
 import time
 
@@ -173,4 +175,27 @@ class TrainSmallerInstanceCheckInAll(Experiment):
             print(f"Runing DQN Agent in instance: {instance} {n}-{k}")
             res = self.run_instance(env, dqn_agent)
             self.print_res("DQN Agent: ", res)
+
+class TestRA(Experiment):
+    def __init__(self, name="Test"):
+        super().__init__(name)
+
+    def run(self, instance, n, k):
+        if "linux" in self.platform:
+            #path = "/home/dario/Documents/Tesis/Learning-Synthesis/fsp"  # For Linux
+            path = "/home/dario/Documents/Tesis/Learning-Synthesis/fsp/Blocking/ControllableFSPs/GR1Test10.lts"  # For Linux
+        else:
+            path = "F:\\UBA\\Tesis\\MTSApy\\fsp"  # For Windows
+
+        d = CompositionGraph(instance, n, k, path).start_composition()
+        context = CompositionAnalyzer(d)
+        env = Environment(context, False)
+        #agent = ReadyAbstraction(env)
+        agent = DebuggingAbstraction(env)
+
+        print(f"Runing RA Agent in instance: {instance} {n}-{k}")
+        res = self.run_instance(env, agent)
+        self.print_res("RA Agent: ", res)
+
+
 

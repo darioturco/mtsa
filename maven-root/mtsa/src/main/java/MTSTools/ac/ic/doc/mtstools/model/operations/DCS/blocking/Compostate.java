@@ -258,6 +258,10 @@ public class Compostate<State, Action> implements Comparable<Compostate<State, A
         return this.status == status;
     }
 
+    public boolean isStatusNone() {
+        return isStatus(Status.NONE);
+    }
+
     public void setLoopID(Integer loopID){
         this.loopID = loopID;
     }
@@ -421,6 +425,11 @@ public class Compostate<State, Action> implements Comparable<Compostate<State, A
             if (result = transition.getSecond().status == status) break;
         }
         return result;
+    }
+
+    public boolean hasStatusChildNone() {
+        Status status = Status.NONE;
+        return hasStatusChild(status);
     }
 
 

@@ -25,7 +25,7 @@ public class DebuggingAbstraction<State, Action> extends Abstraction<State, Acti
                 //the estimates are the first 1 or 3 chars of the action name, so it is easy to order them!
                 String characters = action.toString();
                 int priorityOfAction = characters.charAt(0);
-                if(characters.length()>=3){
+                if(characters.length() >= 3){
                     priorityOfAction = characters.charAt(0) + characters.charAt(1) + characters.charAt(2);
                 }
                 HEstimate<State, Action> estimate = new HEstimate<State, Action>(1, new HDist(priorityOfAction, 1));
