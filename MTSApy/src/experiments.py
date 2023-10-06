@@ -1,5 +1,7 @@
 import sys
+import os
 import random
+import datetime
 import numpy as np
 from src.composition import CompositionGraph, CompositionAnalyzer
 from src.environment import Environment
@@ -9,11 +11,14 @@ from src.agents.ready_abstraction import ReadyAbstraction
 from src.agents.debugging_abstraction import DebuggingAbstraction
 import cProfile
 import time
+import csv
 
 class Experiment(object):
     def __init__(self, name="Test"):
         self.name = name
         self.platform = sys.platform
+        self.BENCHMARK_PROBLEMS = ["AT", "BW", "CM", "DP", "TA", "TL"]
+        self.max_instance_size = 15
         self.seed = 14
         random.seed(self.seed)
         np.random.seed(self.seed)
@@ -21,6 +26,12 @@ class Experiment(object):
 
     #def run(self):
     #    raise NotImplementedError
+
+    def all_instances_iterator(self):
+        for instance in self.BENCHMARK_PROBLEMS:
+            for n in range(2, self.max_instance_size + 1):
+                for k in range(2, self.max_instance_size + 1):
+                    yield instance, n, k
 
     def run_instance(self, env, agent):
         state = env.reset()
@@ -43,7 +54,7 @@ class Experiment(object):
         print(title)
         print(f' Syntesis Time: {res["synthesis time(ms)"]}ms')  # Time used in java synthesis
         print(f' Expanded Transactions: {res["expanded transitions"]}')  # Amount of time step was called
-        print(f' Expanded states: {res["expanded states"]}')  # Amount of states in the graph
+        print(f' Expanded states: {res["expanded states"]}\n')  # Amount of states in the graph
 
     # Original parameters:
     # problems='AT-BW-CM-DP-TA-TL', exp_path='my experiment', step_2_results='step_2_results.csv', step_3_results='step_3_results.csv', desc='main',
@@ -176,26 +187,50 @@ class TrainSmallerInstanceCheckInAll(Experiment):
             res = self.run_instance(env, dqn_agent)
             self.print_res("DQN Agent: ", res)
 
-class TestRA(Experiment):
+class RunRandomInAllInstances(Experiment):
     def __init__(self, name="Test"):
         super().__init__(name)
 
-    def run(self, instance, n, k):
+    def save_to_csv(self, path, info):
+        header_list = list(info.keys())
+        new_file = False
+        if not os.path.isfile(path):
+            new_file = True
+
+        with open(path, 'a') as f:
+            dictwriter = csv.DictWriter(f, fieldnames=header_list)
+            if new_file:
+                dictwriter.writerow(dict(zip(header_list, header_list)))
+
+            dictwriter.writerow(info)
+            f.close()
+
+
+    def run(self):
         if "linux" in self.platform:
-            #path = "/home/dario/Documents/Tesis/Learning-Synthesis/fsp"  # For Linux
-            path = "/home/dario/Documents/Tesis/Learning-Synthesis/fsp/Blocking/ControllableFSPs/GR1Test10.lts"  # For Linux
+            path = "/home/dario/Documents/Tesis/Learning-Synthesis/fsp"  # For Linux
         else:
             path = "F:\\UBA\\Tesis\\MTSApy\\fsp"  # For Windows
 
-        d = CompositionGraph(instance, n, k, path).start_composition()
-        context = CompositionAnalyzer(d)
-        env = Environment(context, False)
-        #agent = ReadyAbstraction(env)
-        agent = DebuggingAbstraction(env)
+        agent = RandomAgent(None)
+        for instance, n, k in self.all_instances_iterator():
 
-        print(f"Runing RA Agent in instance: {instance} {n}-{k}")
-        res = self.run_instance(env, agent)
-        self.print_res("RA Agent: ", res)
+            d = CompositionGraph(instance, n, k, path).start_composition()
+            context = CompositionAnalyzer(d)
+            env = Environment(context, False)
+
+
+            print(f"Runing Random Agent in instance: {instance} {n}-{k}")
+            print(f"Starting at: {datetime.datetime.now()}")
+            res = self.run_instance(env, agent)
+            self.print_res("Random Agent: ", res)
+
+            # Mover a una funcion general que guarde los resultados en un csv
+            csv_path = f"./results/csv/random.csv"
+            info = {"Instance": instance, "N": n, "K": k, "Transitions": res["expanded transitions"], "States": res["expanded states"], "Time(ms)": res["synthesis time(ms)"]}
+            self.save_to_csv(csv_path, info)
+
+
 
 
 

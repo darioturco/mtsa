@@ -55,13 +55,19 @@ Monitor(Id=0) = (eat[Id] -> Done),
 
 ||Plant = (forall [p:Phil] (Philosopher(p) || Fork(p) || Monitor(p))).
 
+set Take = {take[0][0], take[0][1], take[1][1], take[1][2], take[2][2], take[2][3], take[3][3], take[3][4], take[4][4], take[4][5], take[5][5], take[5][6], take[6][6], take[6][7], take[7][7], take[7][8], take[8][8], take[8][9], take[9][9], take[9][0]}
+set Release = {release[0][0], release[0][1], release[1][1], release[1][2], release[2][2], release[2][3], release[3][3], release[3][4], release[4][4], release[4][5], release[5][5], release[5][6], release[6][6], release[6][7], release[7][7], release[7][8], release[8][8], release[8][9], release[9][9], release[9][0]}
+set Allactions = {think[p:Phil], step[p:Phil], eat[p:Phil], eat.all,
+                    Take, Release}
+fluent F = <eat.all, Allactions\{eat.all}>
+assert A = F
 controllerSpec Goal = {
-  controllable = {take[Phil][Phil]}
-  marking = {eat.all}
-  nonblocking
+  controllable = {Take}
+  liveness = {A}
 }
+assert Check = ([]<>A)
 
-monolithicDirector ||MonolithicController = Plant~{Goal}.
+controller ||MonolithicController = Plant~{Goal}.
 
 heuristic ||DirectedController = Plant~{Goal}.
 

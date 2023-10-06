@@ -9,6 +9,7 @@ import MTSTools.ac.ic.doc.mtstools.model.impl.LTSImpl;
 import MTSTools.ac.ic.doc.mtstools.model.impl.MarkedLTSImpl;
 import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.DirectedControllerSynthesis;
 import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.abstraction.*;
+import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.nonblocking.DirectedControllerSynthesisNonBlocking;
 import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.nonblocking.ExplorationHeuristic;
 import jargs.gnu.CmdLineParser;
 import ltsa.dispatcher.TransitionSystemDispatcher;
@@ -40,6 +41,9 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
 
     /** Constant used to represent an undefined distance to the goal. */
     public static final int UNDEF = -1;
+
+    /** Indicates the maximun number of transition to expand */
+    public static int expansion_budget = -1;
 
     /** Indicates the abstraction to use in order to compute the heuristic. */
     public static AbstractionMode mode = AbstractionMode.Ready;
@@ -181,20 +185,33 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
         stratX = new HashMap<>();
     }
 
+    public static void setAbstractionMode(String heuristic){
+        if(heuristic != null) {
+            if(heuristic.equals("Debugging"))
+                mode = AbstractionMode.Debugging;
+            if(heuristic.equals("Ready"))
+                mode = AbstractionMode.Ready;
+            if(heuristic.equals("Monolitic"))
+                mode = AbstractionMode.Monotonic;
+        }else{
+            mode = AbstractionMode.Debugging;
+        }
+    }
 
     public Abstraction<State, Action> get_abstraction(){
         // TODO Complete this function and test it
         // FIXME, this is only done here until it can be chosen from the FSP instead of hardcoded
         Abstraction<State, Action> res;
         //mode = AbstractionMode.Ready;
+
+        //return new DebuggingAbstraction<>();
         if(mode == AbstractionMode.Monotonic){
             return new MonotonicAbstraction<>(this.ltss, this.defaultTargets, this.base, this.alphabet);
         }else{
             return new ReadyAbstraction<>(this.ltss, this.defaultTargets, this.alphabet);
         }
 
-        //res = new DebuggingAbstraction<>();
-        //return res;
+
     }
 
     /** This method starts the directed synthesis of a controller.
@@ -227,6 +244,12 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
             Compostate<State, Action> next = open.remove();
             evaluate(next);
             doOpen(next);
+
+            //expansion_budget = -1 significa que no se limita la cantidad de expansiones
+            if(expansion_budget==0) {
+                return null;
+            }
+            else if (expansion_budget>0) expansion_budget--;
         }
 
         assertFalse("Finished because open was empty, shouldn't be the case", initial.isStatus(Status.NONE));
@@ -1358,15 +1381,28 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
     }
 
     public static void main(String[] args) {
+        args = new String[5];
+        args[0] = "java";
+        args[1] = "-i";
+        args[2] = "/home/dario/Documents/Tesis/mtsa/MTSApy/fsp/Blocking/ControllableFSPs/GR1Test10.lts";
+        args[3] = "-h";
+        args[4] = "ready"; // Can be {monolitic, ready, dummy, bfs, rl, debugging} by default is debugging
+
+        //args[2] = "fsp_path";
+        //args[2] = "fsp_path";
+        //args[2] = "fsp_path";
+
         CmdLineParser cmdParser= new CmdLineParser();
         CmdLineParser.Option fsp_path_opt = cmdParser.addStringOption('i', "file");
+        CmdLineParser.Option heuristic_opt = cmdParser.addStringOption('h', "heuristic");
         CmdLineParser.Option model_path_opt = cmdParser.addStringOption('m', "model");
         CmdLineParser.Option features_path_opt = cmdParser.addStringOption('c', "features");
         CmdLineParser.Option labels_path_opt = cmdParser.addStringOption('l', "labels");
-
         CmdLineParser.Option max_frontier_opt = cmdParser.addIntegerOption('f', "max_frontier");
         CmdLineParser.Option expansion_budget = cmdParser.addIntegerOption('e',"expbud");
         CmdLineParser.Option debug_opt = cmdParser.addBooleanOption('d', "debug");
+
+
 
         try {
             cmdParser.parse(args);
@@ -1377,6 +1413,7 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
 
         String fsp_path = (String)cmdParser.getOptionValue(fsp_path_opt);
         String model_path = (String)cmdParser.getOptionValue(model_path_opt);
+        String heuristic = (String)cmdParser.getOptionValue(heuristic_opt);
         String features_path = (String)cmdParser.getOptionValue(features_path_opt);
         String labels_path = (String)cmdParser.getOptionValue(labels_path_opt);
 
@@ -1386,58 +1423,33 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
         boolean debugging = b != null && b;
 
         try {
-            // Quiero remplazar esto por blocking como esta en los test
-
-
-
-            //String FSP_Path = ltsFile.toString();
             Pair<CompositeState, LTSOutput> c = FeatureBasedExplorationHeuristic.compileFSP(fsp_path);
+            if(expansionBudgetValue!=null) DirectedControllerSynthesisBlocking.expansion_budget = expansionBudgetValue;
+            DirectedControllerSynthesisBlocking.setAbstractionMode(heuristic);
             CompositeState compositeState = c.getFirst();
             LTSOutput output = c.getSecond();
             ControllerGoal<String> goal = compositeState.goal;
 
-            //if(TransitionSystemDispatcher.checkGuaranteesAndAssumptions(goal, output)){
-            //    return;
-            //}
+            if(TransitionSystemDispatcher.checkGuaranteesAndAssumptions(goal, output)){
+                return;
+            }
 
             Pair<List<LTS<Long, String>>, Set<String>> p = TransitionSystemDispatcher.getLTSs(compositeState);
             List<LTS<Long, String>> ltss = p.getFirst();
             Set<String> actions = p.getSecond();
 
-            FormulaToMarkedLTS ftm = new FormulaToMarkedLTS();
             Pair<HashMap<Integer, Integer>, HashMap<Integer, Integer>> pairGuaranteesAndAssumptions = TransitionSystemDispatcher.getGuaranteesAndAssumptions(goal, ltss, actions, output);
             HashMap<Integer, Integer> guarantees =  pairGuaranteesAndAssumptions.getFirst();
             HashMap<Integer, Integer> assumptions = pairGuaranteesAndAssumptions.getSecond();
 
-            //if(TransitionSystemDispatcher.filterActions(compositeState, ltss, assumptions, guarantees, output)){
-            //    return;
-            //}
+            if(TransitionSystemDispatcher.filterActions(compositeState, ltss, assumptions, guarantees, output)){
+                return;
+            }
 
-            // Obtener la heuristica a usar
-            //ExplorationHeuristic<> heuristica = new DebuggingAbstraction<>();
-
-            //DirectedControllerSynthesisBlocking.mode = Setea el mode
             DirectedControllerSynthesisBlocking<Long,String> dcs = new DirectedControllerSynthesisBlocking<>();
             dcs.synthesize(ltss, goal.getControllableActions(), goal.isReachability(), guarantees, assumptions);
 
-
-
-
-            //Pair<CompositeState, LTSOutput> c = compileFSP(fsp_path);
-            //if(expansionBudgetValue!=null) DirectedControllerSynthesisNonBlocking.expansion_budget = expansionBudgetValue;
-
-            //DirectedControllerSynthesisNonBlocking.mode = DirectedControllerSynthesisNonBlocking.HeuristicMode.TrainedAgent;
-            //MTSTools.ac.ic.doc.mtstools.model.operations.DCS.nonblocking.DCSFeatures<Long, String> featureMaker = new DCSFeatures<>(features_path, labels_path, max_frontier, c.getFirst());
-            //MTSTools.ac.ic.doc.mtstools.model.operations.DCS.nonblocking.FeatureBasedExplorationHeuristic<Long, String> heuristic = new MTSTools.ac.ic.doc.mtstools.model.operations.DCS.nonblocking.FeatureBasedExplorationHeuristic<>(model_path, featureMaker, debugging);
-
-            /*TransitionSystemDispatcher.hcs(heuristic, c.getFirst(), new LTSOutput() {
-                public void out(String str) {System.out.print(str);}
-                public void outln(String str) { System.out.println(str);}
-                public void clearOutput() {}
-            }, false);
-            */
-
-
+            System.out.println(dcs.statistics);
         } catch (OutOfMemoryError e){
             System.out.println("OutOfMem error during exploration");
         }

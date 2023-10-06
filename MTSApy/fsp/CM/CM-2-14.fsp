@@ -57,13 +57,18 @@ Cat(Cid=0) = Next[0],
 ||Plant = (
   forall [m:0..Mice-1] Mouse(m) || forall [c:0..Cats-1] Cat(c)).
 
+
+set Allactions = {safe, cat.turn, mouse.turn, cat[0..Cats-1].move[b:Area],
+ mouse[0..Mice-1].move[b:Area]}
+fluent F = <safe, Allactions\{safe}>
+assert A = F
 controllerSpec Goal = {
   controllable = {mouse[0..Mice-1].move[Area]}
-  marking = {safe}
-  nonblocking
+  liveness = {A}
 }
+assert Check = ([]<>A)
 
-monolithicDirector ||MonolithicController = Plant~{Goal}.
+controller ||MonolithicController = Plant~{Goal}.
 
 heuristic ||DirectedController = Plant~{Goal}.
 

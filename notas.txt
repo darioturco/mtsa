@@ -6,3 +6,10 @@ Como compilar el jar:
 	
 	te lo deja en la carpeta: /home/dario/Documents/Tesis/mtsa/maven-root/mtsa/target
 	con el nombre "mtsa-1.0-SNAPSHOT.jar"
+	
+Como sacar el open Queue de DCS Blocking:
+
+	Antes que nada que ready abstraction funcione bien y pase todos los test.
+	Despues hacer la clase OpenSetExplorationHeuristic
+
+	

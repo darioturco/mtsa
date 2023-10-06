@@ -67,13 +67,19 @@ ResponseMonitor = (
   forall [h:Height] HeightMonitor(h) ||
   forall [p:Plane]  Airplane(p) ).
 
+
+set Allactions = {requestLand[p:Plane], descend[p:Plane][h:Height],
+ extendFlight[p:Plane], approach[p:Plane], land[p:Plane], control.all,
+ air.crash[h:Height], land.crash}
+fluent F = <control.all, Allactions\{control.all}>
+assert A = F
 controllerSpec Goal = {
   controllable = {descend[Plane][Height], approach[Plane]}
-  marking = {control.all}
-  nonblocking
+  liveness = {A}
 }
+assert Check = ([]<>A)
 
-monolithicDirector ||MonolithicController = Plant~{Goal}.
+controller ||MonolithicController = Plant~{Goal}.
 
 heuristic ||DirectedController = Plant~{Goal}.
 

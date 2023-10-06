@@ -66,13 +66,18 @@ Document = Count[0],
 
 ||Plant = (Document || forall [t:Team] Crew(t)).
 
+
+set Allactions = {approve, refuse, assign[t:Team], accept[t:Team],
+ reject[t:Team][s:Step]}
+fluent F = <{refuse, approve}, Allactions\{refuse, approve}>
+assert A = F
 controllerSpec Goal = {
   controllable = {assign[Team], refuse, approve}
-  marking = {refuse, approve}
-  nonblocking
+  liveness = {A}
 }
+assert Check = ([]<>A)
 
-monolithicDirector ||MonolithicController = Plant~{Goal}.
+controller ||MonolithicController = Plant~{Goal}.
 
 heuristic ||DirectedController = Plant~{Goal}.
 

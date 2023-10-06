@@ -109,13 +109,20 @@ AgencyMonitor = Disallow[0],
   Agency || AgencyMonitor ||
   forall [a:Amenity] (Service(a) || ServiceMonitor(a)) ).
 
+
+set Allactions = {agency.request,  agency.fail, agency.succ, query[a:Amenity],
+ unavailable[a:Amenity], query.fail[a:Amenity], available[a:Amenity], query.succ[a:Amenity],
+ steps[a:Amenity][s:Step], select[a:Amenity], committed[a:Amenity], uncommitted[a:Amenity],
+ cancel[a:Amenity], purchase[a:Amenity], purchase.succ[a:Amenity], purchase.fail[a:Amenity]}
+fluent F = <{agency.succ, agency.fail}, Allactions\{agency.succ, agency.fail}>
+assert A = F
 controllerSpec Goal = {
   controllable = {cancel[Amenity],purchase[Amenity], agency.succ, agency.fail}
-  marking = {agency.succ, agency.fail}
-  nonblocking
+  liveness = {A}
 }
+assert Check = ([]<>A)
 
-monolithicDirector ||MonolithicController = Plant~{Goal}.
+controller ||MonolithicController = Plant~{Goal}.
 
 heuristic ||DirectedController = Plant~{Goal}.
 

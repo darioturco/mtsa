@@ -18,6 +18,6 @@ if __name__ == "__main__":
 
     #TrainSmallInstanceCheckBigInstance().run("TA", 2, 2, 15, 15, use_saved_agent=False)
     #TrainSmallerInstanceCheckInAll().run("TA", 2, 2, 3, 3, use_saved_agent=False)
-    TestRA().run("Custom", 2, 2)
+    RunRandomInAllInstances().run()
 
 
