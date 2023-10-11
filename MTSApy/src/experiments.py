@@ -17,9 +17,10 @@ class Experiment(object):
     def __init__(self, name="Test"):
         self.name = name
         self.platform = sys.platform
-        self.BENCHMARK_PROBLEMS = ["AT", "BW", "CM", "DP", "TA", "TL"]
+        self.BENCHMARK_PROBLEMS = ["AT", "BW", "DP", "TA", "TL", "CM"]
+        #self.BENCHMARK_PROBLEMS = ["DP", "TA", "TL"]
         self.max_instance_size = 15
-        self.seed = 14
+        self.seed = 1
         random.seed(self.seed)
         np.random.seed(self.seed)
 
@@ -33,19 +34,23 @@ class Experiment(object):
                 for k in range(2, self.max_instance_size + 1):
                     yield instance, n, k
 
-    def run_instance(self, env, agent):
+    def run_instance(self, env, agent, budget=-1):
+        if budget == -1:
+            budget = float("inf")
         state = env.reset()
         finish = False
         rewards = []
+
         i = 0
 
-        while not finish:
+        while not finish and i <= budget:
             idx = agent.get_action(state, 0, env)
             state, reward, finish, info = env.step(idx)
             rewards.append(reward)
             i = i + 1
 
         res = env.get_info()
+        res["failed"] = not finish
 
         env.close()
         return res
@@ -70,14 +75,15 @@ class Experiment(object):
                 "nesterov": True,
                 "weight_decay": 1e-4,
                 "first_epsilon": 1.0,
-                "buffer_size": 10000,
-                "n_step": 5,           # 1
-                "last_epsilon": 0.01,
+                "buffer_size": 10,
+                "n_step": 1,
+                "last_epsilon": 0.001,       #0.01
                 "epsilon_decay_steps": 250000,
                 "exp_replay": True,
                 "target_q": False,
-                "reset_target_freq": 10000,
-                "batch_size": 10
+                "reset_target_freq": 10000,  # 10000
+                "batch_size": 10,
+                "max_eps": 200000 # 100000
                 }
 
 class TestTrainInstance(Experiment):
@@ -95,7 +101,7 @@ class TestTrainInstance(Experiment):
         neural_network = NeuralNetwork(nfeatures, args["nn_size"]).to("cpu")
         nn_model = TorchModel(nfeatures, network=neural_network, args=args)
         agent = DQN(env, nn_model, args, save_file=None, verbose=False)
-        agent.train(seconds=None, max_steps=None, max_eps=None, last_obs=None, early_stopping=False, top=10)
+        agent.train(seconds=None, max_steps=None, max_eps=args["max_eps"], last_obs=None, early_stopping=False)
         print("Trained :)\n")
 
         res = self.run_instance(env, agent)
@@ -109,7 +115,7 @@ class TrainSmallInstanceCheckBigInstance(Experiment):
 
     def run(self, instance, n_train, k_train, n_test, k_test, use_saved_agent=False):
         if "linux" in self.platform:
-            path = "/home/dario/Documents/Tesis/Learning-Synthesis/fsp"  # For Linux
+            path = "/home/dario/Documents/Tesis/mtsa/MTSApy/fsp"  # For Linux
         else:
             path = "F:\\UBA\\Tesis\\MTSApy\\fsp"  # For Windows
 
@@ -128,7 +134,7 @@ class TrainSmallInstanceCheckBigInstance(Experiment):
             neural_network = NeuralNetwork(nfeatures, args["nn_size"]).to("cpu")
             nn_model = TorchModel(nfeatures, network=neural_network, args=args)
             dqn_agent = DQN(env, nn_model, args, verbose=False)
-            dqn_agent.train(seconds=None, max_steps=None, max_eps=None, last_obs=None, early_stopping=False, top=1000)
+            dqn_agent.train(seconds=None, max_steps=None, max_eps=args["max_eps"], early_stopping=False, onnx_path=onnx_path)
             print(f"Trained in instance: {instance} {n_train}-{k_train}")
             DQN.save(dqn_agent, onnx_path)
 
@@ -168,7 +174,7 @@ class TrainSmallerInstanceCheckInAll(Experiment):
             neural_network = NeuralNetwork(nfeatures, args["nn_size"]).to("cpu")
             nn_model = TorchModel(nfeatures, network=neural_network, args=args)
             dqn_agent = DQN(env, nn_model, args, verbose=False)
-            dqn_agent.train(seconds=None, max_steps=None, max_eps=None, last_obs=None, early_stopping=False, top=100000)
+            dqn_agent.train(seconds=None, max_steps=None, max_eps=args["max_eps"], early_stopping=False, onnx_path=onnx_path)
             print(f"Trained in instance: {instance} {n_min}-{k_min}")
             DQN.save(dqn_agent, onnx_path)
 
@@ -205,29 +211,78 @@ class RunRandomInAllInstances(Experiment):
             dictwriter.writerow(info)
             f.close()
 
+    def init_instance_res(self):
+        return {"expanded transitions max": -1,
+                "expanded states max": -1,
+                "synthesis time(max)": -1,
+                "expanded transitions min": 9999999,
+                "expanded states min": 9999999,
+                "synthesis time(min)": 9999999,
+                "expanded transitions mean": 0,
+                "expanded states mean": 0,
+                "synthesis time(mean)": 0,
+                "failed": 0}
 
-    def run(self):
+    def update_instance_res(self, instance_res, res):
+        instance_res["expanded transitions min"] = min(res["expanded transitions"],
+                                                       instance_res["expanded transitions min"])
+        instance_res["expanded states min"] = min(res["expanded states"], instance_res["expanded states min"])
+        instance_res["synthesis time(min)"] = min(res["synthesis time(ms)"], instance_res["synthesis time(min)"])
+        instance_res["expanded transitions max"] = max(res["expanded transitions"],
+                                                       instance_res["expanded transitions max"])
+        instance_res["expanded states max"] = max(res["expanded states"], instance_res["expanded states max"])
+        instance_res["synthesis time(max)"] = max(res["synthesis time(ms)"], instance_res["synthesis time(max)"])
+        instance_res["expanded transitions mean"] += res["expanded transitions"]
+        instance_res["expanded states mean"] += res["expanded states"]
+        instance_res["synthesis time(mean)"] += res["synthesis time(ms)"]
+        instance_res["failed"] += int(res["failed"])
+
+    def run(self, budget, repetitions):
+        # La idea es correrlo con un budget de 5000 y con 100 repeticiones por instancia
         if "linux" in self.platform:
             path = "/home/dario/Documents/Tesis/Learning-Synthesis/fsp"  # For Linux
         else:
             path = "F:\\UBA\\Tesis\\MTSApy\\fsp"  # For Windows
 
         agent = RandomAgent(None)
+
+        last_instance = ""
+        failed = False
         for instance, n, k in self.all_instances_iterator():
+            if last_instance != instance:
+                failed = False
 
-            d = CompositionGraph(instance, n, k, path).start_composition()
-            context = CompositionAnalyzer(d)
-            env = Environment(context, False)
+            instance_res = self.init_instance_res()
+            if failed:
+                instance_res = self.init_instance_res()
+                instance_res["failed"] = repetitions
 
+            else:
+                for _ in range(repetitions):
+                    d = CompositionGraph(instance, n, k, path).start_composition()
+                    context = CompositionAnalyzer(d)
+                    env = Environment(context, False)
 
-            print(f"Runing Random Agent in instance: {instance} {n}-{k}")
-            print(f"Starting at: {datetime.datetime.now()}")
-            res = self.run_instance(env, agent)
-            self.print_res("Random Agent: ", res)
+                    print(f"Runing Random Agent in instance: {instance} {n}-{k}")
+                    # print(f"Starting at: {datetime.datetime.now()}")
+                    res = self.run_instance(env, agent, budget)
+                    self.print_res("Random Agent: ", res)
+                    self.update_instance_res(instance_res, res)
 
-            # Mover a una funcion general que guarde los resultados en un csv
+                if instance_res["failed"] >= repetitions - 1:
+                    failed = True
+
+            instance_res["expanded transitions mean"] /= repetitions
+            instance_res["expanded states mean"] /= repetitions
+            instance_res["synthesis time(mean)"] /= repetitions
+
             csv_path = f"./results/csv/random.csv"
-            info = {"Instance": instance, "N": n, "K": k, "Transitions": res["expanded transitions"], "States": res["expanded states"], "Time(ms)": res["synthesis time(ms)"]}
+            info = {"Instance": instance, "N": n, "K": k,
+                    "Transitions (min)": instance_res["expanded transitions min"], "States (min)": instance_res["expanded states min"], "Time(min)": instance_res["synthesis time(min)"],
+                    "Transitions (max)": instance_res["expanded transitions max"], "States (max)": instance_res["expanded states max"], "Time(max)": instance_res["synthesis time(max)"],
+                    "Transitions (mean)": instance_res["expanded transitions mean"], "States (mean)": instance_res["expanded states mean"], "Time(mean)": instance_res["synthesis time(mean)"],
+                    "Failed": instance_res["failed"]}
+            last_instance = instance
             self.save_to_csv(csv_path, info)
 
 

@@ -161,6 +161,7 @@ class CompositionAnalyzer:
 
     def marked_state(self, transition):
         """Whether s and s ′ ∈ M E p ."""
+        # Le falta una feature a esta funcion (deberia devolver una lista de 2 elementos)
         return [float(transition.childMarked)]
 
     def current_phase(self, transition):
@@ -181,7 +182,6 @@ class CompositionAnalyzer:
         return res
 
     def uncontrollable_neighborhood(self, transition):
-        # warnings.warn("Chequear que este bien")
         return [float(transition.state.uncontrollableUnexploredTransitions > 0),
                 float(transition.state.uncontrollableTransitions > 0),
                 float(transition.child is None or transition.child.uncontrollableUnexploredTransitions > 0),
@@ -189,8 +189,7 @@ class CompositionAnalyzer:
                 ]
 
     def explored_state_child(self, transition):
-        aux = self.composition.out_edges(transition.state)
-        f1 = float(len(aux) != transition.state.unexploredTransitions)
+        f1 = float(len(self.composition.out_edges(transition.state)) != transition.state.unexploredTransitions)
         f2 = float(transition.child is not None and len(self.composition.out_edges(transition.child)) != transition.state.unexploredTransitions)
         return [f1, f2]
 
@@ -199,10 +198,8 @@ class CompositionAnalyzer:
 
     def remove_indices(self, transition_label: str):
         res = ""
-
         for c in transition_label:
             if not c.isdigit(): res += c
-
         return res
 
     def get_transition_features_size(self):
@@ -219,3 +216,6 @@ class CompositionAnalyzer:
         if self.nfeatures is None:
             self.nfeatures = len(res)
         return res
+
+    def compute_feature_of_list(self, transactions):
+        return [self.compute_features(t) for t in transactions]

@@ -1,27 +1,9 @@
-"""
-from src.agents import Agent
-
-class DQN(Agent):
-
-    def __init__(self, env):
-        super().__init__(env)
-        # Guardar el resto de parametros
-        # Initialize all
-
-    def train(self, epochs):
-
-
-    def predict(self, state):
-        pass
-"""
-
 import torch
 import torch.nn as nn
-import json
 import time
 import numpy as np
-import os
 import onnx
+import csv
 
 from src.agents.replay_buffer import ReplayBuffer
 from src.agents.agent import Agent
@@ -63,10 +45,6 @@ class TorchModel(Model):
 
         self.has_learned_something = False
         self.losses = []
-
-        # print("Using", self.device, "device")
-        # print(self.model)
-        # print("Learning rate:", args["learning_rate"])
 
     def eval_batch(self, ss):
         return np.array([self.eval(s) for s in ss])
@@ -178,6 +156,7 @@ class DQN(Agent):
         self.best_training_perf = {}
         self.last_best = None
         self.converged = False
+        self.freq_save = 100
 
     def initializeBuffer(self):
         """ Initialize replay buffer uniformly with experiences """
@@ -194,24 +173,32 @@ class DQN(Agent):
 
         print("Done.")
 
-    def train(self, seconds=None, max_steps=None, max_eps=None, last_obs=None, early_stopping=False, top=1000):
+    def train(self, seconds=None, max_steps=None, max_eps=100000, early_stopping=False, onnx_path=None):
         self.initializeBuffer()
         if self.training_start is None:
             self.training_start = time.time()
             self.last_best = 0
 
-        steps, eps = 0, 0
+        instance, n, k = self.env.get_instance_info()
+        csv_path = f"./results/training/{instance}-{n}-{k}-partial.csv"
+        saved = False
+
+        steps, eps = 1, 1
         epsilon_step = (self.args["first_epsilon"] - self.args["last_epsilon"])
         epsilon_step /= self.args["epsilon_decay_steps"]
 
-        obs = self.env.reset() if (last_obs is None) else last_obs
+        obs = self.env.reset()
 
+        rewards = 0
+        all_rewards = []
         last_steps = []
-        while top:  # What is top used for?
+
+        while not (max_eps is not None and eps >= max_eps):
             a = self.get_action(obs, self.epsilon)
             last_steps.append(obs[a])
 
             obs2, reward, done, info = self.env.step(a)
+            rewards += reward
 
             if self.args["exp_replay"]:
                 if done:
@@ -220,19 +207,20 @@ class DQN(Agent):
                     last_steps = []
                 else:
                     if len(last_steps) >= self.args["n_step"]:
-                        self.buffer.add(self.env.context.compute_features(last_steps[0]), -self.args["n_step"], obs2)
+                        aux = self.env.context.compute_feature_of_list(obs2)
+                        self.buffer.add(self.env.context.compute_features(last_steps[0]), -self.args["n_step"], aux)
                     last_steps = last_steps[len(last_steps) - self.args["n_step"] + 1:]
                 self.batch_update()
             else:
                 self.update(obs, a, reward, obs2)
 
             if done:
+                eps += 1
+
+                all_rewards.append(-rewards)
+                print(f"Epsode: {eps} - Acumulated Reward: {-rewards} - Acumulated: {np.mean(all_rewards[-32:])} - Epsilon: {self.epsilon}")
+                rewards = 0
                 instance = (self.env.info["problem"], self.env.info["n"], self.env.info["k"])
-                if instance not in self.best_training_perf.keys() or \
-                        info["expanded transitions"] < self.best_training_perf[instance]:
-                    self.best_training_perf[instance] = info["expanded transitions"]
-                    print(f"New best at instance {str(instance)}! {self.best_training_perf[instance]} Steps: {self.training_steps}")
-                    self.last_best = self.training_steps
                 info.update({
                     "training time": time.time() - self.training_start,
                     "training steps": self.training_steps,
@@ -244,18 +232,25 @@ class DQN(Agent):
             else:
                 obs = obs2
 
-            #if self.training_steps % save_freq == 0 and results_path is not None:
-            #    self.save(self.env.info, path=results_path)
+            if eps % self.freq_save == 0 and not saved and onnx_path is not None:
+                if len(all_rewards) > 1000:
+                    all_rewards = all_rewards[100:]
 
+                saved = True
+                DQN.save(self, onnx_path, partial=True)
 
-            if self.args["target_q"] and self.training_steps % self.args["reset_target_freq"] == 0:
-                if self.verbose:
-                    normalize_reward=False
+                with open(csv_path, 'a') as f:
+                    writer = csv.writer(f)
+                    for i in range(self.freq_save-1):
+                        writer.writerow([steps, all_rewards[-self.freq_save+1+i]])
+
+                print("Partial Saved!")
+            else:
+                if eps % self.freq_save != 0:
+                    saved = False
+
             steps += 1
             self.training_steps += 1
-            if done:
-                top -= 1
-                eps += 1
 
             if seconds is not None and time.time() - self.training_start > seconds:
                 break
@@ -276,9 +271,6 @@ class DQN(Agent):
 
             if self.epsilon > self.args["last_epsilon"] + 1e-10:
                 self.epsilon -= epsilon_step
-
-        #if results_path is not None and save_at_end:
-        #    self.save(self.env.info, results_path)
 
         self.trained = True
         return obs
@@ -319,9 +311,10 @@ class DQN(Agent):
 
 
     @staticmethod
-    def save(agent, path):
+    def save(agent, path, partial=False):
+        if partial:
+            path = path[:-5] + f"-partial.onnx"
         agent.model.save(path)
-        # Todo: guardar los parametros(args) y los atributos en un txt
 
 
 

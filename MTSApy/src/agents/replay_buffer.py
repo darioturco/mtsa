@@ -38,6 +38,8 @@ class ReplayBuffer(object):
     def __repr__(self):
         return " - ".join([str(data[:2]) for data in self._storage])
 
+    """
+    # Esta funcion fallaba si n_step era igual a 1 (quedo vieja, BORRAR)
     def get_experience_from_random_policy(self, total_steps, nstep=1):
         states = []
         last_steps = []
@@ -63,7 +65,6 @@ class ReplayBuffer(object):
                 states.append((self._env.context.compute_features(last_steps[j]), -len(last_steps) + j, None))
 
         return states
-
     """
     def get_experience_from_random_policy(self, total_steps, nstep=1):
         # A random policy is run for total_steps steps, saving the observations in the format of the replay buffer
@@ -79,14 +80,16 @@ class ReplayBuffer(object):
             obs2, reward, done, info = self._env.step(action)
 
             if done:
+
                 for j in range(len(last_steps)):
-                    states.append((last_steps[j], -len(last_steps) + j, None))
+                    states.append((self._env.context.compute_features(last_steps[j]), -len(last_steps) + j, None))
                 last_steps = []
                 obs = self._env.reset()
             else:
                 if len(last_steps) >= nstep:
-                    states.append((last_steps[0], -nstep, obs2))
+                    aux = self._env.context.compute_feature_of_list(obs2)
+                    states.append((self._env.context.compute_features(last_steps[0]), -nstep, aux))
                 last_steps = last_steps[len(last_steps) - nstep + 1:]
                 obs = obs2
             steps += 1
-        return states"""
+        return states

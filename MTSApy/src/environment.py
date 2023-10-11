@@ -74,5 +74,9 @@ class Environment:
     def actions_to_features(self, actions):
         return [self.context.compute_features(action) for action in actions]
 
+    def get_instance_info(self):
+        info = self.context.composition.get_info()
+        return info["problem"], info["n"], info["k"]
+
     def close(self):
         pass
