@@ -1381,12 +1381,17 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
     }
 
     public static void main(String[] args) {
-        args = new String[5];
-        args[0] = "java";
-        args[1] = "-i";
-        args[2] = "/home/dario/Documents/Tesis/mtsa/MTSApy/fsp/Blocking/ControllableFSPs/GR1Test10.lts";
-        args[3] = "-h";
-        args[4] = "ready"; // Can be {monolitic, ready, dummy, bfs, rl, debugging} by default is debugging
+        //args = new String[7];
+        //args[0] = "java";
+        //args[1] = "-h";
+        //args[2] = "Ready";
+        //args[3] = "-i";
+        //args[4] = "F:\\UBA\\Tesis\\mtsa\\MTSApy\\fsp/DP/DP-6-9.fsp"; // Can be {monolitic, ready, dummy, bfs, rl, debugging} by default is debugging
+        //"/home/dario/Documents/Tesis/mtsa/MTSApy/fsp/Blocking/ControllableFSPs/GR1Test10.lts";
+        //args[5] = "-e";
+        //args[6] = "5000";
+
+        // -h Ready -i F:\UBA\Tesis\mtsa\MTSApy\fsp/TL/TL-2-2.fsp -e 5000
 
         //args[2] = "fsp_path";
         //args[2] = "fsp_path";

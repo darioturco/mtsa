@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 import time
 import numpy as np
-import onnx
 import csv
 
 from src.agents.replay_buffer import ReplayBuffer
@@ -68,7 +67,6 @@ class TorchModel(Model):
         return self.batch_update(np.array([s]), np.array([value]))
 
     def batch_update(self, ss, values):
-
         ss = torch.tensor(ss).to(self.device)
         values = torch.tensor(values, dtype=torch.float, device=self.device).reshape(len(ss), 1)
 
@@ -94,24 +92,13 @@ class TorchModel(Model):
         return avg_loss
 
     def save(self, path):
-        x = torch.randn(1, self.nfeatures, device=self.device)
-        torch.onnx.export(self.model,
-                          x,
-                          path,
-                          export_params=True,
-                          opset_version=10,
-                          do_constant_folding=True,
-                          input_names=['X'],
-                          output_names=['output'],
-                          dynamic_axes={'X': {0: 'batch_size'},
-                                        'output': {0: 'batch_size'}}
-                          )
+        torch.save(self.model, path)
     @classmethod
     def load(cls, nfeatures, path, args):
-        network = onnx.load(path)
-        from onnx2pytorch import ConvertModel
-        network = ConvertModel(network)
-        return cls(nfeatures, network, args)
+        network = torch.load(path)
+        new_model = cls(nfeatures, network, args)
+        new_model.has_learned_something = True
+        return new_model
 
 
 class NeuralNetwork(nn.Module):
@@ -128,9 +115,6 @@ class NeuralNetwork(nn.Module):
         for layer in self.layers:
             x = layer(x.to(torch.float))
         return x
-
-    def reuse_onnx_model(self, onnx_path):
-        raise NotImplementedError
 
 class DQN(Agent):
     def __init__(self, env, nn_model, args, verbose=False):
@@ -173,7 +157,7 @@ class DQN(Agent):
 
         print("Done.")
 
-    def train(self, seconds=None, max_steps=None, max_eps=100000, early_stopping=False, onnx_path=None):
+    def train(self, seconds=None, max_steps=None, max_eps=100000, early_stopping=False, pth_path=None):
         self.initializeBuffer()
         if self.training_start is None:
             self.training_start = time.time()
@@ -232,12 +216,12 @@ class DQN(Agent):
             else:
                 obs = obs2
 
-            if eps % self.freq_save == 0 and not saved and onnx_path is not None:
+            if eps % self.freq_save == 0 and not saved and pth_path is not None:
                 if len(all_rewards) > 1000:
                     all_rewards = all_rewards[100:]
 
                 saved = True
-                DQN.save(self, onnx_path, partial=True)
+                DQN.save(self, f"{pth_path[:-4]}-{eps}.pth", partial=True)
 
                 with open(csv_path, 'a') as f:
                     writer = csv.writer(f)
@@ -313,7 +297,7 @@ class DQN(Agent):
     @staticmethod
     def save(agent, path, partial=False):
         if partial:
-            path = path[:-5] + f"-partial.onnx"
+            path = path[:-4] + f"-partial.pth"
         agent.model.save(path)
 
 
