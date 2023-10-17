@@ -36,7 +36,7 @@ class Environment:
         else:
             self.context.composition = new_composition.reset_from_copy()
             self.info = new_composition.get_info()
-        return self.actions()
+        return self.states()
 
     def get_context(self):
         return self.context
@@ -47,7 +47,7 @@ class Environment:
         if composition_graph.javaEnv.isFinished():
             return None, self.reward(), True, self.get_info()
         else:
-            return self.actions(), self.reward(), False, {}
+            return self.states(), self.reward(), False, {}
 
 
     def get_info(self):
@@ -66,7 +66,7 @@ class Environment:
         else:
             return -1
 
-    def actions(self):
+    def states(self):
         return self.context.composition.getFrontier()
 
     def get_nfeatures(self):
@@ -99,13 +99,19 @@ class FeatureEnvironment(object):
 
     def reset(self):
         state = self.env.reset()
-        return self.env.actions_to_features(state), False
+        #return self.env.actions_to_features(state), False
+        return self.env.actions_to_features(state)[0], False
 
     def step(self, action):
         if not isinstance(action, int):
             action = np.argmax(action)
+
+        actual_state = self.env.states()
         state, reward, done, info = self.env.step(action)
-        return self.env.actions_to_features(state), reward, done, False, info
+        #return self.env.actions_to_features(state), reward, done, False, info
+        return self.env.context.compute_features(actual_state[action]), reward, done, False, info
+
+
     def close(self):
         self.env.close()
 

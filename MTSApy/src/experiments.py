@@ -449,7 +449,7 @@ class TrainPPO(Experiment):
         env = FeatureEnvironment(context, False)
 
         ppo = PPO(env)
-        ppo.learn(100)
+        ppo.learn(1000000)
 
 
 

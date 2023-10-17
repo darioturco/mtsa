@@ -881,7 +881,7 @@ class PPO:
                 log_prob - the log probability of the selected action in the distribution
         """
         # Query the actor network for a mean action
-        obs = torch.tensor(obs, dtype=torch.float)
+        #obs = torch.tensor(obs, dtype=torch.float)
         mean = self.actor(obs)
 
         # Create a distribution with the mean action and std from the covariance matrix above.
