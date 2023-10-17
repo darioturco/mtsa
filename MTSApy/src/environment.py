@@ -99,17 +99,12 @@ class FeatureEnvironment(object):
 
     def reset(self):
         state = self.env.reset()
-        #return self.env.actions_to_features(state), False
-        return self.env.actions_to_features(state)[0], False
+        return self.env.actions_to_features(state), False
+        #return self.env.actions_to_features(state)[0], False
 
     def step(self, action):
-        if not isinstance(action, int):
-            action = np.argmax(action)
-
-        actual_state = self.env.states()
         state, reward, done, info = self.env.step(action)
-        #return self.env.actions_to_features(state), reward, done, False, info
-        return self.env.context.compute_features(actual_state[action]), reward, done, False, info
+        return self.env.actions_to_features(state), reward, done, False, info
 
 
     def close(self):

@@ -5,7 +5,8 @@ import datetime
 import numpy as np
 from src.composition import CompositionGraph, CompositionAnalyzer
 from src.environment import Environment, FeatureEnvironment
-from src.agents.dqn import DQN, NeuralNetwork, TorchModel, TRPO, PPO
+from src.agents.dqn import DQN, NeuralNetwork, TorchModel
+from src.agents.ppo import PPO
 from src.agents.random import RandomAgent
 from src.agents.ready_abstraction import ReadyAbstraction
 from src.agents.debugging_abstraction import DebuggingAbstraction
@@ -418,23 +419,6 @@ class RunRAInAllInstances(Experiment):
 
             self.save_to_csv(csv_path, info)
 
-class TrainTRPO(Experiment):
-    def __init__(self, name="Test"):
-        super().__init__(name)
-    def run(self):
-        if "linux" in self.platform:
-            path = "/home/dario/Documents/Tesis/Learning-Synthesis/fsp"  # For Linux
-        else:
-            path = "F:\\UBA\\Tesis\\mtsa\\MTSApy\\fsp"  # For Windows
-
-        d = CompositionGraph("TL", 2, 2, path).start_composition()
-        context = CompositionAnalyzer(d)
-        env = FeatureEnvironment(context, False)
-
-        args = {'actor_size': 32, 'critic_size': 32, 'learning_rate': 0.005, "max_d_kl": 0.01}
-        trpo = TRPO(env, args)
-        trpo.train(episodes=50, freq_update=1)
-
 class TrainPPO(Experiment):
     def __init__(self, name="Test"):
         super().__init__(name)
@@ -444,7 +428,7 @@ class TrainPPO(Experiment):
         else:
             path = "F:\\UBA\\Tesis\\mtsa\\MTSApy\\fsp"  # For Windows
 
-        d = CompositionGraph("TL", 2, 2, path).start_composition()
+        d = CompositionGraph("DP", 2, 2, path).start_composition()
         context = CompositionAnalyzer(d)
         env = FeatureEnvironment(context, False)
 
