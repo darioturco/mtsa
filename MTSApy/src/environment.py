@@ -17,6 +17,9 @@ class Environment:
         pass
 
 """
+import numpy as np
+
+
 class Environment:
     def __init__(self, context, normalize_reward):
         """Environment base class.
@@ -41,10 +44,11 @@ class Environment:
     def step(self, action_idx):
         composition_graph = self.context.composition
         composition_graph.expand(action_idx)  # TODO refactor. Analyzer should not be the expansion medium
-        if not composition_graph.javaEnv.isFinished():
-            return self.actions(), self.reward(), False, {}
-        else:
+        if composition_graph.javaEnv.isFinished():
             return None, self.reward(), True, self.get_info()
+        else:
+            return self.actions(), self.reward(), False, {}
+
 
     def get_info(self):
         composition_dg = self.context.composition
@@ -62,9 +66,6 @@ class Environment:
         else:
             return -1
 
-    def state(self):
-        raise NotImplementedError
-
     def actions(self):
         return self.context.composition.getFrontier()
 
@@ -72,6 +73,8 @@ class Environment:
         return self.context.get_transition_features_size()
 
     def actions_to_features(self, actions):
+        if actions is None:
+            return []
         return [self.context.compute_features(action) for action in actions]
 
     def get_instance_info(self):
@@ -80,3 +83,31 @@ class Environment:
 
     def close(self):
         pass
+
+#import gym
+class FeatureEnvironment(object):
+    def __init__(self, context, normalize_reward):
+        self.env = Environment(context, normalize_reward)
+
+        # self.state_size = env.observation_space.shape[0]
+        #         self.num_actions = env.action_space.n
+
+        self.observation_space_dim = self.env.context.get_transition_features_size()
+        self.action_space = [0, 1]
+
+
+
+    def reset(self):
+        state = self.env.reset()
+        return self.env.actions_to_features(state), False
+
+    def step(self, action):
+        if not isinstance(action, int):
+            action = np.argmax(action)
+        state, reward, done, info = self.env.step(action)
+        return self.env.actions_to_features(state), reward, done, False, info
+    def close(self):
+        self.env.close()
+
+
+

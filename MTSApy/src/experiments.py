@@ -4,14 +4,15 @@ import random
 import datetime
 import numpy as np
 from src.composition import CompositionGraph, CompositionAnalyzer
-from src.environment import Environment
-from src.agents.dqn import DQN, NeuralNetwork, TorchModel
+from src.environment import Environment, FeatureEnvironment
+from src.agents.dqn import DQN, NeuralNetwork, TorchModel, TRPO, PPO
 from src.agents.random import RandomAgent
 from src.agents.ready_abstraction import ReadyAbstraction
 from src.agents.debugging_abstraction import DebuggingAbstraction
 import cProfile
 import time
 import csv
+import subprocess
 
 class Experiment(object):
     def __init__(self, name="Test"):
@@ -336,7 +337,7 @@ class RunRandomInAllInstances(Experiment):
             last_instance = instance
             self.save_to_csv(csv_path, info)
 
-import subprocess
+
 class RunRAInAllInstances(Experiment):
     def __init__(self, name="Test"):
         super().__init__(name)
@@ -360,12 +361,6 @@ class RunRAInAllInstances(Experiment):
         else:
             try:
                 results = self.read_lines(lines)
-
-                #i = list(map((lambda l: "ExpandedStates" in l), lines)).index(True)
-                #j = list(map((lambda l: "DirectedController" in l), lines)).index(True)
-                #self.debug_output = None
-                #results = self.read_lines(lines[i:])
-                #results["OutOfMem"] = False
 
             except BaseException as err:
                 results = {"expanded transitions": np.nan, "synthesis time(ms)": np.nan, "OutOfMem": False,
@@ -419,56 +414,44 @@ class RunRAInAllInstances(Experiment):
                     "Transitions": results["expanded transitions"],
                     "States": results["expanded states"],
                     "Time": results["synthesis time(ms)"],
-                    "Failed": -1 < budget < results["expanded transitions"]}   # Cambiar
-            #last_instance = instance
+                    "Failed": -1 < budget < results["expanded transitions"]}
+
             self.save_to_csv(csv_path, info)
 
+class TrainTRPO(Experiment):
+    def __init__(self, name="Test"):
+        super().__init__(name)
+    def run(self):
+        if "linux" in self.platform:
+            path = "/home/dario/Documents/Tesis/Learning-Synthesis/fsp"  # For Linux
+        else:
+            path = "F:\\UBA\\Tesis\\mtsa\\MTSApy\\fsp"  # For Windows
+
+        d = CompositionGraph("TL", 2, 2, path).start_composition()
+        context = CompositionAnalyzer(d)
+        env = FeatureEnvironment(context, False)
+
+        args = {'actor_size': 32, 'critic_size': 32, 'learning_rate': 0.005, "max_d_kl": 0.01}
+        trpo = TRPO(env, args)
+        trpo.train(episodes=50, freq_update=1)
+
+class TrainPPO(Experiment):
+    def __init__(self, name="Test"):
+        super().__init__(name)
+    def run(self):
+        if "linux" in self.platform:
+            path = "/home/dario/Documents/Tesis/Learning-Synthesis/fsp"  # For Linux
+        else:
+            path = "F:\\UBA\\Tesis\\mtsa\\MTSApy\\fsp"  # For Windows
+
+        d = CompositionGraph("TL", 2, 2, path).start_composition()
+        context = CompositionAnalyzer(d)
+        env = FeatureEnvironment(context, False)
+
+        ppo = PPO(env)
+        ppo.learn(100)
 
 
-
-
-        """
-        agent = RandomAgent(None)
-
-        last_instance = ""
-        failed = False
-        for instance, n, k in self.all_instances_iterator():
-            if last_instance != instance:
-                failed = False
-
-            instance_res = self.init_instance_res()
-            if failed:
-                instance_res = self.init_instance_res()
-                instance_res["failed"] = repetitions
-
-            else:
-                for _ in range(repetitions):
-                    d = CompositionGraph(instance, n, k, path).start_composition()
-                    context = CompositionAnalyzer(d)
-                    env = Environment(context, False)
-
-                    print(f"Runing Random Agent in instance: {instance} {n}-{k}")
-                    # print(f"Starting at: {datetime.datetime.now()}")
-                    res = self.run_instance(env, agent, budget)
-                    self.print_res("Random Agent: ", res)
-                    self.update_instance_res(instance_res, res)
-
-                if instance_res["failed"] >= repetitions - 1:
-                    failed = True
-
-            instance_res["expanded transitions mean"] /= repetitions
-            instance_res["expanded states mean"] /= repetitions
-            instance_res["synthesis time(mean)"] /= repetitions
-
-            csv_path = f"./results/csv/random.csv"
-            info = {"Instance": instance, "N": n, "K": k,
-                    "Transitions (min)": instance_res["expanded transitions min"], "States (min)": instance_res["expanded states min"], "Time(min)": instance_res["synthesis time(min)"],
-                    "Transitions (max)": instance_res["expanded transitions max"], "States (max)": instance_res["expanded states max"], "Time(max)": instance_res["synthesis time(max)"],
-                    "Transitions (mean)": instance_res["expanded transitions mean"], "States (mean)": instance_res["expanded states mean"], "Time(mean)": instance_res["synthesis time(mean)"],
-                    "Failed": instance_res["failed"]}
-            last_instance = instance
-            self.save_to_csv(csv_path, info)
-            """
 
 
 
