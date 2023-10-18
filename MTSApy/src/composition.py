@@ -4,12 +4,17 @@ from bidict import bidict
 import sys
 
 if not jpype.isJVMStarted():
-    if "Linux" in sys.platform:
+    if "linux" in sys.platform:
         jpype.startJVM(classpath=['mtsa.jar'])  # For Linux
     else:
         jpype.startJVM(f"C:\\Program Files\\Java\\jdk-21\\bin\\server\\jvm.dll", '-ea', classpath=['C:/Users/diort/Downloads/mtsa/maven-root/mtsa/target/mtsa.jar'])  # For Windows
 
-from MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking import DirectedControllerSynthesisBlocking, FeatureBasedExplorationHeuristic, DCSForPython
+NONBLOCKING = False
+if NONBLOCKING:
+    print("WARNING: Runing NonBlocking environment")
+    from MTSTools.ac.ic.doc.mtstools.model.operations.DCS.nonblocking import DirectedControllerSynthesisNonBlocking, FeatureBasedExplorationHeuristic, DCSForPython
+else:
+    from MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking import DirectedControllerSynthesisBlocking, FeatureBasedExplorationHeuristic, DCSForPython
 
 #FSP_PATH = "../fsp"
 #BENCHMARK_PROBLEMS = ["AT", "BW", "CM", "DP", "TA", "TL"]

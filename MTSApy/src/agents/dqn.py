@@ -77,6 +77,7 @@ class TorchModel(Model):
 
         loss = self.loss_fn(pred, values)
         loss.backward()
+        print(loss)
         self.optimizer.step()
 
         self.losses.append(loss.item())
@@ -92,6 +93,20 @@ class TorchModel(Model):
         avg_loss = np.mean(self.losses)
         self.losses = []
         return avg_loss
+
+    def to_onnx(self):
+        x = torch.randn(1, self.nfeatures, device=self.device)
+        torch.onnx.export(self.model,  # model being run
+                          x,  # model input (or a tuple for multiple inputs)
+                          "tmp.onnx",  # where to save the model (can be a file or file-like object)
+                          export_params=True,  # store the trained parameter weights inside the model file
+                          opset_version=10,  # the ONNX version to export the model to
+                          do_constant_folding=True,  # whether to execute constant folding for optimization
+                          input_names=['X'],  # the model's input names
+                          output_names=['output'],  # the model's output names
+                          dynamic_axes={'X': {0: 'batch_size'},  # variable length axes
+                                        'output': {0: 'batch_size'}})
+        return onnx.load("tmp.onnx"), InferenceSession("tmp.onnx")
 
     def save(self, path):
         torch.save(self.model, path)
@@ -117,6 +132,33 @@ class NeuralNetwork(nn.Module):
         for layer in self.layers:
             x = layer(x.to(torch.float))
         return x
+
+import onnx
+from onnxruntime import InferenceSession
+from skl2onnx import to_onnx
+class OnnxModel(Model):
+    def __init__(self, model):
+        super().__init__()
+        assert model.has_learned_something
+
+        self.onnx_model, self.session = model.to_onnx()
+
+    def save(self, path):
+        onnx.save(self.onnx_model, path + ".onnx")
+
+    def predict(self, s):
+        if s is None:
+            return 0
+        return self.session.run(None, {'X': s})[0]
+
+    def eval_batch(self, ss):
+        return np.array([self.eval(s) for s in ss])
+
+    def eval(self, s):
+        return np.max(self.predict(s))
+
+    def current_loss(self):
+        raise NotImplementedError()
 
 class DQN(Agent):
     def __init__(self, env, nn_model, args, verbose=False):
@@ -159,6 +201,147 @@ class DQN(Agent):
 
         print("Done.")
 
+    #def train(self, seconds=None, max_steps=None, max_eps=100000, early_stopping=False, pth_path=None):
+    def train(self, seconds=None, max_steps=None, max_eps=10000,
+              early_stopping=False, pth_path=None):
+
+        env = self.env
+        save_freq = 200000
+        last_obs = None
+        save_at_end = False
+        results_path = None
+        top = 1000
+
+        instance, n, k = self.env.get_instance_info()
+        csv_path = f"./results/training/{instance}-{n}-{k}-partial.csv"
+        saved = False
+        acumulated_reward = 0
+        all_rewards = []
+        self.initializeBuffer()
+
+        if self.training_start is None:
+            self.training_start = time.time()
+            self.last_best = 0
+
+        steps, eps = 1, 1
+
+        epsilon_step = (self.args["first_epsilon"] - self.args["last_epsilon"])
+        epsilon_step /= self.args["epsilon_decay_steps"]
+
+        obs = env.reset() if (last_obs is None) else last_obs
+
+        last_steps = []
+        while top:  # What is top used for?
+            a = self.get_action(obs, self.epsilon)
+            last_steps.append(obs[a])
+
+            obs2, reward, done, info = env.step(a)
+
+            acumulated_reward += reward
+            if self.args["exp_replay"]:
+                if done:
+                    if eps > 500 and -acumulated_reward >= 75:
+                        print("Wooo que paso aqui")
+
+                    for j in range(len(last_steps)):
+                        self.buffer.add(self.env.context.compute_features(last_steps[j]), -len(last_steps) + j, None)
+                    last_steps = []
+                else:
+                    if len(last_steps) >= self.args["n_step"]:
+                        self.buffer.add(self.env.context.compute_features(last_steps[0]), -self.args["n_step"], self.env.context.compute_feature_of_list(obs2))
+                    last_steps = last_steps[len(last_steps) - self.args["n_step"] + 1:]
+                self.batch_update()
+            else:
+                self.update(obs, a, reward, obs2)
+
+            if done:
+                instance = (env.info["problem"], env.info["n"], env.info["k"])
+
+                if instance not in self.best_training_perf.keys() or \
+                        info["expanded transitions"] < self.best_training_perf[instance]:
+                    self.best_training_perf[instance] = info["expanded transitions"]
+                    print("New best at instance " + str(instance) + "!", self.best_training_perf[instance], "Steps:",
+                          self.training_steps)
+                    self.last_best = self.training_steps
+                info.update({
+                    "training time": time.time() - self.training_start,
+                    "training steps": self.training_steps,
+                    "instance": instance,
+                    "loss": self.model.current_loss(),
+
+                })
+                all_rewards.append(-acumulated_reward)
+                print(f"Epsode: {eps} - Acumulated Reward: {-acumulated_reward} - Acumulated: {np.mean(all_rewards[-32:])} - Epsilon: {self.epsilon}")
+                acumulated_reward = 0
+                self.training_data.append(info)
+                obs = env.reset()
+                eps += 1
+
+
+            else:
+                obs = obs2
+
+            if eps % self.freq_save == 0 and not saved and pth_path is not None:
+                if len(all_rewards) > 1000:
+                    all_rewards = all_rewards[100:]
+
+                saved = True
+                DQN.save(self, f"{pth_path[:-4]}-{eps}.pth", partial=True)
+
+                with open(csv_path, 'a') as f:
+                    writer = csv.writer(f)
+                    for i in range(self.freq_save - 1):
+                        writer.writerow([steps, all_rewards[-self.freq_save + 1 + i]])
+
+                print("Partial Saved!")
+            else:
+                if eps % self.freq_save != 0:
+                    saved = False
+
+
+            #if self.training_steps % save_freq == 0 and results_path is not None:
+            #    self.save(env.info, path=results_path)
+            #    top -= 1
+
+            if self.args["target_q"] and self.training_steps % self.args["reset_target_freq"] == 0:
+                if self.verbose:
+                    print("Resetting target.")
+                print("Resetting target.")
+                self.target = OnnxModel(self.model)
+
+            steps += 1
+            self.training_steps += 1
+
+
+
+            if seconds is not None and time.time() - self.training_start > seconds:
+                break
+
+            if max_steps is not None and not early_stopping and steps >= max_steps:
+                break
+
+            if max_eps is not None and eps >= max_eps:
+                break
+
+            if max_steps is not None and self.training_steps > max_steps and (
+                    self.training_steps - self.last_best) / self.training_steps > 0.33:
+                print("Converged since steps are", self.training_steps, "and max_steps is", max_steps,
+                      "and last best was", self.last_best)
+                self.converged = True
+
+            if early_stopping and self.converged:
+                print("Converged!")
+                break
+
+            if self.epsilon > self.args["last_epsilon"] + 1e-10:
+                self.epsilon -= epsilon_step
+
+        #if results_path is not None and save_at_end:
+        #    self.save(env.info, results_path)
+
+        return obs.copy()
+
+    """
     def train(self, seconds=None, max_steps=None, max_eps=100000, early_stopping=False, pth_path=None):
         self.initializeBuffer()
         if self.training_start is None:
@@ -260,6 +443,7 @@ class DQN(Agent):
 
         self.trained = True
         return obs
+    """
 
     def get_action(self, s, epsilon, env=None):
         """ Gets epsilon-greedy action using self.model """

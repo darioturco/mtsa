@@ -4,13 +4,15 @@ import numpy as np
 import seaborn as sn
 
 OUTPUT_FOLDER = "./results/plots/"
-BENCHMARK_PROBLEMS = ["AT", "BW", "DP", "TA", "TL", "CM"]
+#BENCHMARK_PROBLEMS = ["AT", "BW", "DP", "TA", "TL", "CM"]
 #BENCHMARK_PROBLEMS = ["DP", "TA", "CM"]
+BENCHMARK_PROBLEMS = ["DP"]
 
 def graph_training_process(sliding_window=5, save_path=None):
     #random_data = pd.read_csv("./results/csv/random budget=5000 repetitions=100.csv")
     random_data = pd.read_csv("./results/csv/random.csv")
     ra_data = pd.read_csv("./results/csv/Ready Abstraction.csv")
+    limite = 1500
 
     for instance in BENCHMARK_PROBLEMS:
         data_instance = pd.read_csv(f"./results/training/{instance}-2-2-partial.csv", names=['Step', "Reward"])   # Cambiarle el nombre a {instance}-2-2
@@ -22,7 +24,7 @@ def graph_training_process(sliding_window=5, save_path=None):
         random_max = -int(random_data[(random_data["Instance"] == instance) & (random_data["N"] == 2) & (random_data["K"] == 2)]["Transitions (min)"])
         ra_value = -int(ra_data[(ra_data["Instance"] == instance) & (ra_data["N"] == 2) & (ra_data["K"] == 2)]["Transitions"])
 
-        plt.plot(episodes, rewards_win, label="RL")
+        plt.plot(episodes[:limite], rewards_win[:limite], label="RL")
         plt.axhline(y=ra_value, color='r', linestyle='-', label="RA")
         plt.axhline(y=random_mean, color='g', linestyle='--', label="Random Mean")
         plt.axhline(y=random_max, color='g', linestyle='-', label="Random Max")
@@ -69,7 +71,7 @@ def compare_random_and_RL():
 
 if __name__ == "__main__":
     print("Plotting...")
-    graph_training_process(sliding_window=32, save_path='./results/plots')
+    graph_training_process(sliding_window=100, save_path='./results/NonBlocking-plots')
     #compare_random_and_RL()
 
 

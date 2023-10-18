@@ -23,7 +23,7 @@ class Experiment(object):
         #self.BENCHMARK_PROBLEMS = ["TL", "CM"]
         self.min_instance_size = 2
         self.max_instance_size = 15
-        self.seed = 47
+        self.seed = 12
         random.seed(self.seed)
         np.random.seed(self.seed)
 
@@ -85,13 +85,13 @@ class Experiment(object):
                 "first_epsilon": 1.0,
                 "buffer_size": 10,
                 "n_step": 1,
-                "last_epsilon": 0.01,
-                "epsilon_decay_steps": 250000,
+                "last_epsilon": 0,
+                "epsilon_decay_steps": 10000,   # 250000
                 "exp_replay": True,
-                "target_q": False,
-                "reset_target_freq": 10000,
+                "target_q": True,
+                "reset_target_freq": 1000,
                 "batch_size": 10,
-                "max_eps": 30000
+                "max_eps": 1000000
                 }
 
     def init_instance_res(self):
@@ -133,211 +133,6 @@ class Experiment(object):
 
             dictwriter.writerow(info)
             f.close()
-class TestTrainInstance(Experiment):
-    def __init__(self, name="Test"):
-        super().__init__(name)
-
-    def run(self, path, instance, n, k):
-        d = CompositionGraph(instance, n, k, path)
-        d.start_composition()
-        context = CompositionAnalyzer(d)
-        env = Environment(context, False)
-        nfeatures = env.get_nfeatures()
-        args = self.default_args()
-
-        neural_network = NeuralNetwork(nfeatures, args["nn_size"]).to("cpu")
-        nn_model = TorchModel(nfeatures, network=neural_network, args=args)
-        agent = DQN(env, nn_model, args, save_file=None, verbose=False)
-        agent.train(seconds=None, max_steps=None, max_eps=args["max_eps"], last_obs=None, early_stopping=False)
-        print("Trained :)\n")
-
-        res = self.run_instance(env, agent)
-        self.print_res(f"Results For Intance: {instance} {n}-{k}", res)
-
-
-
-class TrainSmallInstanceCheckBigInstance(Experiment):
-    def __init__(self, name="Test"):
-        super().__init__(name)
-
-    def run(self, instance, n_train, k_train, n_test, k_test, use_saved_agent=False):
-        if "linux" in self.platform:
-            path = "/home/dario/Documents/Tesis/mtsa/MTSApy/fsp"  # For Linux
-        else:
-            path = "F:\\UBA\\Tesis\\mtsa\\MTSApy\\fsp"  # For Windows
-
-        d = CompositionGraph(instance, n_train, k_train, path).start_composition()
-        context = CompositionAnalyzer(d)
-        env = Environment(context, False)
-        nfeatures = env.get_nfeatures()
-        args = self.default_args()
-        pth_path = f"results/models/{instance}/{instance}-{n_train}-{k_train}.pth"
-
-        if use_saved_agent:
-            nn_model = TorchModel.load(nfeatures, pth_path, args=args)
-            dqn_agent = DQN(env, nn_model, args, verbose=False)
-
-        else:
-            neural_network = NeuralNetwork(nfeatures, args["nn_size"]).to("cpu")
-            nn_model = TorchModel(nfeatures, network=neural_network, args=args)
-            dqn_agent = DQN(env, nn_model, args, verbose=False)
-            dqn_agent.train(seconds=None, max_steps=None, max_eps=args["max_eps"], early_stopping=False, pth_path=pth_path)
-            print(f"Trained in instance: {instance} {n_train}-{k_train}")
-            DQN.save(dqn_agent, pth_path)
-
-        env.reset(CompositionGraph(instance, n_test, k_test, path).start_composition())
-        random_agent = RandomAgent()
-
-        print(f"Runing Random Agent in instance: {instance} {n_test}-{k_test}")
-        res = self.run_instance(env, random_agent)
-        self.print_res("Random Agent: ", res)
-
-        print(f"Runing DQN Agent in instance: {instance} {n_test}-{k_test}")
-        res = self.run_instance(env, dqn_agent)
-        self.print_res("DQN Agent: ", res)
-
-class TrainSmallerInstanceCheckInAll(Experiment):
-    def __init__(self, name="Test"):
-        super().__init__(name)
-
-    def run(self, instance, n_min, k_min, n_max, k_max, use_saved_agent=False):
-        if "linux" in self.platform:
-            path = "/home/dario/Documents/Tesis/Learning-Synthesis/fsp"  # For Linux
-        else:
-            path = "F:\\UBA\\Tesis\\mtsa\\MTSApy\\fsp"  # For Windows
-
-        d = CompositionGraph(instance, n_min, k_min, path).start_composition()
-        context = CompositionAnalyzer(d)
-        env = Environment(context, False)
-        nfeatures = env.get_nfeatures()
-        args = self.default_args()
-        pth_path = f"results/models/{instance}/{instance}-{n_min}-{k_min}.pth"
-
-        if use_saved_agent:
-            nn_model = TorchModel.load(nfeatures, pth_path, args=args)
-            dqn_agent = DQN(env, nn_model, args, verbose=False)
-
-        else:
-            neural_network = NeuralNetwork(nfeatures, args["nn_size"]).to("cpu")
-            nn_model = TorchModel(nfeatures, network=neural_network, args=args)
-            dqn_agent = DQN(env, nn_model, args, verbose=False)
-            dqn_agent.train(seconds=None, max_steps=None, max_eps=args["max_eps"], early_stopping=False, pth_path=pth_path)
-            print(f"Trained in instance: {instance} {n_min}-{k_min}")
-            DQN.save(dqn_agent, pth_path)
-
-        random_agent = RandomAgent()
-        instances = [(n, k) for n in range(n_min, n_max+1) for k in range(k_min, k_max+1)]
-        for n, k in instances:
-            env.reset(CompositionGraph(instance, n, k, path).start_composition())
-
-            print(f"\n----------------------------------------\n")
-
-            print(f"Runing Random Agent in instance: {instance} {n}-{k}")
-            res = self.run_instance(env, random_agent)
-            self.print_res("Random Agent: ", res)
-
-            print(f"Runing DQN Agent in instance: {instance} {n}-{k}")
-            res = self.run_instance(env, dqn_agent)
-            self.print_res("DQN Agent: ", res)
-
-class TestTrainedInAllInstances(Experiment):
-    def __init__(self, name='Test'):
-        super().__init__(name)
-
-    def run(self, instance, budget, pth_path=None):
-        if "linux" in self.platform:
-            path = "/home/dario/Documents/Tesis/Learning-Synthesis/fsp"  # For Linux
-        else:
-            path = "F:\\UBA\\Tesis\\mtsa\\MTSApy\\fsp"  # For Windows
-
-        d = CompositionGraph(instance, self.min_instance_size, self.min_instance_size, path).start_composition()
-        context = CompositionAnalyzer(d)
-        env = Environment(context, False)
-        nfeatures = env.get_nfeatures()
-        args = self.default_args()
-        if pth_path is None:
-            pth_path = f"results/models/{instance}/{instance}-{self.min_instance_size}-{self.min_instance_size}.pth"
-
-        nn_model = TorchModel.load(nfeatures, pth_path, args=args)
-        #neural_network = NeuralNetwork(nfeatures, args["nn_size"]).to("cpu")
-        #nn_model = TorchModel(nfeatures, network=neural_network, args=args)
-
-        dqn_agent = DQN(env, nn_model, args, verbose=False)
-
-        for instance, n, k in self.all_instances_of(instance):
-
-            d = CompositionGraph(instance, n, k, path).start_composition()
-            context = CompositionAnalyzer(d)
-            env = Environment(context, False)
-
-            print(f"Runing DQN Agent in instance: {instance} {n}-{k}")
-            # print(f"Starting at: {datetime.datetime.now()}")
-            res = self.run_instance(env, dqn_agent, budget)
-            self.print_res("DQN Agent: ", res)
-
-            csv_path = f"./results/csv/{instance}.csv"
-            info = {"Instance": instance, "N": n, "K": k,
-                    "Transitions": res["expanded transitions"],
-                    "States": res["expanded states"],
-                    "Time(ms)": res["synthesis time(ms)"],
-                    "Failed": res["failed"]}
-            self.save_to_csv(csv_path, info)
-
-
-
-class RunRandomInAllInstances(Experiment):
-    def __init__(self, name="Test"):
-        super().__init__(name)
-
-
-
-    def run(self, budget, repetitions):
-        if "linux" in self.platform:
-            path = "/home/dario/Documents/Tesis/Learning-Synthesis/fsp"  # For Linux
-        else:
-            path = "F:\\UBA\\Tesis\\mtsa\\MTSApy\\fsp"  # For Windows
-
-        agent = RandomAgent(None)
-
-        last_instance = ""
-        failed = False
-        for instance, n, k in self.all_instances_iterator():
-            if last_instance != instance:
-                failed = False
-
-            instance_res = self.init_instance_res()
-            if failed:
-                instance_res = self.init_instance_res()
-                instance_res["failed"] = repetitions
-
-            else:
-                for _ in range(repetitions):
-                    d = CompositionGraph(instance, n, k, path).start_composition()
-                    context = CompositionAnalyzer(d)
-                    env = Environment(context, False)
-
-                    print(f"Runing Random Agent in instance: {instance} {n}-{k}")
-                    # print(f"Starting at: {datetime.datetime.now()}")
-                    res = self.run_instance(env, agent, budget)
-                    self.print_res("Random Agent: ", res)
-                    self.update_instance_res(instance_res, res)
-
-                if instance_res["failed"] >= repetitions - 1:
-                    failed = True
-
-            instance_res["expanded transitions mean"] /= repetitions
-            instance_res["expanded states mean"] /= repetitions
-            instance_res["synthesis time(mean)"] /= repetitions
-
-            csv_path = f"./results/csv/random.csv"
-            info = {"Instance": instance, "N": n, "K": k,
-                    "Transitions (min)": instance_res["expanded transitions min"], "States (min)": instance_res["expanded states min"], "Time(min)": instance_res["synthesis time(min)"],
-                    "Transitions (max)": instance_res["expanded transitions max"], "States (max)": instance_res["expanded states max"], "Time(max)": instance_res["synthesis time(max)"],
-                    "Transitions (mean)": instance_res["expanded transitions mean"], "States (mean)": instance_res["expanded states mean"], "Time(mean)": instance_res["synthesis time(mean)"],
-                    "Failed": instance_res["failed"]}
-            last_instance = instance
-            self.save_to_csv(csv_path, info)
-
 
 class RunRAInAllInstances(Experiment):
     def __init__(self, name="Test"):
@@ -417,6 +212,143 @@ class RunRAInAllInstances(Experiment):
                     "Time": results["synthesis time(ms)"],
                     "Failed": -1 < budget < results["expanded transitions"]}
 
+            self.save_to_csv(csv_path, info)
+
+class TrainSmallInstanceCheckBigInstance(Experiment):
+    def __init__(self, name="Test"):
+        super().__init__(name)
+
+    def run(self, instance, n_train, k_train, n_test, k_test, use_saved_agent=False):
+        if "linux" in self.platform:
+            path = "/home/dario/Documents/Tesis/mtsa/MTSApy/fsp"  # For Linux
+
+            ### NonBlocking Path (Borrar)
+            #path = "/home/dario/Documents/Tesis/mtsa/MTSApy/fsp/NonBlocking"  # For Linux
+        else:
+            path = "F:\\UBA\\Tesis\\mtsa\\MTSApy\\fsp"  # For Windows
+
+        d = CompositionGraph(instance, n_train, k_train, path).start_composition()
+        context = CompositionAnalyzer(d)
+        env = Environment(context, False)
+        nfeatures = env.get_nfeatures()
+        args = self.default_args()
+        pth_path = f"results/models/{instance}/{instance}-{n_train}-{k_train}.pth"
+
+        if use_saved_agent:
+            nn_model = TorchModel.load(nfeatures, pth_path, args=args)
+            dqn_agent = DQN(env, nn_model, args, verbose=False)
+
+        else:
+            neural_network = NeuralNetwork(nfeatures, args["nn_size"]).to("cpu")
+            nn_model = TorchModel(nfeatures, network=neural_network, args=args)
+            dqn_agent = DQN(env, nn_model, args, verbose=False)
+            dqn_agent.train(seconds=None, max_steps=None, max_eps=args["max_eps"], early_stopping=False, pth_path=pth_path)
+            print(f"Trained in instance: {instance} {n_train}-{k_train}")
+            DQN.save(dqn_agent, pth_path)
+
+        env.reset(CompositionGraph(instance, n_test, k_test, path).start_composition())
+        random_agent = RandomAgent()
+
+        print(f"Runing Random Agent in instance: {instance} {n_test}-{k_test}")
+        res = self.run_instance(env, random_agent)
+        self.print_res("Random Agent: ", res)
+
+        print(f"Runing DQN Agent in instance: {instance} {n_test}-{k_test}")
+        res = self.run_instance(env, dqn_agent)
+        self.print_res("DQN Agent: ", res)
+
+class TestTrainedInAllInstances(Experiment):
+    def __init__(self, name='Test'):
+        super().__init__(name)
+
+    def run(self, instance, budget, pth_path=None):
+        if "linux" in self.platform:
+            path = "/home/dario/Documents/Tesis/Learning-Synthesis/fsp"  # For Linux
+        else:
+            path = "F:\\UBA\\Tesis\\mtsa\\MTSApy\\fsp"  # For Windows
+
+        d = CompositionGraph(instance, self.min_instance_size, self.min_instance_size, path).start_composition()
+        context = CompositionAnalyzer(d)
+        env = Environment(context, False)
+        nfeatures = env.get_nfeatures()
+        args = self.default_args()
+        if pth_path is None:
+            pth_path = f"results/models/{instance}/{instance}-{self.min_instance_size}-{self.min_instance_size}.pth"
+
+        nn_model = TorchModel.load(nfeatures, pth_path, args=args)
+        #neural_network = NeuralNetwork(nfeatures, args["nn_size"]).to("cpu")
+        #nn_model = TorchModel(nfeatures, network=neural_network, args=args)
+
+        dqn_agent = DQN(env, nn_model, args, verbose=False)
+
+        for instance, n, k in self.all_instances_of(instance):
+
+            d = CompositionGraph(instance, n, k, path).start_composition()
+            context = CompositionAnalyzer(d)
+            env = Environment(context, False)
+
+            print(f"Runing DQN Agent in instance: {instance} {n}-{k}")
+            # print(f"Starting at: {datetime.datetime.now()}")
+            res = self.run_instance(env, dqn_agent, budget)
+            self.print_res("DQN Agent: ", res)
+
+            csv_path = f"./results/csv/{instance}.csv"
+            info = {"Instance": instance, "N": n, "K": k,
+                    "Transitions": res["expanded transitions"],
+                    "States": res["expanded states"],
+                    "Time(ms)": res["synthesis time(ms)"],
+                    "Failed": res["failed"]}
+            self.save_to_csv(csv_path, info)
+
+class RunRandomInAllInstances(Experiment):
+    def __init__(self, name="Test"):
+        super().__init__(name)
+
+    def run(self, budget, repetitions):
+        if "linux" in self.platform:
+            path = "/home/dario/Documents/Tesis/Learning-Synthesis/fsp"  # For Linux
+        else:
+            path = "F:\\UBA\\Tesis\\mtsa\\MTSApy\\fsp"  # For Windows
+
+        agent = RandomAgent(None)
+
+        last_instance = ""
+        failed = False
+        for instance, n, k in self.all_instances_iterator():
+            if last_instance != instance:
+                failed = False
+
+            instance_res = self.init_instance_res()
+            if failed:
+                instance_res = self.init_instance_res()
+                instance_res["failed"] = repetitions
+
+            else:
+                for _ in range(repetitions):
+                    d = CompositionGraph(instance, n, k, path).start_composition()
+                    context = CompositionAnalyzer(d)
+                    env = Environment(context, False)
+
+                    print(f"Runing Random Agent in instance: {instance} {n}-{k}")
+                    # print(f"Starting at: {datetime.datetime.now()}")
+                    res = self.run_instance(env, agent, budget)
+                    self.print_res("Random Agent: ", res)
+                    self.update_instance_res(instance_res, res)
+
+                if instance_res["failed"] >= repetitions - 1:
+                    failed = True
+
+            instance_res["expanded transitions mean"] /= repetitions
+            instance_res["expanded states mean"] /= repetitions
+            instance_res["synthesis time(mean)"] /= repetitions
+
+            csv_path = f"./results/csv/random.csv"
+            info = {"Instance": instance, "N": n, "K": k,
+                    "Transitions (min)": instance_res["expanded transitions min"], "States (min)": instance_res["expanded states min"], "Time(min)": instance_res["synthesis time(min)"],
+                    "Transitions (max)": instance_res["expanded transitions max"], "States (max)": instance_res["expanded states max"], "Time(max)": instance_res["synthesis time(max)"],
+                    "Transitions (mean)": instance_res["expanded transitions mean"], "States (mean)": instance_res["expanded states mean"], "Time(mean)": instance_res["synthesis time(mean)"],
+                    "Failed": instance_res["failed"]}
+            last_instance = instance
             self.save_to_csv(csv_path, info)
 
 class TrainPPO(Experiment):
