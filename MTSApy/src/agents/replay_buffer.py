@@ -82,13 +82,12 @@ class ReplayBuffer(object):
             if done:
 
                 for j in range(len(last_steps)):
-                    states.append((self._env.context.compute_features(last_steps[j]), -len(last_steps) + j, None))
+                    states.append((last_steps[j], -len(last_steps) + j, None))
                 last_steps = []
                 obs = self._env.reset()
             else:
                 if len(last_steps) >= nstep:
-                    aux = self._env.context.compute_feature_of_list(obs2)
-                    states.append((self._env.context.compute_features(last_steps[0]), -nstep, aux))
+                    states.append((last_steps[0], -nstep, obs2))
                 last_steps = last_steps[len(last_steps) - nstep + 1:]
                 obs = obs2
             steps += 1

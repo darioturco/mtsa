@@ -97,18 +97,31 @@ class FeatureEnvironment(object):
 
 
 
-    def reset(self):
+    def reset(self, new_composition=None):
         state = self.env.reset()
-        return self.env.actions_to_features(state), False
-        #return self.env.actions_to_features(state)[0], False
+        return self.env.actions_to_features(state)
+        #return self.env.actions_to_features(state), False
+
+    #def step(self, action):
+    #    state, reward, done, info = self.env.step(action)
+    #    return self.env.actions_to_features(state), reward, done, False, info
 
     def step(self, action):
         state, reward, done, info = self.env.step(action)
-        return self.env.actions_to_features(state), reward, done, False, info
+        return self.env.actions_to_features(state), reward, done, info
 
 
     def close(self):
         self.env.close()
+
+    def get_info(self):
+        return self.env.get_info()
+
+    def get_instance_info(self):
+        return self.env.get_instance_info()
+
+    def get_nfeatures(self):
+        return self.env.get_nfeatures()
 
 
 

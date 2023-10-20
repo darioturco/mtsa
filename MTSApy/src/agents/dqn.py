@@ -5,6 +5,7 @@ import numpy as np
 import csv
 from torch.optim import Adam
 from torch.distributions import Categorical
+import matplotlib.pyplot as plt
 
 from src.agents.replay_buffer import ReplayBuffer
 from src.agents.agent import Agent
@@ -68,7 +69,7 @@ class TorchModel(Model):
     def single_update(self, s, value):
         return self.batch_update(np.array([s]), np.array([value]))
 
-    def batch_update(self, ss, values):
+    def batch_update(self, ss, values, eps):
         ss = torch.tensor(ss).to(self.device)
         values = torch.tensor(values, dtype=torch.float, device=self.device).reshape(len(ss), 1)
 
@@ -76,8 +77,12 @@ class TorchModel(Model):
         pred = self.model(ss)
 
         loss = self.loss_fn(pred, values)
+        #if loss.item() < 1.0:
         loss.backward()
-        print(loss)
+        #if eps > 1000 and loss.item() > 1.0:
+        #    print("Mucho loss")
+        #    return
+        #print(loss)
         self.optimizer.step()
 
         self.losses.append(loss.item())
@@ -91,6 +96,7 @@ class TorchModel(Model):
     # should be called only at the end of each episode
     def current_loss(self):
         avg_loss = np.mean(self.losses)
+        #avg_loss = np.max(self.losses)
         self.losses = []
         return avg_loss
 
@@ -135,7 +141,6 @@ class NeuralNetwork(nn.Module):
 
 import onnx
 from onnxruntime import InferenceSession
-from skl2onnx import to_onnx
 class OnnxModel(Model):
     def __init__(self, model):
         super().__init__()
@@ -205,114 +210,107 @@ class DQN(Agent):
     def train(self, seconds=None, max_steps=None, max_eps=10000,
               early_stopping=False, pth_path=None):
 
-        env = self.env
-        save_freq = 200000
         last_obs = None
-        save_at_end = False
-        results_path = None
         top = 1000
 
         instance, n, k = self.env.get_instance_info()
         csv_path = f"./results/training/{instance}-{n}-{k}-partial.csv"
-        saved = False
+        #saved = False
         acumulated_reward = 0
         all_rewards = []
+        losses = []
         self.initializeBuffer()
 
         if self.training_start is None:
             self.training_start = time.time()
             self.last_best = 0
 
-        steps, eps = 1, 1
+        steps = 1
+        self.eps = 1
 
         epsilon_step = (self.args["first_epsilon"] - self.args["last_epsilon"])
         epsilon_step /= self.args["epsilon_decay_steps"]
 
-        obs = env.reset() if (last_obs is None) else last_obs
+        obs = self.env.reset() if (last_obs is None) else last_obs
 
         last_steps = []
         while top:  # What is top used for?
             a = self.get_action(obs, self.epsilon)
             last_steps.append(obs[a])
 
-            obs2, reward, done, info = env.step(a)
+            obs2, reward, done, info = self.env.step(a)
 
             acumulated_reward += reward
             if self.args["exp_replay"]:
                 if done:
-                    if eps > 500 and -acumulated_reward >= 75:
-                        print("Wooo que paso aqui")
+                    #if self.eps > 500 and -acumulated_reward >= 75:
+                    #    print("Wooo que paso aqui")
 
                     for j in range(len(last_steps)):
-                        self.buffer.add(self.env.context.compute_features(last_steps[j]), -len(last_steps) + j, None)
+                        self.buffer.add(last_steps[j], -len(last_steps) + j, None)
                     last_steps = []
                 else:
                     if len(last_steps) >= self.args["n_step"]:
-                        self.buffer.add(self.env.context.compute_features(last_steps[0]), -self.args["n_step"], self.env.context.compute_feature_of_list(obs2))
+                        self.buffer.add(last_steps[0], -self.args["n_step"], obs2)
                     last_steps = last_steps[len(last_steps) - self.args["n_step"] + 1:]
                 self.batch_update()
             else:
                 self.update(obs, a, reward, obs2)
 
             if done:
-                instance = (env.info["problem"], env.info["n"], env.info["k"])
+                #if instance not in self.best_training_perf.keys() or \
+                #        info["expanded transitions"] < self.best_training_perf[instance]:
+                #    self.best_training_perf[instance] = info["expanded transitions"]
+                #    print("New best at instance " + str(instance) + "!", self.best_training_perf[instance], "Steps:", self.training_steps)
+                #    self.last_best = self.training_steps
+                loss = self.model.current_loss()
+                losses.append(loss)
+                #info.update({
+                #    "training time": time.time() - self.training_start,
+                #    "training steps": self.training_steps,
+                #    "instance": instance,
+                #    "loss": loss
+                #})
 
-                if instance not in self.best_training_perf.keys() or \
-                        info["expanded transitions"] < self.best_training_perf[instance]:
-                    self.best_training_perf[instance] = info["expanded transitions"]
-                    print("New best at instance " + str(instance) + "!", self.best_training_perf[instance], "Steps:",
-                          self.training_steps)
-                    self.last_best = self.training_steps
-                info.update({
-                    "training time": time.time() - self.training_start,
-                    "training steps": self.training_steps,
-                    "instance": instance,
-                    "loss": self.model.current_loss(),
+                #sw = 16
+                #plt.plot([np.mean([losses[i:i+sw]]) for i in range(len(losses)-sw)])
+                #plt.draw()
+                #plt.pause(0.0001)
+                #plt.clf()
 
-                })
                 all_rewards.append(-acumulated_reward)
-                print(f"Epsode: {eps} - Acumulated Reward: {-acumulated_reward} - Acumulated: {np.mean(all_rewards[-32:])} - Epsilon: {self.epsilon}")
+                print(f"Epsode: {self.eps} - Acumulated Reward: {-acumulated_reward} - Acumulated: {np.mean(all_rewards[-32:])} - Epsilon: {self.epsilon}")
                 acumulated_reward = 0
-                self.training_data.append(info)
-                obs = env.reset()
-                eps += 1
+                #self.training_data.append(info)
+                obs = self.env.reset()
 
+                if self.eps % self.freq_save == 0 and pth_path is not None:
+                    if len(all_rewards) > 1000:
+                        all_rewards = all_rewards[100:]
+
+                    DQN.save(self, f"{pth_path[:-4]}-{self.eps}.pth", partial=True)
+
+                    with open(csv_path, 'a') as f:
+                        writer = csv.writer(f)
+                        for i in range(self.freq_save - 1):
+                            idx = -self.freq_save + 1 + i
+                            writer.writerow([steps, all_rewards[idx], losses[idx]])
+
+                    print("Partial Saved!")
+
+                self.eps += 1
 
             else:
                 obs = obs2
 
-            if eps % self.freq_save == 0 and not saved and pth_path is not None:
-                if len(all_rewards) > 1000:
-                    all_rewards = all_rewards[100:]
 
-                saved = True
-                DQN.save(self, f"{pth_path[:-4]}-{eps}.pth", partial=True)
-
-                with open(csv_path, 'a') as f:
-                    writer = csv.writer(f)
-                    for i in range(self.freq_save - 1):
-                        writer.writerow([steps, all_rewards[-self.freq_save + 1 + i]])
-
-                print("Partial Saved!")
-            else:
-                if eps % self.freq_save != 0:
-                    saved = False
-
-
-            #if self.training_steps % save_freq == 0 and results_path is not None:
-            #    self.save(env.info, path=results_path)
-            #    top -= 1
 
             if self.args["target_q"] and self.training_steps % self.args["reset_target_freq"] == 0:
-                if self.verbose:
-                    print("Resetting target.")
                 print("Resetting target.")
                 self.target = OnnxModel(self.model)
 
             steps += 1
             self.training_steps += 1
-
-
 
             if seconds is not None and time.time() - self.training_start > seconds:
                 break
@@ -320,7 +318,7 @@ class DQN(Agent):
             if max_steps is not None and not early_stopping and steps >= max_steps:
                 break
 
-            if max_eps is not None and eps >= max_eps:
+            if max_eps is not None and self.eps >= max_eps:
                 break
 
             if max_steps is not None and self.training_steps > max_steps and (
@@ -336,114 +334,7 @@ class DQN(Agent):
             if self.epsilon > self.args["last_epsilon"] + 1e-10:
                 self.epsilon -= epsilon_step
 
-        #if results_path is not None and save_at_end:
-        #    self.save(env.info, results_path)
-
         return obs.copy()
-
-    """
-    def train(self, seconds=None, max_steps=None, max_eps=100000, early_stopping=False, pth_path=None):
-        self.initializeBuffer()
-        if self.training_start is None:
-            self.training_start = time.time()
-            self.last_best = 0
-
-        instance, n, k = self.env.get_instance_info()
-        csv_path = f"./results/training/{instance}-{n}-{k}-partial.csv"
-        saved = False
-
-        steps, eps = 1, 1
-        epsilon_step = (self.args["first_epsilon"] - self.args["last_epsilon"])
-        epsilon_step /= self.args["epsilon_decay_steps"]
-
-        obs = self.env.reset()
-
-        rewards = 0
-        all_rewards = []
-        last_steps = []
-
-        while not (max_eps is not None and eps >= max_eps):
-            a = self.get_action(obs, self.epsilon)
-            last_steps.append(obs[a])
-
-            obs2, reward, done, info = self.env.step(a)
-            rewards += reward
-
-            if self.args["exp_replay"]:
-                if done:
-                    for j in range(len(last_steps)):
-                        self.buffer.add(self.env.context.compute_features(last_steps[j]), -len(last_steps) + j, None)
-                    last_steps = []
-                else:
-                    if len(last_steps) >= self.args["n_step"]:
-                        aux = self.env.context.compute_feature_of_list(obs2)
-                        self.buffer.add(self.env.context.compute_features(last_steps[0]), -self.args["n_step"], aux)
-                    last_steps = last_steps[len(last_steps) - self.args["n_step"] + 1:]
-                self.batch_update()
-            else:
-                self.update(obs, a, reward, obs2)
-
-            if done:
-                eps += 1
-
-                all_rewards.append(-rewards)
-                print(f"Epsode: {eps} - Acumulated Reward: {-rewards} - Acumulated: {np.mean(all_rewards[-32:])} - Epsilon: {self.epsilon}")
-                rewards = 0
-                instance = (self.env.info["problem"], self.env.info["n"], self.env.info["k"])
-                info.update({
-                    "training time": time.time() - self.training_start,
-                    "training steps": self.training_steps,
-                    "instance": instance,
-                    "loss": self.model.current_loss(),
-                    })
-                self.training_data.append(info)
-                obs = self.env.reset()
-            else:
-                obs = obs2
-
-            if eps % self.freq_save == 0 and not saved and pth_path is not None:
-                if len(all_rewards) > 1000:
-                    all_rewards = all_rewards[100:]
-
-                saved = True
-                DQN.save(self, f"{pth_path[:-4]}-{eps}.pth", partial=True)
-
-                with open(csv_path, 'a') as f:
-                    writer = csv.writer(f)
-                    for i in range(self.freq_save-1):
-                        writer.writerow([steps, all_rewards[-self.freq_save+1+i]])
-
-                print("Partial Saved!")
-            else:
-                if eps % self.freq_save != 0:
-                    saved = False
-
-            steps += 1
-            self.training_steps += 1
-
-            if seconds is not None and time.time() - self.training_start > seconds:
-                break
-
-            if max_steps is not None and not early_stopping and steps >= max_steps:
-                break
-
-            if max_eps is not None and eps >= max_eps:
-                break
-
-            if max_steps is not None and self.training_steps > max_steps and (self.training_steps - self.last_best) / self.training_steps > 0.33:
-                print("Converged since steps are", self.training_steps, "and max_steps is", max_steps, "and last best was", self.last_best)
-                self.converged = True
-
-            if early_stopping and self.converged:
-                print("Converged!")
-                break
-
-            if self.epsilon > self.args["last_epsilon"] + 1e-10:
-                self.epsilon -= epsilon_step
-
-        self.trained = True
-        return obs
-    """
 
     def get_action(self, s, epsilon, env=None):
         """ Gets epsilon-greedy action using self.model """
@@ -452,8 +343,9 @@ class DQN(Agent):
         if np.random.rand() <= epsilon:
             return np.random.randint(len(s))
         else:
-            features = env.actions_to_features(s)
-            return self.model.best(features)
+            #features = env.actions_to_features(s)
+            #return self.model.best(features)
+            return self.model.best(s)
 
     def update(self, obs, action, reward, obs2):
         """ Gets epsilon-greedy action using self.model """
@@ -477,7 +369,7 @@ class DQN(Agent):
         if self.verbose:
             print("Batch update. Values:", rewards+values)
 
-        self.model.batch_update(np.array(action_featuress), rewards + values)
+        self.model.batch_update(np.array(action_featuress), rewards + values, self.eps)
 
 
     @staticmethod

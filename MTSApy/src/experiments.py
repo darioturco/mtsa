@@ -81,15 +81,15 @@ class Experiment(object):
                 "learning_rate": 1e-5,
                 "momentum": 0.9,
                 "nesterov": True,
-                "weight_decay": 1e-4,
+                "weight_decay": 0.0001,
                 "first_epsilon": 1.0,
-                "buffer_size": 10,
+                "buffer_size": 10000,
                 "n_step": 1,
-                "last_epsilon": 0,
-                "epsilon_decay_steps": 10000,   # 250000
+                "last_epsilon": 0.01,
+                "epsilon_decay_steps": 250000,   # 250000
                 "exp_replay": True,
                 "target_q": True,
-                "reset_target_freq": 1000,
+                "reset_target_freq": 10000,      # 10000
                 "batch_size": 10,
                 "max_eps": 1000000
                 }
@@ -223,13 +223,13 @@ class TrainSmallInstanceCheckBigInstance(Experiment):
             path = "/home/dario/Documents/Tesis/mtsa/MTSApy/fsp"  # For Linux
 
             ### NonBlocking Path (Borrar)
-            #path = "/home/dario/Documents/Tesis/mtsa/MTSApy/fsp/NonBlocking"  # For Linux
+            path = "/home/dario/Documents/Tesis/mtsa/MTSApy/fsp/NonBlocking"  # For Linux
         else:
             path = "F:\\UBA\\Tesis\\mtsa\\MTSApy\\fsp"  # For Windows
 
         d = CompositionGraph(instance, n_train, k_train, path).start_composition()
         context = CompositionAnalyzer(d)
-        env = Environment(context, False)
+        env = FeatureEnvironment(context, False)
         nfeatures = env.get_nfeatures()
         args = self.default_args()
         pth_path = f"results/models/{instance}/{instance}-{n_train}-{k_train}.pth"
