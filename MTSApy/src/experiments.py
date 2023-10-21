@@ -91,7 +91,14 @@ class Experiment(object):
                 "target_q": True,
                 "reset_target_freq": 10000,      # 10000
                 "batch_size": 10,
+
+
+                ### Miscellaneous
+                'freq_save': 100,
+                'seconds': None,
+                'max_steps': None,
                 "max_eps": 1000000
+
                 }
 
     def init_instance_res(self):
@@ -223,7 +230,7 @@ class TrainSmallInstanceCheckBigInstance(Experiment):
             path = "/home/dario/Documents/Tesis/mtsa/MTSApy/fsp"  # For Linux
 
             ### NonBlocking Path (Borrar)
-            path = "/home/dario/Documents/Tesis/mtsa/MTSApy/fsp/NonBlocking"  # For Linux
+            #path = "/home/dario/Documents/Tesis/mtsa/MTSApy/fsp/NonBlocking"  # For Linux
         else:
             path = "F:\\UBA\\Tesis\\mtsa\\MTSApy\\fsp"  # For Windows
 
@@ -242,8 +249,8 @@ class TrainSmallInstanceCheckBigInstance(Experiment):
             neural_network = NeuralNetwork(nfeatures, args["nn_size"]).to("cpu")
             nn_model = TorchModel(nfeatures, network=neural_network, args=args)
             dqn_agent = DQN(env, nn_model, args, verbose=False)
-            dqn_agent.train(seconds=None, max_steps=None, max_eps=args["max_eps"], early_stopping=False, pth_path=pth_path)
-            print(f"Trained in instance: {instance} {n_train}-{k_train}")
+            dqn_agent.train(seconds=args["seconds"], max_steps=args["max_steps"], max_eps=args["max_eps"], pth_path=pth_path)
+            print(f"Trained in instance: {instance} {n_train}-{k_train}\n")
             DQN.save(dqn_agent, pth_path)
 
         env.reset(CompositionGraph(instance, n_test, k_test, path).start_composition())

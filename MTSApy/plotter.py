@@ -6,13 +6,13 @@ import seaborn as sn
 OUTPUT_FOLDER = "./results/plots/"
 #BENCHMARK_PROBLEMS = ["AT", "BW", "DP", "TA", "TL", "CM"]
 #BENCHMARK_PROBLEMS = ["DP", "TA", "CM"]
-BENCHMARK_PROBLEMS = ["BW"]
+BENCHMARK_PROBLEMS = ["CM"]
 
 def graph_training_process(sliding_window=5, save_path=None, use_steps=False):
     #random_data = pd.read_csv("./results/csv/random budget=5000 repetitions=100.csv")
     random_data = pd.read_csv("./results/csv/random.csv")
     ra_data = pd.read_csv("./results/csv/Ready Abstraction.csv")
-    limite = 10000
+    limite = 30000
     graph_loss = True
 
     for instance in BENCHMARK_PROBLEMS:
@@ -87,7 +87,7 @@ def compare_random_and_RL():
 
 if __name__ == "__main__":
     print("Plotting...")
-    graph_training_process(sliding_window=250, save_path='./results/NonBlocking-plots', use_steps=True)
+    graph_training_process(sliding_window=10, save_path='./results/plots', use_steps=True)
     #compare_random_and_RL()
 
 

@@ -7,9 +7,9 @@ if not jpype.isJVMStarted():
     if "linux" in sys.platform:
         jpype.startJVM(classpath=['mtsa.jar'])  # For Linux
     else:
-        jpype.startJVM(f"C:\\Program Files\\Java\\jdk-21\\bin\\server\\jvm.dll", '-ea', classpath=['C:/Users/diort/Downloads/mtsa/maven-root/mtsa/target/mtsa.jar'])  # For Windows
+        jpype.startJVM(f"C:\\Program Files\\Java\\jdk-21\\bin\\server\\jvm.dll", '-ea', classpath=['F:/UBA/Tesis/mtsa/MTSApy/mtsa.jar'])  # For Windows
 
-NONBLOCKING = True
+NONBLOCKING = False
 if NONBLOCKING:
     print("WARNING: Runing NonBlocking environment")
     from MTSTools.ac.ic.doc.mtstools.model.operations.DCS.nonblocking import DirectedControllerSynthesisNonBlocking, FeatureBasedExplorationHeuristic, DCSForPython

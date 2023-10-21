@@ -3,12 +3,12 @@ import torch.nn as nn
 import time
 import numpy as np
 import csv
-from torch.optim import Adam
-from torch.distributions import Categorical
 import matplotlib.pyplot as plt
 
 from src.agents.replay_buffer import ReplayBuffer
 from src.agents.agent import Agent
+import onnx
+from onnxruntime import InferenceSession
 
 class Model:
     def __init__(self):
@@ -139,8 +139,6 @@ class NeuralNetwork(nn.Module):
             x = layer(x.to(torch.float))
         return x
 
-import onnx
-from onnxruntime import InferenceSession
 class OnnxModel(Model):
     def __init__(self, model):
         super().__init__()
@@ -179,7 +177,6 @@ class DQN(Agent):
         self.trained = False
 
         self.training_start = None
-        self.training_steps = 0
         self.epsilon = args["first_epsilon"]
 
         self.verbose = verbose
@@ -189,7 +186,7 @@ class DQN(Agent):
         self.best_training_perf = {}
         self.last_best = None
         self.converged = False
-        self.freq_save = 100
+        self.freq_save = args['freq_save']
 
     def initializeBuffer(self):
         """ Initialize replay buffer uniformly with experiences """
@@ -202,20 +199,14 @@ class DQN(Agent):
         for action_features, reward, obs2 in random_experience:
             self.buffer.add(action_features, reward, obs2)
 
-
-
         print("Done.")
 
-    #def train(self, seconds=None, max_steps=None, max_eps=100000, early_stopping=False, pth_path=None):
-    def train(self, seconds=None, max_steps=None, max_eps=10000,
-              early_stopping=False, pth_path=None):
+    def train(self, seconds=None, max_steps=None, max_eps=10000, pth_path=None):
 
         last_obs = None
-        top = 1000
 
         instance, n, k = self.env.get_instance_info()
         csv_path = f"./results/training/{instance}-{n}-{k}-partial.csv"
-        #saved = False
         acumulated_reward = 0
         all_rewards = []
         losses = []
@@ -225,7 +216,7 @@ class DQN(Agent):
             self.training_start = time.time()
             self.last_best = 0
 
-        steps = 1
+        self.steps = 1
         self.eps = 1
 
         epsilon_step = (self.args["first_epsilon"] - self.args["last_epsilon"])
@@ -234,7 +225,7 @@ class DQN(Agent):
         obs = self.env.reset() if (last_obs is None) else last_obs
 
         last_steps = []
-        while top:  # What is top used for?
+        while self.eps < max_eps:
             a = self.get_action(obs, self.epsilon)
             last_steps.append(obs[a])
 
@@ -243,9 +234,6 @@ class DQN(Agent):
             acumulated_reward += reward
             if self.args["exp_replay"]:
                 if done:
-                    #if self.eps > 500 and -acumulated_reward >= 75:
-                    #    print("Wooo que paso aqui")
-
                     for j in range(len(last_steps)):
                         self.buffer.add(last_steps[j], -len(last_steps) + j, None)
                     last_steps = []
@@ -258,19 +246,8 @@ class DQN(Agent):
                 self.update(obs, a, reward, obs2)
 
             if done:
-                #if instance not in self.best_training_perf.keys() or \
-                #        info["expanded transitions"] < self.best_training_perf[instance]:
-                #    self.best_training_perf[instance] = info["expanded transitions"]
-                #    print("New best at instance " + str(instance) + "!", self.best_training_perf[instance], "Steps:", self.training_steps)
-                #    self.last_best = self.training_steps
                 loss = self.model.current_loss()
                 losses.append(loss)
-                #info.update({
-                #    "training time": time.time() - self.training_start,
-                #    "training steps": self.training_steps,
-                #    "instance": instance,
-                #    "loss": loss
-                #})
 
                 #sw = 16
                 #plt.plot([np.mean([losses[i:i+sw]]) for i in range(len(losses)-sw)])
@@ -280,10 +257,6 @@ class DQN(Agent):
 
                 all_rewards.append(-acumulated_reward)
                 print(f"Epsode: {self.eps} - Acumulated Reward: {-acumulated_reward} - Acumulated: {np.mean(all_rewards[-32:])} - Epsilon: {self.epsilon}")
-                acumulated_reward = 0
-                #self.training_data.append(info)
-                obs = self.env.reset()
-
                 if self.eps % self.freq_save == 0 and pth_path is not None:
                     if len(all_rewards) > 1000:
                         all_rewards = all_rewards[100:]
@@ -294,45 +267,34 @@ class DQN(Agent):
                         writer = csv.writer(f)
                         for i in range(self.freq_save - 1):
                             idx = -self.freq_save + 1 + i
-                            writer.writerow([steps, all_rewards[idx], losses[idx]])
+                            writer.writerow([self.steps, all_rewards[idx], losses[idx]])
 
                     print("Partial Saved!")
 
+                obs = self.env.reset()
+                acumulated_reward = 0
                 self.eps += 1
 
             else:
                 obs = obs2
 
-
-
-            if self.args["target_q"] and self.training_steps % self.args["reset_target_freq"] == 0:
+            if self.args["target_q"] and self.steps % self.args["reset_target_freq"] == 0:
                 print("Resetting target.")
                 self.target = OnnxModel(self.model)
 
-            steps += 1
-            self.training_steps += 1
+            self.steps += 1
+            if self.epsilon > self.args["last_epsilon"] + 1e-10:
+                self.epsilon -= epsilon_step
 
             if seconds is not None and time.time() - self.training_start > seconds:
                 break
 
-            if max_steps is not None and not early_stopping and steps >= max_steps:
+            if max_steps is not None and self.steps >= max_steps:
                 break
 
-            if max_eps is not None and self.eps >= max_eps:
-                break
+            #if max_eps is not None and self.eps >= max_eps:
+            #    break
 
-            if max_steps is not None and self.training_steps > max_steps and (
-                    self.training_steps - self.last_best) / self.training_steps > 0.33:
-                print("Converged since steps are", self.training_steps, "and max_steps is", max_steps,
-                      "and last best was", self.last_best)
-                self.converged = True
-
-            if early_stopping and self.converged:
-                print("Converged!")
-                break
-
-            if self.epsilon > self.args["last_epsilon"] + 1e-10:
-                self.epsilon -= epsilon_step
 
         return obs.copy()
 
