@@ -256,7 +256,7 @@ class DQN(Agent):
                 #plt.clf()
 
                 all_rewards.append(-acumulated_reward)
-                print(f"Epsode: {self.eps} - Acumulated Reward: {-acumulated_reward} - Acumulated: {np.mean(all_rewards[-32:])} - Epsilon: {self.epsilon}")
+                print(f"Epsode: {self.eps} - Reward: {-acumulated_reward} - Acumulated: {np.mean(all_rewards[-32:])} - Epsilon: {self.epsilon}")
                 if self.eps % self.freq_save == 0 and pth_path is not None:
                     if len(all_rewards) > 1000:
                         all_rewards = all_rewards[100:]
@@ -291,9 +291,6 @@ class DQN(Agent):
 
             if max_steps is not None and self.steps >= max_steps:
                 break
-
-            #if max_eps is not None and self.eps >= max_eps:
-            #    break
 
 
         return obs.copy()

@@ -5,14 +5,14 @@ import seaborn as sn
 
 OUTPUT_FOLDER = "./results/plots/"
 #BENCHMARK_PROBLEMS = ["AT", "BW", "DP", "TA", "TL", "CM"]
-#BENCHMARK_PROBLEMS = ["DP", "TA", "CM"]
-BENCHMARK_PROBLEMS = ["CM"]
+#BENCHMARK_PROBLEMS = ["AT", "BW", "TA", "TL", "CM"]
+BENCHMARK_PROBLEMS = ["TA"]
 
 def graph_training_process(sliding_window=5, save_path=None, use_steps=False):
     #random_data = pd.read_csv("./results/csv/random budget=5000 repetitions=100.csv")
     random_data = pd.read_csv("./results/csv/random.csv")
     ra_data = pd.read_csv("./results/csv/Ready Abstraction.csv")
-    limite = 30000
+    limite = 12000
     graph_loss = True
 
     for instance in BENCHMARK_PROBLEMS:
@@ -34,10 +34,11 @@ def graph_training_process(sliding_window=5, save_path=None, use_steps=False):
             x = episodes
             x_label = 'Episodes'
 
+        plt.clf()
         plt.plot(x[:limite], rewards_win[:limite], label="RL")
-        plt.axhline(y=ra_value, color='r', linestyle='-', label="RA")
-        plt.axhline(y=random_mean, color='g', linestyle='--', label="Random Mean")
-        plt.axhline(y=random_max, color='g', linestyle='-', label="Random Max")
+        plt.axhline(y=int(random_mean), color='g', linestyle='--', label="Random Mean")
+        plt.axhline(y=int(random_max), color='g', linestyle='-', label="Random Max")
+        plt.axhline(y=int(ra_value), color='red', linestyle='-', label="RA")
         plt.xlabel(x_label)
         plt.ylabel('Reward')
         plt.title(instance)
@@ -87,7 +88,7 @@ def compare_random_and_RL():
 
 if __name__ == "__main__":
     print("Plotting...")
-    graph_training_process(sliding_window=10, save_path='./results/plots', use_steps=True)
+    graph_training_process(sliding_window=500, save_path='./results/plots', use_steps=True)
     #compare_random_and_RL()
 
 

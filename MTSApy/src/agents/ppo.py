@@ -263,6 +263,7 @@ class PPO:
         batch_lens = []
         batch_vals = []
         batch_dones = []
+        all_rewards = []
 
         t = 0  # Keeps track of how many timesteps we've run so far this batch
         eps = 0
@@ -273,7 +274,7 @@ class PPO:
             ep_vals = []  # state values collected per episode
             ep_dones = []  # done flag collected per episode
             # Reset the environment. Note that obs is short for observation.
-            obs, _ = self.env.reset()
+            obs = self.env.reset()
 
             step = 0
             done = False
@@ -295,8 +296,8 @@ class PPO:
                 batch_obs.append(obs[action])
 
 
-                obs, rew, terminated, truncated, _ = self.env.step(action)
-                done = terminated or truncated
+                obs, rew, terminated, _ = self.env.step(action)
+                done = terminated
                 # Track recent reward, action, and action log probability
                 ep_rews.append(rew)
                 ep_vals.append(val.flatten()[action])
@@ -306,8 +307,10 @@ class PPO:
                 step += 1
 
             eps += 1
-            #print(f"Epsode: {eps} - Acumulated Reward: {np.sum(ep_rews)} - Acumulated: {np.mean(all_rewards[-32:])}")
-            print(f"Epsode: {self.logger['eps_so_far']+eps} - Acumulated Reward: {np.sum(ep_rews)}")
+            rewards = -np.sum(ep_rews)
+            all_rewards.append(rewards)
+            #print(f"Epsode: {eps} - Reward: {np.sum(ep_rews)} - Acumulated: {np.mean(all_rewards[-32:])}")
+            print(f"Epsode: {self.logger['eps_so_far']+eps} - Reward: {rewards} - Acumulated: {np.mean(all_rewards[-32:])}")
 
             # Track episodic lengths, rewards, state values, and done flags
             batch_lens.append(step + 1)
@@ -409,15 +412,15 @@ class PPO:
         # Algorithm hyperparameters
         self.timesteps_per_batch = 5000  # Number of timesteps to run per batch
         self.max_timesteps_per_episode = 5000  # Max number of timesteps per episode
-        self.n_updates_per_iteration = 5  # Number of times to update actor/critic per iteration
-        self.lr = 0.003  # Learning rate of actor optimizer
-        self.gamma = 0.95  # Discount factor to be applied when calculating Rewards-To-Go
+        self.n_updates_per_iteration = 16  # Number of times to update actor/critic per iteration
+        self.lr = 0.005  # Learning rate of actor optimizer
+        self.gamma = 1.0  # Discount factor to be applied when calculating Rewards-To-Go
         self.clip = 0.2  # Recommended 0.2, helps define the threshold to clip the ratio during SGA
         self.lam = 0.98  # Lambda Parameter for GAE
-        self.num_minibatches = 5  # Number of mini-batches for Mini-batch Update
+        self.num_minibatches = 10  # Number of mini-batches for Mini-batch Update
         self.ent_coef = 0  # Entropy coefficient for Entropy Regularization
         self.target_kl = 0.03  # KL Divergence threshold
-        self.max_grad_norm = 0.5  # Gradient Clipping threshold
+        self.max_grad_norm = 5.0  # Gradient Clipping threshold
 
         # Miscellaneous parameters
         self.render = False  # If we should render during rollout
