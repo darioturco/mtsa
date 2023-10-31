@@ -8,3 +8,10 @@ class Agent(object):
 
     def get_action(self, state):
         pass
+
+    def feature_vector_to_number(self, features):
+        res = 0
+        for i, f in enumerate(features):
+            res += round(f) * (2 ** i)
+
+        return res

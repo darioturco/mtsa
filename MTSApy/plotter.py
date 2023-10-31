@@ -6,7 +6,7 @@ import seaborn as sn
 OUTPUT_FOLDER = "./results/plots/"
 #BENCHMARK_PROBLEMS = ["AT", "BW", "DP", "TA", "TL", "CM"]
 #BENCHMARK_PROBLEMS = ["AT", "BW", "TA", "TL", "CM"]
-BENCHMARK_PROBLEMS = ["TA"]
+BENCHMARK_PROBLEMS = ["BW"]
 
 def graph_training_process(sliding_window=5, save_path=None, use_steps=False):
     #random_data = pd.read_csv("./results/csv/random budget=5000 repetitions=100.csv")

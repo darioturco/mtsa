@@ -145,7 +145,7 @@ class CompositionAnalyzer:
         """
         Determines the label of ℓ in A E p .
         """
-        feature_vec_slice = [0 for _ in self._no_indices_alphabet]
+        feature_vec_slice = [0.0 for _ in self._no_indices_alphabet]
         self._set_transition_type_bit(feature_vec_slice, transition.action)
         # print(no_idx_label, feature_vec_slice)
         return feature_vec_slice
@@ -153,16 +153,17 @@ class CompositionAnalyzer:
     def _set_transition_type_bit(self, feature_vec_slice, transition):
         no_idx_label = self.remove_indices(str(transition.toString()))
         feature_vec_slice_pos = self._fast_no_indices_alphabet_dict[no_idx_label]
-        feature_vec_slice[feature_vec_slice_pos] = 1
+        feature_vec_slice[feature_vec_slice_pos] = 1.0
 
     def state_label_feature(self, transition):
         """
         Determines the labels of the explored
             transitions that arrive at s.
         """
-        feature_vec_slice = [0 for _ in self._no_indices_alphabet]
+        feature_vec_slice = [0.0 for _ in self._no_indices_alphabet]
         arriving_to_s = transition.state.getParents()
-        for trans in arriving_to_s: self._set_transition_type_bit(feature_vec_slice, trans.getFirst())
+        for trans in arriving_to_s:
+            self._set_transition_type_bit(feature_vec_slice, trans.getFirst())
         return feature_vec_slice
 
     def controllable(self, transition):
@@ -183,7 +184,7 @@ class CompositionAnalyzer:
         s ′ is winning, losing, none,
         or not yet
         explored."""
-        res = [0, 0, 0]
+        res = [0.0, 0.0, 0.0]
         if transition.child is not None:
             res = [float(transition.child.status.toString() == "GOAL"),
                    float(transition.child.status.toString() == "ERROR"),

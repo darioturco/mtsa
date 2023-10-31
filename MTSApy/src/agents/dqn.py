@@ -182,6 +182,7 @@ class DQN(Agent):
         self.verbose = verbose
 
         self.training_data = []
+        self.expanded_transitions = set()
 
         self.best_training_perf = {}
         self.last_best = None
@@ -201,7 +202,7 @@ class DQN(Agent):
 
         print("Done.")
 
-    def train(self, seconds=None, max_steps=None, max_eps=10000, pth_path=None):
+    def train(self, seconds=None, max_steps=None, max_eps=10000, pth_path=None, transitions_path=None):
 
         last_obs = None
 
@@ -228,6 +229,7 @@ class DQN(Agent):
         while self.eps < max_eps:
             a = self.get_action(obs, self.epsilon)
             last_steps.append(obs[a])
+            self.expanded_transitions.add(self.feature_vector_to_number(obs[a]))
 
             obs2, reward, done, info = self.env.step(a)
 
@@ -257,19 +259,25 @@ class DQN(Agent):
 
                 all_rewards.append(-acumulated_reward)
                 print(f"Epsode: {self.eps} - Reward: {-acumulated_reward} - Acumulated: {np.mean(all_rewards[-32:])} - Epsilon: {self.epsilon}")
-                if self.eps % self.freq_save == 0 and pth_path is not None:
-                    if len(all_rewards) > 1000:
-                        all_rewards = all_rewards[100:]
+                if self.eps % self.freq_save == 0:
+                    if pth_path is not None:
+                        if len(all_rewards) > 1000:
+                            all_rewards = all_rewards[100:]
 
-                    DQN.save(self, f"{pth_path[:-4]}-{self.eps}.pth", partial=True)
+                        DQN.save(self, f"{pth_path[:-4]}-{self.eps}.pth", partial=True)
 
-                    with open(csv_path, 'a') as f:
-                        writer = csv.writer(f)
-                        for i in range(self.freq_save - 1):
-                            idx = -self.freq_save + 1 + i
-                            writer.writerow([self.steps, all_rewards[idx], losses[idx]])
+                        with open(csv_path, 'a') as f:
+                            writer = csv.writer(f)
+                            for i in range(self.freq_save - 1):
+                                idx = -self.freq_save + 1 + i
+                                writer.writerow([self.steps, all_rewards[idx], losses[idx]])
 
-                    print("Partial Saved!")
+                        print("Partial Saved!")
+
+                    if transitions_path is not None:
+                        with open(transitions_path, 'w') as f:
+                            f.write(str(self.expanded_transitions))
+
 
                 obs = self.env.reset()
                 acumulated_reward = 0
