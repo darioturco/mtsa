@@ -76,7 +76,6 @@ def graph_training_process(sliding_window=5, repetitions=5, save_path=None, use_
             steps_all.append(steps)
             rewards_win_all.append(rewards_win)
 
-
             plt.plot(steps if use_steps else episodes, rewards_win, label=None, alpha=0.2, color='#1f77b4')
 
         random_mean = -int(
@@ -140,19 +139,26 @@ def compare_random_and_RL():
 def comparative_bar_plot():
     random_data = pd.read_csv("./results/csv/random.csv")
     ra_data = pd.read_csv("./results/csv/Ready Abstraction.csv")
-    for instance in BENCHMARK_PROBLEMS:
-        print(instance)
+    data = {"Random": {}, "RL": {}, "RA": {}}
+    instances = ["AT", "BW", "DP", "TA", "TL", "CM"][::-1]
+    for instance in instances:
+        random_instance = random_data[random_data["Instance"] == instance]
+        data["Random"][instance] = random_instance[random_instance["Failed"] < 99].count()["Failed"]
 
-    data = {"Random": {"TA": 1, "DP": 2, "BW": 5},
-            "RL": {"TA": 4, "DP": 3, "BW": 6}}
+        ra_instance = ra_data[ra_data["Instance"] == instance]
+        data["RA"][instance] = ra_instance[ra_instance["Failed"] == False].count()["Failed"]
 
-    instances = ["TA", "DP", "BW"]
+        rl_instance = pd.read_csv(f"./results/csv/{instance}.csv")
+        data["RL"][instance] = rl_instance[rl_instance["Failed"] == False].count()["Failed"]
+
+    print(data)
+
     heigths = []
     for i in instances:
         heigths.append(np.array([data[algo][i] for algo in data.keys()]))
 
     for h in range(len(heigths) - 1, -1, -1):
-        plt.bar(list(data.keys()), sum([heigths[i] for i in range(h + 1)]), label=instances[len(instances) - 1 - h])
+        plt.bar(list(data.keys()), sum([heigths[i] for i in range(h + 1)]), label=instances[h])
 
     for x, (k, v) in enumerate(data.items()):
         totals = [0]
@@ -160,10 +166,10 @@ def comparative_bar_plot():
             totals.append(totals[-1] + v[i])
 
         for i in range(len(totals) - 1):
-            plt.text(x, (totals[i + 1] - totals[i]) / 2 + totals[i] - 0.25, f'{(totals[i + 1] - totals[i])}',
+            plt.text(x, (totals[i + 1] - totals[i]) / 2 + totals[i] - 10, f'{(totals[i + 1] - totals[i])}',
                      ha='center', va='bottom')
 
-        plt.text(x, totals[-1], f'{totals[-1]}', ha='center', va='bottom')
+        plt.text(x, totals[-1]+10, f'{totals[-1]}', ha='center', va='bottom')
 
     plt.legend()
     plt.show()
@@ -175,7 +181,10 @@ if __name__ == "__main__":
     #graph_individual_training_process(sliding_window=500, save_path='./results/plots', use_steps=True)
     #graph_individual_training_process(sliding_window=500, save_path=None, use_steps=True)
 
-    graph_training_process(sliding_window=500, repetitions=5, save_path='./results/plots', use_steps=True)
+    #graph_training_process(sliding_window=500, repetitions=5, save_path='./results/plots', use_steps=True)
+
+    comparative_bar_plot()
+
 
 
 
