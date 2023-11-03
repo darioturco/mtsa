@@ -45,13 +45,13 @@ class Experiment(object):
         finish = False
         rewards = []
         trace = []
-        expanded_transitions = set()
+        expanded_fv = set()
 
         i = 0
 
         while not finish and i <= budget:
             idx = agent.get_action(state, 0, env)
-            expanded_transitions.add(agent.feature_vector_to_number(state[idx]))
+            expanded_fv.add(agent.feature_vector_to_number(state[idx]))
             state, reward, finish, info = env.step(idx)
             rewards.append(reward)
             trace.append(idx)
@@ -60,7 +60,7 @@ class Experiment(object):
         res = env.get_info()
         res["failed"] = not finish
         res["trace"] = trace
-        res["expanded transitions set"] = expanded_transitions
+        res["features vectores"] = expanded_fv
 
         env.close()
         return res
@@ -288,25 +288,41 @@ class TestTrainedInAllInstances(Experiment):
 
         nn_model = TorchModel.load(nfeatures, pth_path, args=args)
         dqn_agent = DQN(env, nn_model, args, verbose=False)
+        last_failed = False
+        last_n = self.min_instance_size
 
         for instance, n, k in self.all_instances_of(instance):
+            if n != last_n:
+                last_failed = False
 
-            d = CompositionGraph(instance, n, k, path).start_composition()
-            context = CompositionAnalyzer(d)
-            env = Environment(context, False)
+            if last_failed:
+                print(f"DQN Agent in instance: {instance} {n}-{k}: Failed")
+                res = {"expanded transitions": budget+1,
+                    "expanded states": budget+1,
+                    "synthesis time(ms)": 9999,
+                    "failed": True,
+                    "features vectores": set()}
+            else:
+                env = self.get_environment(instance, n, k, path)
 
-            print(f"Runing DQN Agent in instance: {instance} {n}-{k}")
-            # print(f"Starting at: {datetime.datetime.now()}")
-            res = self.run_instance(env, dqn_agent, budget)
-            self.print_res("DQN Agent: ", res)
+                print(f"Runing DQN Agent in instance: {instance} {n}-{k}")
+                # print(f"Starting at: {datetime.datetime.now()}")
+                res = self.run_instance(env, dqn_agent, budget)
+                self.print_res("DQN Agent: ", res)
 
             csv_path = f"./results/csv/{instance}.csv"
             info = {"Instance": instance, "N": n, "K": k,
                     "Transitions": res["expanded transitions"],
                     "States": res["expanded states"],
                     "Time(ms)": res["synthesis time(ms)"],
-                    "Failed": res["failed"]}
+                    "Failed": res["failed"],
+                    "Features Vectors": res["features vectores"]}
+
             self.save_to_csv(csv_path, info)
+
+            last_failed = res["failed"]
+            last_n = n
+
 
 class RunRandomInAllInstances(Experiment):
     def __init__(self, name="Test"):
@@ -314,7 +330,6 @@ class RunRandomInAllInstances(Experiment):
 
     def run(self, budget, repetitions):
         path = self.get_fsp_path()
-
 
         agent = RandomAgent(None)
 

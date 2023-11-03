@@ -70,8 +70,9 @@ class Node(object):
             # Do what I need with n
             res.append((n, d))
 
-            for node in n._to:
-                node_fv = n._from
+            for edge in n._to:
+                node_fv = edge._from
+                print(node_fv)
                 if node_fv not in visited:
                     queue.append(node_fv)
                     visited.append(node_fv)
@@ -167,12 +168,31 @@ class MCTS(Agent):
 
     def path_weight(self, ds):
         return nx.path_weight(self.G, ds, 'weight')
+
+    #def self.vecinos_a(self, k, node):
+    #    res = [node]
+    #    for kk in range(k):
+
+
     def getUCB(self, fv):
         if fv not in self.eval:
             return 0
 
+        k = 3
         node = self.eval[fv]
+
+        lista = node.bfs()
+        print("holaa")
+        print(lista)
+
+
+         #return max([self.vecinos_a(kk, node) ])
+
+
+
+        #node = self.eval[fv]
         return sum([ self.eval[t._from].win_rate() * t.weight / node.n for t in node._to])
+
 
         """
         # If only the target is specified, return a dictionary keyed by sources with a list of nodes in a shortest path from one of the sources to the target.
