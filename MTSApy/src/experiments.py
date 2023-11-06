@@ -4,9 +4,10 @@ import random
 import datetime
 import numpy as np
 from src.composition import CompositionGraph, CompositionAnalyzer
-from src.environment import Environment, FeatureEnvironment
+from src.environment import Environment, FeatureEnvironment, EmbeddingEnvironment
 from src.agents.dqn import DQN, NeuralNetwork, TorchModel
 from src.agents.random import RandomAgent
+from src.config import *
 import time
 import csv
 import subprocess
@@ -16,7 +17,6 @@ class Experiment(object):
         self.name = name
         self.platform = sys.platform
         self.BENCHMARK_PROBLEMS = ["AT", "BW", "DP", "TA", "TL", "CM"]
-        #self.BENCHMARK_PROBLEMS = ["TL", "CM"]
         self.min_instance_size = 2
         self.max_instance_size = 15
         self.seed = 12
@@ -145,7 +145,11 @@ class Experiment(object):
 
     def get_fsp_path(self):
         if "linux" in self.platform:
-            path = "/home/dario/Documents/Tesis/mtsa/MTSApy/fsp"  # For Linux
+            if NONBLOCKING:
+                path = "/home/dario/Documents/Tesis/mtsa/MTSApy/fsp/NonBlocking"  # For Linux
+            else:
+                path = "/home/dario/Documents/Tesis/mtsa/MTSApy/fsp"  # For Linux
+
         else:
             path = "F:\\UBA\\Tesis\\mtsa\\MTSApy\\fsp"  # For Windows
         return path
@@ -153,7 +157,7 @@ class Experiment(object):
     def get_environment(self, instance, n, k, path):
         d = CompositionGraph(instance, n, k, path).start_composition()
         context = CompositionAnalyzer(d)
-        return FeatureEnvironment(context, False)
+        return EmbeddingEnvironment(context, False)
 
 
 

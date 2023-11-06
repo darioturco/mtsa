@@ -123,5 +123,46 @@ class FeatureEnvironment(object):
     def get_nfeatures(self):
         return self.env.get_nfeatures()
 
+class EmbeddingEnvironment(object):
+    def __init__(self, context, normalize_reward):
+        self.env = Environment(context, normalize_reward)
+
+        self.observation_space_dim = self.get_nfeatures()
+
+        self.action_space = [0, 1]
+
+
+
+    def get_nfeatures(self):
+        # TODO: Complete this
+        #       This should return the len of a vector embedding
+        longitud_de_embedding = 4 # Cambiar el 4 por el numero correcto
+        return self.env.get_nfeatures() + longitud_de_embedding
+
+    def get_embedding(self, state):
+        # TODO: Complete this
+        #       This should return the vector embedding of the state
+        return self.env.actions_to_features(state)
+
+    def reset(self, new_composition=None):
+        state = self.env.reset()
+        return self.get_embedding(state)
+
+    def step(self, action):
+        state, reward, done, info = self.env.step(action)
+        return self.get_embedding(state), reward, done, info
+
+    def close(self):
+        self.env.close()
+
+    def get_info(self):
+        return self.env.get_info()
+
+    def get_instance_info(self):
+        return self.env.get_instance_info()
+
+    def get_nfeatures(self):
+        return
+
 
 

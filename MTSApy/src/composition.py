@@ -1,5 +1,6 @@
 import networkx as nx
 import jpype.imports
+from src.config import *
 from bidict import bidict
 import sys
 
@@ -9,7 +10,7 @@ if not jpype.isJVMStarted():
     else:
         jpype.startJVM(f"C:\\Program Files\\Java\\jdk-21\\bin\\server\\jvm.dll", '-ea', classpath=['F:/UBA/Tesis/mtsa/MTSApy/mtsa.jar'])  # For Windows
 
-NONBLOCKING = False
+
 if NONBLOCKING:
     print("WARNING: Runing NonBlocking environment")
     from MTSTools.ac.ic.doc.mtstools.model.operations.DCS.nonblocking import DirectedControllerSynthesisNonBlocking, FeatureBasedExplorationHeuristic, DCSForPython
@@ -206,7 +207,7 @@ class CompositionAnalyzer:
     def isLastExpanded(self, transition):
         return [float(self.composition.getLastExpanded() == transition)]
 
-    def remove_indices(self, transition_label: str):
+    def remove_indices(self, transition_label):
         res = ""
         for c in transition_label:
             if not c.isdigit(): res += c
