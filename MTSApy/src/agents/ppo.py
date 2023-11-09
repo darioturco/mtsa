@@ -376,6 +376,7 @@ class PPO:
                 batch_rtgs - the rewards-to-go calculated in the most recently collected
                                 batch as a tensor. Shape: (number of timesteps in batch)
         """
+        print(f"Batch Obs {batch_obs}")
         # Query critic network for a value V for each batch_obs. Shape of V should be same as batch_rtgs
         # if batch_obs.size(0) == 1:
         #     V = self.critic(batch_obs)
@@ -390,7 +391,9 @@ class PPO:
         dist = MultivariateNormal(mean, self.cov_mat)
 
         #log_probs = dist.log_prob(batch_acts)
+        print(f"Probs: {batch_logs}")
         log_probs = dist.log_prob(batch_logs.reshape((-1, 1)))
+
 
 
         # Return the value vector V of each observation in the batch

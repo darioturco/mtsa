@@ -405,3 +405,299 @@ class TrainMCST(Experiment):
         res = self.run_instance(env, mcts, -1)
         self.print_res("MCTS Agent: ", res)
 
+class TrainGNN(Experiment):
+    def __init__(self, name="Test"):
+        super().__init__(name)
+    def run(self):
+        #ENABLED_PYTHON_FEATURES = {
+        #    EventLabel: False,
+        #    StateLabel: False,
+        #    Controllable: False,
+        #    MarkedSourceAndSinkStates: False,
+        #    CurrentPhase: False,
+        #    ChildNodeState: False,
+        #    UncontrollableNeighborhood: False,
+        #    ExploredStateChild: False,
+        #    IsLastExpanded: False,
+        #    RandomTransitionFeature: False,
+        #    RandomOneHotTransitionFeature: False,
+        #}
+
+        instance = "TL"
+        path = self.get_fsp_path()
+
+        d = CompositionGraph(instance, 2, 2, path)
+        d.start_composition()
+        d.full_composition()
+
+
+        #da = FeatureExtractor(d, None, feature_classes=ENABLED_PYTHON_FEATURES.keys())
+        da = FeatureExtractor(d, None, None)
+        data, device = da.composition_to_nx()
+
+        da.train_gae_on_full_graph(to_undirected=True, epochs=100000)
+
+
+
+
+import torch
+#from torch.utils.tensorboard import SummaryWriter
+#from torch_geometric.datasets import Planetoid
+from torch_geometric.nn import GCNConv, Sequential, GAE
+from torch import nn
+from torch_geometric.utils import from_networkx
+from bidict import bidict
+
+
+class LabelsOHE(object):
+    @classmethod
+    def compute(cls, state: CompositionGraph, node, dir="in"):
+        composition = state.composition
+        incoming = composition.in_edges(node, data=True) if dir == "in" else composition.out_edges(node, data=True)
+
+        feature_vec_slice = [0.0 for _ in state._no_indices_alphabet]
+        # arriving_to_s = transition.state.getParents()
+        for edge in incoming:
+            cls._set_transition_type_bit(feature_vec_slice, edge[2]["label"], state._fast_no_indices_alphabet_dict)
+        return feature_vec_slice
+
+    @classmethod
+    def _set_transition_type_bit(cls, feature_vec_slice, transition, _fast_no_indices_alphabet_dict):
+        no_idx_label = util_remove_indices(transition.toString() if type(transition) != str else transition)
+        feature_vec_slice_pos = _fast_no_indices_alphabet_dict[no_idx_label]
+        feature_vec_slice[feature_vec_slice_pos] = 1
+
+class MarkedState(object):
+    @classmethod
+    def compute(cls, state: CompositionGraph, node):
+        #return [float(node.marked)]
+        return [float(len(node.markedByGuarantee) > 0)]
+
+class NodePairSplitter:
+    def __init__(self, data, split_labels=True, add_negative_train_samples=True, val_prop = 0.05, test_prop = 0.1, proportional=False):
+        Warning("Sending split tensors to DEVICE may be convenient if using accelerators (TODO).")
+
+        n_nodes = self.n_nodes = data.x.shape[0]
+        n_edges = self.n_edges = data.edge_index.shape[1]
+        n_neg_edges = (n_nodes ** 2) - n_edges if proportional else n_edges
+
+        test_edge_index_idx = np.random.randint(0,n_edges,int(test_prop * n_edges))
+        #val_edge_index_idx = np.random.randint(0, n_edges, int(val_prop * n_edges))
+        train_edge_index_idx = [i for i in range(n_edges) if i not in test_edge_index_idx]
+
+        #neg_edge_index = torch.tensor([(i,j) for i in range(n_nodes) for j in range(n_nodes) if torch.tensor((i,j)) not in data.edge_index.T])
+        #assert(neg_edge_index.shape[0] == (n_edges ** 2)-n_edges)
+        self.pos_training_edge_index = data.edge_index.T[train_edge_index_idx].tolist()
+        self.pos_testing_edge_index = data.edge_index.T[test_edge_index_idx].tolist()
+
+        self.neg_testing_edge_index = []
+        self.neg_training_edge_index = []
+
+        self.pos_training_edge_index = torch.tensor(self.pos_training_edge_index).T
+        self.pos_testing_edge_index = torch.tensor(self.pos_testing_edge_index).T
+
+    def get_split(self):
+        return self.pos_training_edge_index, self.neg_training_edge_index, self.pos_testing_edge_index, self.neg_testing_edge_index
+
+class GCNEncoder(torch.nn.Module):
+    def __init__(self, in_channels, out_channels):
+        super(GCNEncoder, self).__init__()
+        planes = 128
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        self.first_layer = Sequential('x, edge_index', [
+            (GCNConv(in_channels, planes), 'x, edge_index -> x'),
+            nn.ReLU(inplace=True),
+        ])
+
+        def conv_block():
+            return Sequential('x, edge_index', [
+                (GCNConv(planes, planes), 'x, edge_index -> x'),
+                nn.ReLU(inplace=True)
+            ])
+
+        self.conv_blocks = Sequential('x, edge_index', [(conv_block(), 'x, edge_index -> x') for _ in range(7)])
+
+        self.last_linear = nn.Linear(planes, out_channels)
+
+    def forward(self, x, edge_index):
+        x = self.first_layer(x, edge_index)
+        x = self.conv_blocks(x, edge_index)
+        x = self.last_linear(x)
+        return x
+
+
+class FeatureExtractor:
+    """class used to get Composition information, usable as hand-crafted features
+        Design:
+        attrs: Features (list of classes)
+        methods: .extract(featureClass, from = composition) .phi(composition)
+    """
+
+    def __init__(self, composition, enabled_features_dict, feature_classes):
+        #FIXME composition should be a parameter of phi, since FeatureExctractor works ...
+        # for any context independently UNLESS there are trained features
+        # in general, composition should be completely decoupled from extractor (passed always as a parameter)
+        self.composition = composition
+        self.context = CompositionAnalyzer(composition)
+        assert (self.composition._started)
+
+        self._no_indices_alphabet = list(set([self.remove_indices(str(e)) for e in composition._alphabet]))
+        self._no_indices_alphabet.sort()
+        self._fast_no_indices_alphabet_dict = dict()
+        for i in range(len(self._no_indices_alphabet)): self._fast_no_indices_alphabet_dict[self._no_indices_alphabet[i]]=i
+        self._fast_no_indices_alphabet_dict = bidict(self._fast_no_indices_alphabet_dict)
+
+        self._feature_classes = self.context.get_features_methods()
+        #self._feature_classes = feature_classes
+        #self._enabled_feature_classes = enabled_features_dict if enabled_features_dict is not None else {feature : True for feature in self._feature_classes}
+        #self._global_feature_classes = [feature_cls for feature_cls in self._feature_classes if feature_cls.__class__ == GlobalFeature]  #
+        #self._node_feature_classes = [feature_cls for feature_cls in self._feature_classes if feature_cls.__class__ == NodeFeature]
+    def phi(self):
+        return self.frontier_feature_vectors()
+
+    def extract(self, transition, state):
+        res = []
+        for feature in self._feature_classes:
+            #if self.includes(feature):
+            #    res += feature.compute(state=state, transition=transition)
+
+            res += feature(transition)
+        return res
+
+    def _set_transition_type_bit(self, feature_vec_slice, transition):
+        no_idx_label = self.remove_indices(transition.toString())
+        feature_vec_slice_pos = self._fast_no_indices_alphabet_dict[no_idx_label]
+        feature_vec_slice[feature_vec_slice_pos] = 1
+
+
+    def remove_indices(self, transition_label : str):
+        util_remove_indices(transition_label)
+    def get_transition_features_size(self):
+        if(len(self.composition.getFrontier())): return len(self.extract(self.composition.getFrontier()[0], self.composition))
+        elif (len(self.composition.getNonFrontier())): return len(self.extract(self.composition.getNonFrontier()[0], self.composition))
+        else: raise ValueError
+
+    def non_frontier_feature_vectors(self) -> dict[tuple,list[float]]:
+        # TODO you can parallelize this (GPU etc)
+        return {(trans.state,trans.child) : self.extract(trans, self.composition) for trans in self.composition.getNonFrontier()}
+
+    def frontier_feature_vectors(self) -> dict[tuple,list[float]]:
+        #TODO you can parallelize this (GPU etc)
+        #for trans in self.composition.getFrontier():
+
+        return {(trans.state,trans.action) : self.extract(trans, self.composition) for trans in self.composition.getFrontier()}
+
+    def set_static_node_features(self):
+        #FIXME refactor this
+        for node in self.composition.nodes:
+            in_label_ohe = LabelsOHE.compute(self.context, node, dir="in")
+            out_label_ohe = LabelsOHE.compute(self.context, node, dir="out")
+            marked =  MarkedState.compute(self.composition, node)
+            self.composition.nodes[node]["features"] = in_label_ohe + out_label_ohe + marked
+            self.composition.nodes[node]["compostate"] = node.toString()
+
+    def global_feature_vectors(self) -> dict:
+        raise NotImplementedError
+
+    def train_node2vec(self):
+        raise NotImplementedError
+    def train_watch_your_step(self):
+        raise NotImplementedError
+    def train_DGI(self):
+        raise NotImplementedError
+    def __str__(self):
+        return "feature classes: " + str(self._enabled_feature_classes)
+
+    def train_gae_on_full_graph(self, to_undirected=True, epochs=5000, debug_graph=None):
+        Warning("This function will be replaced by the official VGAE implementation from DGL")
+        # FIXME this should be converted into a Feature class in the future
+        # FIXME FIXME the inference is being performed purely on edges!!!!!!!!!!!
+        # from torch_geometric.transforms import RandomLinkSplit
+        data, device = self.composition_to_nx(debug_graph, to_undirected)
+
+        Warning("We should use RandomNodeSplit")
+        Warning("How are negative edge features obtained?")
+        splitter = NodePairSplitter(data)
+        p_tr, n_tr, p_test, n_test = splitter.get_split()
+
+        out_channels = 2
+
+        num_features = data.x.shape[1]
+        # TODO adapt for RandomLinkSplit, continue with tutorial structure
+        gnc_ncoder = GCNEncoder(num_features, out_channels)
+        model = GAE(gnc_ncoder)
+
+        model = model.to(device)
+        node_features = data.x.to(device)
+        Warning("This features are only of connected nodes")
+        # x_train = train_data.edge_attr.to(device)
+        # x_test = test_data.edge_attr.to(device)
+
+        # train_pos_edge_label_index = train_data.pos_edge_label_index.to(device)
+
+        # FIXME how are neg edge features computed if inference is done on edge features and not node features?
+        # train_neg_edge_label_index = train_data.neg_edge_label_index.to(device)  # TODO .encode and add to loss and EVAL
+        # inizialize the optimizer
+
+        optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
+        start_time = time.time()
+
+        for epoch in range(1, epochs + 1):
+            # , , p_test, n_test
+            # breakpoint()
+            loss = self.train(model, optimizer, node_features, p_tr, n_tr)
+            #auc, ap = test(model, p_test, n_test, node_features, data.edge_index, n_tr)
+            #print('Epoch: {:03d}, AUC: {:.4f}, AP: {:.4f}'.format(epoch, auc, ap))
+            # writer.add_scalar("losses/loss", loss, epoch)
+            # writer.add_scalar("charts/SPS", int(epoch / (time.time() - start_time)), epoch)
+            # writer.add_scalar("metrics/AUC", auc, epoch)
+            # writer.add_scalar("metrics/AP", ap, epoch)
+        # writer.close()
+
+    def train(self, model, optimizer, features, train_pos_edge_label_index, train_neg_edge_label_index):
+        model.train()
+        optimizer.zero_grad()
+
+        z = model.encode(features, train_pos_edge_label_index)
+        #   breakpoint()
+        loss = model.recon_loss(z, train_pos_edge_label_index, train_neg_edge_label_index)
+        # if args.variational:
+        #   loss = loss + (1 / data.num_nodes) * model.kl_loss()
+        loss.backward()
+        optimizer.step()
+        return float(loss)
+
+    def composition_to_nx(self, debug_graph=None, to_undirected=True, selected_transitions_to_inspect=[]):
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        print(len(self.composition.nodes()), len(self.composition.edges()))
+        edge_features = self.non_frontier_feature_vectors()
+        self.set_static_node_features()
+        CG = self.composition
+        # fill attrs with features:
+        selected_actions_to_inspect = []
+        for ((s, t), features) in edge_features.items():
+            # if CG[s][t]["label"] in selected_transitions_to_inspect:
+            # selected_actions_to_inspect.append((s.toString(),t.toString(),CG[s][t]["label"]))
+
+            # Codigo original de Marco
+            #for edge in CG[s][t].values():
+            #    edge["features"] = features
+            CG[s][t]["features"] = features
+
+        D = CG.to_pure_nx()
+        G = CG.copy_with_nodes_as_ints(D)
+
+        if to_undirected:
+            G = G.to_undirected()  # FIXME what about double edges between nodes?
+
+        data = from_networkx(G, group_node_attrs=["features"], group_edge_attrs=["label"]) if debug_graph is None else \
+        debug_graph[0].to(device)
+        data.feat = data.x
+        return data, device
+
+def util_remove_indices(transition_label):
+    res = ""
+    for c in transition_label:
+        if not c.isdigit(): res += c
+    return res

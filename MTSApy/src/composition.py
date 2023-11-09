@@ -39,7 +39,6 @@ class CompositionGraph(nx.DiGraph):
         self._frontier = []
         self._started, self._completed = False, False
         self._alphabet = []
-        self._no_indices_alphabet = []
         self._number_of_goals = 0
         self._expansion_order = []
         self.javaEnv = None
@@ -85,9 +84,14 @@ class CompositionGraph(nx.DiGraph):
     def last_expansion_source_state(self):
         return self.javaEnv.heuristic.lastExpandedFrom
 
-    def getFrontier(self): return self.javaEnv.heuristic.explorationFrontier
+    def getFrontier(self):
+        return self.javaEnv.heuristic.explorationFrontier
 
-    def getLastExpanded(self): return self.javaEnv.heuristic.lastExpandedStateAction
+    def getNonFrontier(self):
+        return self.javaEnv.heuristic.allActionsWFNoFrontier
+
+    def getLastExpanded(self):
+        return self.javaEnv.heuristic.lastExpandedStateAction
 
     def _check_no_repeated_states(self):
         raise NotImplementedError
@@ -114,6 +118,54 @@ class CompositionGraph(nx.DiGraph):
     def get_info(self):
         return {"problem": self._problem, "n": self._n, "k": self._k}
 
+    def to_pure_nx(self, cls=nx.MultiDiGraph):
+        D = cls()
+        D.nodes, D.edges = self.nodes, self.edges
+        return D
+
+    @staticmethod
+    def copy_with_nodes_as_ints(G, drop_edge_attrs=["action_with_features"]):
+        mapping = bidict({n: i for n, i in zip(G.nodes, range(len(G.nodes)))})
+
+        D = nx.MultiDiGraph()
+        for n, d in G.nodes(data=True):
+            D.add_node(mapping[n], **d)
+        for s, t, d in G.edges(data=True):
+            for attr in drop_edge_attrs:
+                if attr in d:
+                    d.pop(attr)
+            #[d.pop(attr) for attr in drop_edge_attrs if attr in d]
+            D.add_edge(mapping[s], mapping[t], **d)
+
+        return D
+
+
+    def getFrontierSize(self):
+        return self.javaEnv.frontierSize()
+
+    #def getNonFrontier(self):
+    #    return self.javaEnv.heuristic.allActionsWFNoFrontier
+
+    def full_composition(self):
+        """
+        Composes the full plant.
+        """
+        assert self.javaEnv is not None and len(self.edges()) == 0, "You already started an expansion"
+        self.javaEnv.set_initial_as_none()
+        while self.getFrontierSize() > 0:
+            self.javaEnv.set_initial_as_none()
+            self.expand(0)
+
+            lastexp = self.getLastExpanded()
+            # nonfront = self.getNonFrontier()
+            #assert lastexp.state == nonfront[len(nonfront) - 1].state
+            #assert lastexp.action == nonfront[len(nonfront) - 1].action
+            self.javaEnv.set_compostate_as_none(lastexp.state)
+
+        return self
+
+
+
 
 class CompositionAnalyzer:
     """class used to get Composition information, usable as hand-crafted features
@@ -135,6 +187,8 @@ class CompositionAnalyzer:
             , self.marked_state, self.current_phase, self.child_node_state,
                                  self.uncontrollable_neighborhood, self.explored_state_child, self.isLastExpanded]
 
+    def get_features_methods(self):
+        return self._feature_methods
     def test_features_on_transition(self, transition):
         res = []
         for compute_feature in self._feature_methods:
@@ -206,7 +260,7 @@ class CompositionAnalyzer:
     def isLastExpanded(self, transition):
         return [float(self.composition.getLastExpanded() == transition)]
 
-    def remove_indices(self, transition_label: str):
+    def remove_indices(self, transition_label):
         res = ""
         for c in transition_label:
             if not c.isdigit(): res += c
