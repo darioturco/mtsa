@@ -431,8 +431,6 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
         state.addChild(action, child);
         child.addParent(action, state);
 
-
-
         child.setTargets(state.getTargets());
         if (child.markedByGuarantee.size() > 0)
             child.addTargets(child);
@@ -443,7 +441,9 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
             logger.finer("Expanding child compostate " + child.toString() + " is an error");
         }
 
-        explore(state, recommendation, child);
+        heuristic.addToListActions((Compostate<Long, String>) state, (HAction<String>) action);
+
+    explore(state, recommendation, child);
         return child;
     }
 
@@ -515,7 +515,6 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
                 expandChild(child);
             }
         }
-
         clearLoopDetection();
     }
 

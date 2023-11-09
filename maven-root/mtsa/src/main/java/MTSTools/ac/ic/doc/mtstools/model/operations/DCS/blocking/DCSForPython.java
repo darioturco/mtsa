@@ -150,9 +150,14 @@ public class DCSForPython {
             }
             idx++;
         }
-
-
         return -1;
+    }
+
+    public void set_initial_as_none(){
+        dcs.initial.status = Status.NONE;
+    }
+    public void set_compostate_as_none(Compostate compostate){
+        compostate.status = Status.NONE;
     }
 
     public static void main(String[] args) throws OrtException {

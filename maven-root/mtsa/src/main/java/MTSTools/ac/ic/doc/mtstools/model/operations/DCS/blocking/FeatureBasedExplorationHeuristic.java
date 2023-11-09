@@ -177,6 +177,7 @@ public class FeatureBasedExplorationHeuristic<State, Action> implements Explorat
      */
     // List of actions available for expanding
     public ArrayList<ActionWithFeatures<State, Action>> explorationFrontier;
+    public ArrayList<ActionForPython<State, Action>> allActionsWFNoFrontier;
 
     ReadyAbstraction<State, Action> ra;
 
@@ -239,6 +240,8 @@ public class FeatureBasedExplorationHeuristic<State, Action> implements Explorat
             }
         }
         this.explorationFrontier = new ArrayList<>();
+        this.allActionsWFNoFrontier = new ArrayList<>();
+
 
         this.visitCounts = new ArrayList<>();
         for(int i = 0; i < dcs.ltssSize; i++) this.visitCounts.add(new HashMap<>());
@@ -363,6 +366,7 @@ public class FeatureBasedExplorationHeuristic<State, Action> implements Explorat
             state.actionsWithFeatures.put(action, actionWF);
         }
     }
+
     /*
     public void notifyExpandingState(Compostate<State, Action> parent, HAction<State, Action> action, Compostate<State, Action> state) {
         if(state.wasExpanded()){ // todo: understand this, i am copying the behavior of the code pre refactor
@@ -373,13 +377,17 @@ public class FeatureBasedExplorationHeuristic<State, Action> implements Explorat
         addActionLabelToState(state, action, parent);
         if(featureMaker.using_labelsThatReach_feature) featureMaker.update_child_labelsThatReach(parent,action,state);
 
-    }
+    }*/
 
+    public void addToListActions(Compostate<State, Action> parent, HAction<Action> action){
+        ActionForPython<State, Action> actionNoFeatures = new ActionForPython<State, Action>(parent, action, this);
+        allActionsWFNoFrontier.add(actionNoFeatures);
+    }
 
     public boolean somethingLeftToExplore() {
         return !explorationFrontier.isEmpty();
     }
-    */
+
     ////public void updateUnexploredTransitions(Compostate<State, Action> state, HAction<State, Action> action) {
     public void updateUnexploredTransitions(Compostate<State, Action> state, HAction<Action> action) {////
         state.unexploredTransitions--;
