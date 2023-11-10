@@ -4,7 +4,7 @@ import random
 import datetime
 import numpy as np
 from src.composition import CompositionGraph, CompositionAnalyzer
-from src.environment import Environment, FeatureEnvironment
+from src.environment import Environment, FeatureEnvironment, FeatureCompleteEnvironment
 from src.agents.dqn import DQN, NeuralNetwork, TorchModel
 from src.agents.random import RandomAgent
 import time
@@ -372,19 +372,25 @@ class RunRandomInAllInstances(Experiment):
             last_instance = instance
             self.save_to_csv(csv_path, info)
 
-from src.agents.ppo import PPO
+#from src.agents.ppo import PPO
+from stable_baselines3 import PPO, DQN
 class TrainPPO(Experiment):
     def __init__(self, name="Test"):
         super().__init__(name)
     def run(self):
         path = self.get_fsp_path()
 
-        d = CompositionGraph("DP", 2, 2, path).start_composition()
+        d = CompositionGraph("TL", 2, 2, path).start_composition()
         context = CompositionAnalyzer(d)
-        env = FeatureEnvironment(context, False)
+        #env = FeatureEnvironment(context, False)
+        env = FeatureCompleteEnvironment(context, False)
 
-        ppo = PPO(env)
-        ppo.learn(1000000)
+        ppo = DQN("MlpPolicy", env, verbose=1)
+        ppo.learn(total_timesteps=100000)
+
+        ppo.save("ppo_TL")
+
+
 
 from src.agents.mcts import MCTS
 class TrainMCST(Experiment):

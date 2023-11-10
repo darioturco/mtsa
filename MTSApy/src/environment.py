@@ -123,5 +123,63 @@ class FeatureEnvironment(object):
     def get_nfeatures(self):
         return self.env.get_nfeatures()
 
+import gymnasium as gym
+class FeatureCompleteEnvironment(gym.Env):
+    def __init__(self, context, normalize_reward):
+        self.env = Environment(context, normalize_reward)
+
+        # self.state_size = env.observation_space.shape[0]
+        #         self.num_actions = env.action_space.n
+        self.actual_state = None
+        self.max_f = 16
+
+        self.observation_space = gym.spaces.Box(low=0, high=1, shape=[self.max_f, self.get_nfeatures()], dtype=int)
+        self.observation_space_dim = self.env.context.get_transition_features_size()
+
+        self.action_space_dim = self.max_f
+        self.action_space = gym.spaces.Discrete(self.action_space_dim)
+
+
+
+
+    def reset(self, seed=None, options=None, new_composition=None):
+        state = self.env.reset(new_composition)
+        self.actual_state = self.env.actions_to_features(state)
+        return self.complete_actions(self.actual_state), {}
+
+    def step(self, action):
+        valid_actions = len(self.actual_state)
+        if action >= valid_actions:
+            return None, -500, True, False, {} # La info devuelta puede estar mal
+        else:
+            state, reward, done, info = self.env.step(action)
+            self.actual_state = self.env.actions_to_features(state)
+            return self.complete_actions(self.actual_state), reward, done, False, info
+
+    def render(self):
+        return None
+
+    def close(self):
+        self.env.close()
+
+    def get_info(self):
+        return self.env.get_info()
+
+    def get_instance_info(self):
+        return self.env.get_instance_info()
+
+    def get_nfeatures(self):
+        return self.env.get_nfeatures()
+
+    def get_zero_feature(self):
+        return [0.0 for _ in range(self.get_nfeatures())]
+    def complete_actions(self, state):
+        res = []
+        for i in range(self.max_f):
+            if i >= len(state):
+                res.append(self.get_zero_feature())
+            else:
+                res.append(state[i])
+        return res
 
 

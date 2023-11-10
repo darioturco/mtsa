@@ -27,10 +27,11 @@ if __name__ == "__main__":
     #RunRandomInAllInstances().run(5000, 100)
     #RunRAInAllInstances().run(5000)
 
-    #TrainPPO().run()
+
+    TrainPPO().run()
     #TrainMCST().run()
 
-    TrainGNN().run()
+    #TrainGNN().run()
 
 ### Notas:
     # ...

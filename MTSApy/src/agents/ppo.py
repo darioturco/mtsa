@@ -69,7 +69,7 @@ class PPO:
         self.env = env
 
         self.obs_dim = env.observation_space_dim
-        self.act_dim = 1
+        self.act_dim = 100
 
         policy_class = FeedForwardNN
         # Initialize actor and critic networks
@@ -290,11 +290,12 @@ class PPO:
                 # Calculate action and make a step in the env.
                 # Note that rew is short for reward.
                 action, log_prob = self.get_action(torch.Tensor(obs))
+                print(obs)
+                print(action)
                 val = self.critic(torch.Tensor(obs))
 
                 # Track observations in this batch
                 batch_obs.append(obs[action])
-
 
                 obs, rew, terminated, _ = self.env.step(action)
                 done = terminated
