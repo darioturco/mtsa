@@ -373,22 +373,45 @@ class RunRandomInAllInstances(Experiment):
             self.save_to_csv(csv_path, info)
 
 #from src.agents.ppo import PPO
-from stable_baselines3 import PPO, DQN
+#from stable_baselines3 import PPO
+
+from sb3_contrib.common.maskable.policies import MaskableActorCriticPolicy
+from sb3_contrib.common.wrappers import ActionMasker
+from sb3_contrib.ppo_mask import MaskablePPO
+
 class TrainPPO(Experiment):
     def __init__(self, name="Test"):
         super().__init__(name)
     def run(self):
         path = self.get_fsp_path()
 
-        d = CompositionGraph("TL", 2, 2, path).start_composition()
+        d = CompositionGraph("DP", 2, 2, path).start_composition()
         context = CompositionAnalyzer(d)
         #env = FeatureEnvironment(context, False)
         env = FeatureCompleteEnvironment(context, False)
 
-        ppo = DQN("MlpPolicy", env, verbose=1)
-        ppo.learn(total_timesteps=100000)
+        def mask_fn(envi):
+            # Do whatever you'd like in this function to return the action mask
+            # for the current env. In this example, we assume the env has a
+            # helpful method we can rely on.
+            return envi.valid_action_mask()
 
-        ppo.save("ppo_TL")
+        env = ActionMasker(env, mask_fn)  # Wrap to enable masking
+
+        # MaskablePPO behaves the same as SB3's PPO unless the env is wrapped
+        # with ActionMasker. If the wrapper is detected, the masks are automatically
+        # retrieved and used when learning. Note that MaskablePPO does not accept
+        # a new action_mask_fn kwarg, as it did in an earlier draft.
+        model = MaskablePPO(MaskableActorCriticPolicy, env, verbose=1)
+        t = 100000
+        #t = 100
+        model.learn(total_timesteps=t)
+
+        model.save("Hola.")
+
+
+
+
 
 
 
@@ -540,6 +563,28 @@ class FeatureExtractor:
         methods: .extract(featureClass, from = composition) .phi(composition)
     """
 
+    def train_vgae_official(file_name="vgae.pt"):
+        import pickle
+        import sys
+        sys.path.append("/home/marco/Desktop/dgl/dgl/examples/pytorch/vgae")
+        import train_vgae
+        import dgl
+        from torch_geometric.utils import to_dgl
+        for problem in ["AT", "DP", "TA", "TL", "BW", "CM"]:
+            d = CompositionGraph(problem, 2, 2)
+            d.start_composition()
+            d.full_composition()
+
+            da = FeatureExtractor(d, ENABLED_PYTHON_FEATURES, feature_classes=ENABLED_PYTHON_FEATURES.keys())
+
+            data, device = da.composition_to_nx()
+
+            dgl_data = to_dgl(data)
+            best_model = train_vgae.dgl_main(dgl_data)  # TODO add parameters: graph, epochs, etc etc
+            Warning(
+                "I'm not so sure the parameters are correctly loaded or if the parameters are from the best model (watch out running mean and variance etc)")
+            torch.save(best_model, problem + file_name)
+
     def __init__(self, composition, enabled_features_dict, feature_classes):
         #FIXME composition should be a parameter of phi, since FeatureExctractor works ...
         # for any context independently UNLESS there are trained features
@@ -585,8 +630,11 @@ class FeatureExtractor:
         else: raise ValueError
 
     def non_frontier_feature_vectors(self) -> dict[tuple,list[float]]:
+        d = dict()
         # TODO you can parallelize this (GPU etc)
-        return {(trans.state,trans.child) : self.extract(trans, self.composition) for trans in self.composition.getNonFrontier()}
+        for trans in self.composition.getNonFrontier():
+            d.update({(trans.state, trans.child): self.extract(trans, self.composition)})
+        return d
 
     def frontier_feature_vectors(self) -> dict[tuple,list[float]]:
         #TODO you can parallelize this (GPU etc)
@@ -687,9 +735,8 @@ class FeatureExtractor:
             # selected_actions_to_inspect.append((s.toString(),t.toString(),CG[s][t]["label"]))
 
             # Codigo original de Marco
-            #for edge in CG[s][t].values():
-            #    edge["features"] = features
             CG[s][t]["features"] = features
+            #CG[s][t]["features"] = features
 
         D = CG.to_pure_nx()
         G = CG.copy_with_nodes_as_ints(D)
@@ -707,3 +754,4 @@ def util_remove_indices(transition_label):
     for c in transition_label:
         if not c.isdigit(): res += c
     return res
+

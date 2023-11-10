@@ -123,7 +123,10 @@ class FeatureEnvironment(object):
     def get_nfeatures(self):
         return self.env.get_nfeatures()
 
+
 import gymnasium as gym
+from gymnasium.spaces.box import Box
+from gymnasium.spaces.discrete import Discrete
 class FeatureCompleteEnvironment(gym.Env):
     def __init__(self, context, normalize_reward):
         self.env = Environment(context, normalize_reward)
@@ -133,11 +136,11 @@ class FeatureCompleteEnvironment(gym.Env):
         self.actual_state = None
         self.max_f = 16
 
-        self.observation_space = gym.spaces.Box(low=0, high=1, shape=[self.max_f, self.get_nfeatures()], dtype=int)
+        self.observation_space = Box(low=0, high=1, shape=[self.max_f, self.get_nfeatures()], dtype=int)
         self.observation_space_dim = self.env.context.get_transition_features_size()
 
         self.action_space_dim = self.max_f
-        self.action_space = gym.spaces.Discrete(self.action_space_dim)
+        self.action_space = Discrete(self.action_space_dim)
 
 
 
@@ -173,6 +176,7 @@ class FeatureCompleteEnvironment(gym.Env):
 
     def get_zero_feature(self):
         return [0.0 for _ in range(self.get_nfeatures())]
+
     def complete_actions(self, state):
         res = []
         for i in range(self.max_f):
@@ -181,5 +185,10 @@ class FeatureCompleteEnvironment(gym.Env):
             else:
                 res.append(state[i])
         return res
+
+    def valid_action_mask(self):
+        s = np.array(np.sum(self.complete_actions(self.actual_state), axis=1))
+        return s > 0.00000001
+
 
 

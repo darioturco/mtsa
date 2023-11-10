@@ -249,6 +249,7 @@ class DQN(Agent):
 
             if done:
                 loss = self.model.current_loss()
+                print(loss)
                 losses.append(loss)
 
                 #sw = 16
