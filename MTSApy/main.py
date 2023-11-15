@@ -27,7 +27,7 @@ if __name__ == "__main__":
     #RunRandomInAllInstances().run(5000, 100)
     #RunRAInAllInstances().run(5000)
 
-    TrainPPO().run(["TL"])
+    TrainPPO().train(["TL"])
 
 ### Notas:
     # ...

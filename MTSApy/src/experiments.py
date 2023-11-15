@@ -386,7 +386,7 @@ from sb3_contrib.ppo_mask import MaskablePPO
 class TrainPPO(Experiment):
     def __init__(self, name="Test"):
         super().__init__(name)
-    def run(self, instances):
+    def train(self, instances):
         path = self.get_fsp_path()
 
         for instance in instances:
@@ -398,7 +398,7 @@ class TrainPPO(Experiment):
 
             print(f"Runing PPO Agent in instance {instance}-2-2")
             res = self.run_instance(env, ppo, -1)
-            self.print_res("MCTS Agent: ", res)
+            self.print_res("PPO Agent: ", res)
 
     def default_args(self):
         return {"learning_rate": 3e-4, "gamma": 0.99, "batch_size": 50, "verbose": 1}
@@ -449,6 +449,3 @@ class TrainPPO(Experiment):
 
             last_failed = res["failed"]
             last_n = n
-
-
-
