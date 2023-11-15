@@ -19,7 +19,7 @@ else:
 #FSP_PATH = "../fsp"
 #BENCHMARK_PROBLEMS = ["AT", "BW", "CM", "DP", "TA", "TL"]
 
-class CompositionGraph(nx.DiGraph):
+class CompositionGraph(nx.MultiDiGraph):
     # The CompositionGraph requires the name of the problem, and its sizes
     # The name can be:
     #  - AT (Air Trafic)

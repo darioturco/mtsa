@@ -99,17 +99,16 @@ class FeatureEnvironment(object):
 
     def reset(self, new_composition=None):
         state = self.env.reset()
-        return self.env.actions_to_features(state)
-        #return self.env.actions_to_features(state), False
-
-    #def step(self, action):
-    #    state, reward, done, info = self.env.step(action)
-    #    return self.env.actions_to_features(state), reward, done, False, info
+        #return self.env.actions_to_features(state)
+        return self.env.actions_to_features(state), False
 
     def step(self, action):
         state, reward, done, info = self.env.step(action)
-        return self.env.actions_to_features(state), reward, done, info
+        return self.env.actions_to_features(state), reward, done, False, info
 
+    #def step(self, action):
+    #    state, reward, done, info = self.env.step(action)
+    #    return self.env.actions_to_features(state), reward, done, info
 
     def close(self):
         self.env.close()
@@ -122,7 +121,6 @@ class FeatureEnvironment(object):
 
     def get_nfeatures(self):
         return self.env.get_nfeatures()
-
 
 import gymnasium as gym
 from gymnasium.spaces.box import Box
@@ -142,9 +140,6 @@ class FeatureCompleteEnvironment(gym.Env):
         self.action_space_dim = self.max_f
         self.action_space = Discrete(self.action_space_dim)
 
-
-
-
     def reset(self, seed=None, options=None, new_composition=None):
         state = self.env.reset(new_composition)
         self.actual_state = self.env.actions_to_features(state)
@@ -153,6 +148,7 @@ class FeatureCompleteEnvironment(gym.Env):
     def step(self, action):
         valid_actions = len(self.actual_state)
         if action >= valid_actions:
+            print("Invalid Action")
             return None, -500, True, False, {} # La info devuelta puede estar mal
         else:
             state, reward, done, info = self.env.step(action)

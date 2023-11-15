@@ -28,8 +28,14 @@ if __name__ == "__main__":
     #RunRAInAllInstances().run(5000)
 
 
-    TrainPPO().run()
-    #TrainMCST().run()
+    #TrainPPO().run(["TA", "CM"])
+    #TrainPPO().test("TA", 5000, pth_path=f"results/models/PPO/TA/TA-2-2-12000-partial")
+    #TrainPPO().test("TL", 5000, pth_path=f"results/models/PPO/TL/TL-2-2-24000-partial")
+    #TrainPPO().test("DP", 5000, pth_path=f"results/models/PPO/DP/DP-2-2-24000-partial")
+    TrainPPO().test("BW", 5000, pth_path=f"results/models/PPO/BW/BW-2-2-24000-partial")
+
+    #TrainPPO().test("AT", 5000, pth_path=f"results/models/PPO/AT/AT-2-2-24000-partial")
+    #TrainPPO().test("CM", 5000, pth_path=f"results/models/PPO/CM/CM-2-2-24000-partial")
 
     #TrainGNN().run()
 

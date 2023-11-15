@@ -41,8 +41,7 @@ class Experiment(object):
     def run_instance(self, env, agent, budget=-1):
         if budget == -1:
             budget = float("inf")
-        state = env.reset()
-        finish = False
+        state, finish = env.reset()
         rewards = []
         trace = []
         expanded_fv = set()
@@ -52,7 +51,7 @@ class Experiment(object):
         while not finish and i <= budget:
             idx = agent.get_action(state, 0, env)
             expanded_fv.add(agent.feature_vector_to_number(state[idx]))
-            state, reward, finish, info = env.step(idx)
+            state, reward, finish, _, info = env.step(idx)
             rewards.append(reward)
             trace.append(idx)
             i = i + 1
@@ -155,6 +154,10 @@ class Experiment(object):
         context = CompositionAnalyzer(d)
         return FeatureEnvironment(context, False)
 
+    def get_complete_environment(self, instance, n, k, path):
+        d = CompositionGraph(instance, n, k, path).start_composition()
+        context = CompositionAnalyzer(d)
+        return FeatureCompleteEnvironment(context, False)
 
 
 class RunRAInAllInstances(Experiment):
@@ -372,7 +375,7 @@ class RunRandomInAllInstances(Experiment):
             last_instance = instance
             self.save_to_csv(csv_path, info)
 
-#from src.agents.ppo import PPO
+from src.agents.ppo import PPO
 #from stable_baselines3 import PPO
 
 from sb3_contrib.common.maskable.policies import MaskableActorCriticPolicy
@@ -382,57 +385,76 @@ from sb3_contrib.ppo_mask import MaskablePPO
 class TrainPPO(Experiment):
     def __init__(self, name="Test"):
         super().__init__(name)
-    def run(self):
+    def run(self, instances):
         path = self.get_fsp_path()
 
-        d = CompositionGraph("DP", 2, 2, path).start_composition()
-        context = CompositionAnalyzer(d)
-        #env = FeatureEnvironment(context, False)
-        env = FeatureCompleteEnvironment(context, False)
+        for instance in instances:
+            print(f"Training {instance}...")
+            env = self.get_complete_environment(instance, 2, 2, path)
 
-        def mask_fn(envi):
-            # Do whatever you'd like in this function to return the action mask
-            # for the current env. In this example, we assume the env has a
-            # helpful method we can rely on.
-            return envi.valid_action_mask()
+            ppo = PPO(env, self.default_args())
+            ppo.train(500000)
 
-        env = ActionMasker(env, mask_fn)  # Wrap to enable masking
+            print(f"Runing PPO Agent in instance {instance}-2-2")
+            res = self.run_instance(env, ppo, -1)
+            self.print_res("MCTS Agent: ", res)
 
-        # MaskablePPO behaves the same as SB3's PPO unless the env is wrapped
-        # with ActionMasker. If the wrapper is detected, the masks are automatically
-        # retrieved and used when learning. Note that MaskablePPO does not accept
-        # a new action_mask_fn kwarg, as it did in an earlier draft.
-        model = MaskablePPO(MaskableActorCriticPolicy, env, verbose=1)
-        t = 100000
-        #t = 100
-        model.learn(total_timesteps=t)
+    def default_args(self):
+        return {"learning_rate": 3e-4, "gamma": 0.99, "batch_size": 50, "verbose": 1}
 
-        model.save("Hola.")
-
-
-
-
-
-
-
-from src.agents.mcts import MCTS
-class TrainMCST(Experiment):
-    def __init__(self, name="Test"):
-        super().__init__(name)
-    def run(self):
+    def test(self, instance, budget, pth_path=None):
         path = self.get_fsp_path()
 
-        instance = "TL"
-        d = CompositionGraph(instance, 2, 2, path).start_composition()
-        context = CompositionAnalyzer(d)
-        env = FeatureEnvironment(context, False)
+        args = self.default_args()
+        if pth_path is None:
+            pth_path = f"results/models/PPO/{instance}/{instance}-{self.min_instance_size}-{self.min_instance_size}"
 
-        mcts = MCTS(env)
-        mcts.train(10)
+        last_failed = False
+        last_n = self.min_instance_size
+        all_fall = False
 
-        print(f"Runing MCTS Agent in instance {instance}-2-2")
-        res = self.run_instance(env, mcts, -1)
-        self.print_res("MCTS Agent: ", res)
+        for instance, n, k in self.all_instances_of(instance):
+
+            if n != last_n:
+                last_failed = False
+
+            if last_failed or all_fall:
+                print(f"PPO Agent in instance: {instance} {n}-{k}: Failed")
+                res = {"expanded transitions": budget + 1,
+                       "expanded states": budget + 1,
+                       "synthesis time(ms)": 9999,
+                       "failed": True,
+                       "features vectores": set()}
+            else:
+                env = self.get_complete_environment(instance, n, k, path)
+                ppo_agent = PPO.load(env, pth_path, args)
+
+                print(f"Runing PPO Agent in instance: {instance} {n}-{k}")
+                res = self.run_instance(env, ppo_agent, budget)
+                self.print_res("PPO Agent: ", res)
+
+            csv_path = f"./results/csv/PPO-{instance}.csv"
+            info = {"Instance": instance, "N": n, "K": k,
+                    "Transitions": res["expanded transitions"],
+                    "States": res["expanded states"],
+                    "Time(ms)": res["synthesis time(ms)"],
+                    "Failed": res["failed"],
+                    "Features Vectors": res["features vectores"]}
+
+            self.save_to_csv(csv_path, info)
+
+            if res["failed"] and k == self.min_instance_size:
+                all_fall = True
+
+            last_failed = res["failed"]
+            last_n = n
+
+
+
+
+
+
+
 
 class TrainGNN(Experiment):
     def __init__(self, name="Test"):
@@ -464,7 +486,18 @@ class TrainGNN(Experiment):
         da = FeatureExtractor(d, None, None)
         data, device = da.composition_to_nx()
 
-        da.train_gae_on_full_graph(to_undirected=True, epochs=100000)
+        sys.path.append("F:\\UBA\\Tesis\\dgl\\dgl\\examples\\pytorch\\vgae")
+        import train_vgae
+        from torch_geometric.utils import softmax
+
+        x = softmax([1,2,3])
+        dgl_data = to_dgl(data)
+
+        best_model = train_vgae.dgl_main(dgl_data)
+
+
+
+        #da.train_gae_on_full_graph(to_undirected=True, epochs=100000)
 
 
 
@@ -735,7 +768,9 @@ class FeatureExtractor:
             # selected_actions_to_inspect.append((s.toString(),t.toString(),CG[s][t]["label"]))
 
             # Codigo original de Marco
-            CG[s][t]["features"] = features
+            for edge in CG[s][t].values():
+                edge["features"] = features
+
             #CG[s][t]["features"] = features
 
         D = CG.to_pure_nx()
