@@ -131,9 +131,9 @@ class CompositionAnalyzer:
         for i in range(len(self._no_indices_alphabet)): self._fast_no_indices_alphabet_dict[
             self._no_indices_alphabet[i]] = i
         self._fast_no_indices_alphabet_dict = bidict(self._fast_no_indices_alphabet_dict)
-        self._feature_methods = [self.event_label_feature, self.state_label_feature, self.controllable
-            , self.marked_state, self.current_phase, self.child_node_state,
-                                 self.uncontrollable_neighborhood, self.explored_state_child, self.isLastExpanded]
+        self._feature_methods = [self.event_label_feature, self.state_label_feature, self.controllable, self.marked_state,
+                                 self.current_phase, self.child_node_state, self.uncontrollable_neighborhood,
+                                 self.explored_state_child, self.isLastExpanded, self.child_dealdlock]
 
     def test_features_on_transition(self, transition):
         res = []
@@ -202,6 +202,9 @@ class CompositionAnalyzer:
         f1 = float(len(self.composition.out_edges(transition.state)) != transition.state.unexploredTransitions)
         f2 = float(transition.child is not None and len(self.composition.out_edges(transition.child)) != transition.state.unexploredTransitions)
         return [f1, f2]
+
+    def child_dealdlock(self, transition):
+        return [float(transition.child is not None and len(transition.child.getTransitions()) == 0)]
 
     def isLastExpanded(self, transition):
         return [float(self.composition.getLastExpanded() == transition)]

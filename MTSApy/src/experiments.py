@@ -4,7 +4,7 @@ import random
 import datetime
 import numpy as np
 from src.composition import CompositionGraph, CompositionAnalyzer
-from src.environment import Environment, FeatureEnvironment
+from src.environment import Environment, FeatureEnvironment, FeatureCompleteEnvironment
 from src.agents.dqn import DQN, NeuralNetwork, TorchModel
 from src.agents.random import RandomAgent
 import time
@@ -158,7 +158,7 @@ class Experiment(object):
     def get_complete_environment(self, instance, n, k, path):
         d = CompositionGraph(instance, n, k, path).start_composition()
         context = CompositionAnalyzer(d)
-        return FeatureEnvironment(context, False)
+        return FeatureCompleteEnvironment(context, False)
 
 
 class RunRAInAllInstances(Experiment):
