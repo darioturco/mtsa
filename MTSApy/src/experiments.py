@@ -155,6 +155,10 @@ class Experiment(object):
         context = CompositionAnalyzer(d)
         return FeatureEnvironment(context, False)
 
+    def get_complete_environment(self, instance, n, k, path):
+        d = CompositionGraph(instance, n, k, path).start_composition()
+        context = CompositionAnalyzer(d)
+        return FeatureEnvironment(context, False)
 
 
 class RunRAInAllInstances(Experiment):
@@ -373,35 +377,78 @@ class RunRandomInAllInstances(Experiment):
             self.save_to_csv(csv_path, info)
 
 from src.agents.ppo import PPO
+#from stable_baselines3 import PPO
+
+from sb3_contrib.common.maskable.policies import MaskableActorCriticPolicy
+from sb3_contrib.common.wrappers import ActionMasker
+from sb3_contrib.ppo_mask import MaskablePPO
+
 class TrainPPO(Experiment):
     def __init__(self, name="Test"):
         super().__init__(name)
-    def run(self):
+    def run(self, instances):
         path = self.get_fsp_path()
 
-        d = CompositionGraph("DP", 2, 2, path).start_composition()
-        context = CompositionAnalyzer(d)
-        env = FeatureEnvironment(context, False)
+        for instance in instances:
+            print(f"Training {instance}...")
+            env = self.get_complete_environment(instance, 2, 2, path)
 
-        ppo = PPO(env)
-        ppo.learn(1000000)
+            ppo = PPO(env, self.default_args())
+            ppo.train(10000)
 
-from src.agents.mcts import MCTS
-class TrainMCST(Experiment):
-    def __init__(self, name="Test"):
-        super().__init__(name)
-    def run(self):
+            print(f"Runing PPO Agent in instance {instance}-2-2")
+            res = self.run_instance(env, ppo, -1)
+            self.print_res("MCTS Agent: ", res)
+
+    def default_args(self):
+        return {"learning_rate": 3e-4, "gamma": 0.99, "batch_size": 50, "verbose": 1}
+
+    def test(self, instance, budget, pth_path=None):
         path = self.get_fsp_path()
 
-        instance = "TL"
-        d = CompositionGraph(instance, 2, 2, path).start_composition()
-        context = CompositionAnalyzer(d)
-        env = FeatureEnvironment(context, False)
+        args = self.default_args()
+        if pth_path is None:
+            pth_path = f"results/models/PPO/{instance}/{instance}-{self.min_instance_size}-{self.min_instance_size}"
 
-        mcts = MCTS(env)
-        mcts.train(10)
+        last_failed = False
+        last_n = self.min_instance_size
+        all_fall = False
 
-        print(f"Runing MCTS Agent in instance {instance}-2-2")
-        res = self.run_instance(env, mcts, -1)
-        self.print_res("MCTS Agent: ", res)
+        for instance, n, k in self.all_instances_of(instance):
+
+            if n != last_n:
+                last_failed = False
+
+            if last_failed or all_fall:
+                print(f"PPO Agent in instance: {instance} {n}-{k}: Failed")
+                res = {"expanded transitions": budget + 1,
+                       "expanded states": budget + 1,
+                       "synthesis time(ms)": 9999,
+                       "failed": True,
+                       "features vectores": set()}
+            else:
+                env = self.get_complete_environment(instance, n, k, path)
+                ppo_agent = PPO.load(env, pth_path, args)
+
+                print(f"Runing PPO Agent in instance: {instance} {n}-{k}")
+                res = self.run_instance(env, ppo_agent, budget)
+                self.print_res("PPO Agent: ", res)
+
+            csv_path = f"./results/csv/PPO-{instance}.csv"
+            info = {"Instance": instance, "N": n, "K": k,
+                    "Transitions": res["expanded transitions"],
+                    "States": res["expanded states"],
+                    "Time(ms)": res["synthesis time(ms)"],
+                    "Failed": res["failed"],
+                    "Features Vectors": res["features vectores"]}
+
+            self.save_to_csv(csv_path, info)
+
+            if res["failed"] and k == self.min_instance_size:
+                all_fall = True
+
+            last_failed = res["failed"]
+            last_n = n
+
+
 
