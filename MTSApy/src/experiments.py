@@ -94,12 +94,11 @@ class Experiment(object):
                 "reset_target_freq": 10000,      # 10000
                 "batch_size": 10,
 
-
                 ### Miscellaneous
                 'freq_save': 100,
                 'seconds': None,
                 'max_steps': None,
-                "max_eps": 15000
+                "max_eps": 12500
 
                 }
 
@@ -281,7 +280,29 @@ class TestTrainedInAllInstances(Experiment):
     def __init__(self, name='Test'):
         super().__init__(name)
 
-    def run(self, instance, budget, pth_path=None):
+    def pre_select(self, instance, budget):
+        #path = self.get_fsp_path()
+        #env = self.get_environment(instance, self.min_instance_size, self.min_instance_size, path)
+
+        trained_agents = 5
+        all_models = []
+        for i in range(1, trained_agents+1):
+            all_models += [os.path.join(r, file) for r, d, f in os.walk(f"./results/models/{instance}/{i}/") for file in f]
+
+        print(all_models)
+        models = np.random.choice(all_models, 100)
+        for model in models:
+            solved = self.run(instance, budget, model)
+
+            # Save the info
+            info = {"Instance": instance,
+                    "Model": model,
+                    "Solved": solved}
+
+            csv_path = f"./results/selection/{instance}.csv"
+            self.save_to_csv(csv_path, info)
+
+    def run(self, instance, budget, pth_path=None, save=True):
         path = self.get_fsp_path()
         env = self.get_environment(instance, self.min_instance_size, self.min_instance_size, path)
 
@@ -294,6 +315,7 @@ class TestTrainedInAllInstances(Experiment):
         dqn_agent = DQN(env, nn_model, args, verbose=False)
         last_failed = False
         last_n = self.min_instance_size
+        solved = 0
 
         for instance, n, k in self.all_instances_of(instance):
             if n != last_n:
@@ -314,18 +336,25 @@ class TestTrainedInAllInstances(Experiment):
                 res = self.run_instance(env, dqn_agent, budget)
                 self.print_res("DQN Agent: ", res)
 
-            csv_path = f"./results/csv/{instance}.csv"
-            info = {"Instance": instance, "N": n, "K": k,
-                    "Transitions": res["expanded transitions"],
-                    "States": res["expanded states"],
-                    "Time(ms)": res["synthesis time(ms)"],
-                    "Failed": res["failed"],
-                    "Features Vectors": res["features vectores"]}
+            if save:
+                info = {"Instance": instance, "N": n, "K": k,
+                        "Model": pth_path,
+                        "Transitions": res["expanded transitions"],
+                        "States": res["expanded states"],
+                        "Time(ms)": res["synthesis time(ms)"],
+                        "Failed": res["failed"],
+                        "Features Vectors": res["features vectores"]}
 
-            self.save_to_csv(csv_path, info)
+                csv_path = f"./results/csv/{instance}.csv"
+                self.save_to_csv(csv_path, info)
+
+            if not res["failed"]:
+                solved += 1
 
             last_failed = res["failed"]
             last_n = n
+
+        return solved
 
 
 class RunRandomInAllInstances(Experiment):
