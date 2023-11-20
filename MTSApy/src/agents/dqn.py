@@ -201,10 +201,16 @@ class DQN(Agent):
             self.buffer.add(action_features, reward, obs2)
 
         print("Done.")
+    def reset_train_for(self, env):
+        self.env = env
+        self.epsilon = self.args["first_epsilon"]
+        self.converged = False
+        self.trained = False
 
-    def train(self, seconds=None, max_steps=None, max_eps=10000, pth_path=None, transitions_path=None):
+    def train(self, seconds=None, max_steps=None, max_eps=10000, pth_path=None, transitions_path=None, freq_save=100):
 
         last_obs = None
+        self.freq_save = freq_save
 
         instance, n, k = self.env.get_instance_info()
         csv_path = f"./results/training/{instance}-{n}-{k}-partial.csv"
@@ -258,7 +264,7 @@ class DQN(Agent):
                 #plt.clf()
 
                 all_rewards.append(-acumulated_reward)
-                print(f"Epsode: {self.eps} - Reward: {-acumulated_reward} - Acumulated: {np.mean(all_rewards[-32:])} - Epsilon: {self.epsilon}")
+                print(f"Step: {self.steps} - Epsode: {self.eps} - Reward: {-acumulated_reward} - Acumulated: {np.mean(all_rewards[-32:])} - Epsilon: {self.epsilon}")
                 if self.eps % self.freq_save == 0:
                     if pth_path is not None:
                         if len(all_rewards) > 1000:
@@ -283,6 +289,9 @@ class DQN(Agent):
                 acumulated_reward = 0
                 self.eps += 1
 
+                if max_steps is not None and self.steps >= max_steps:
+                    break
+
             else:
                 obs = obs2
 
@@ -297,8 +306,7 @@ class DQN(Agent):
             if seconds is not None and time.time() - self.training_start > seconds:
                 break
 
-            if max_steps is not None and self.steps >= max_steps:
-                break
+
 
 
         return obs.copy()

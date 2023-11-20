@@ -1,20 +1,18 @@
-import random
-
-from src.composition import CompositionGraph, CompositionAnalyzer
-from src.environment import Environment
-from src.agents.dqn import DQN, NeuralNetwork, TorchModel
 from src.experiments import *
+from src.fixed_experiment import *
 
 FSP_PATH = "./fsp"
 BENCHMARK_PROBLEMS = ["AT", "BW", "DP", "TA", "TL", "CM"]
 
 if __name__ == "__main__":
-    #TrainSmallInstanceCheckBigInstance().run("TL", 2, 2, 4, 4, use_saved_agent=False)
-    TrainSmallInstanceCheckBigInstance().run("AT", 2, 2, 4, 4, use_saved_agent=False)
-    TrainSmallInstanceCheckBigInstance().run("BW", 2, 2, 4, 4, use_saved_agent=False)
-    TrainSmallInstanceCheckBigInstance().run("DP", 2, 2, 4, 4, use_saved_agent=False)
-    #TrainSmallInstanceCheckBigInstance().run("TA", 2, 2, 4, 4, use_saved_agent=False)
-    #TrainSmallInstanceCheckBigInstance().run("CM", 2, 2, 4, 4, use_saved_agent=False)
+    #TrainSmallInstanceCheckBigInstance().train("TL", 2, 2, 4, 4, use_saved_agent=False)
+    #TrainSmallInstanceCheckBigInstance().train("AT", 2, 2, 4, 4, use_saved_agent=False)
+    #TrainSmallInstanceCheckBigInstance().train("BW", 2, 2, 4, 4, use_saved_agent=False)
+    #TrainSmallInstanceCheckBigInstance().train("DP", 2, 2, 4, 4, use_saved_agent=False)
+    #TrainSmallInstanceCheckBigInstance().train("TA", 2, 2, 4, 4, use_saved_agent=False)
+    #TrainSmallInstanceCheckBigInstance().train("CM", 2, 2, 4, 4, use_saved_agent=False)
+
+
 
     #TestTrainedInAllInstances().pre_select("AT", 1500)
     #TestTrainedInAllInstances().run("AT", 5000, pth_path="./results/models/AT/1/AT-2-2-20100-partial.pth")
@@ -30,5 +28,10 @@ if __name__ == "__main__":
 
     #TrainPPO().train(["TL"])
 
+    TrainSmallInstanceCheckBigInstance().curriculum_train("DP", [{"n": 2, "k": 2, "seconds": None, "max_steps": 300000, "max_eps": 10000, "freq_save": 100},
+                                                                    {"n": 3, "k": 3, "seconds": None, "max_steps": 300000, "max_eps": 8000, "freq_save": 10},
+                                                                    {"n": 4, "k": 4, "seconds": None, "max_steps": 300000, "max_eps": 5000, "freq_save": 1}])
+
+
 ### Notas:
-    # ...
+    # En el pendrive tengo CL corrido en AT, BW, TL, DP
