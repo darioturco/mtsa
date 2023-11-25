@@ -95,7 +95,7 @@ class Experiment(object):
                 ### Miscellaneous
                 'freq_save': 5,
                 'seconds': None,
-                'max_steps': 200000,    # None
+                'max_steps': 400000,    # None
                 "max_eps": 10000
 
                 }
@@ -171,7 +171,8 @@ class TrainSmallInstanceCheckBigInstance(Experiment):
         nfeatures = env.get_nfeatures()
         args = self.default_args()
         pth_path = f"results/models/{instance}/{instance}-{n_train}-{k_train}.pth"
-        transitions_path = f"results/transitions/{instance}/{instance}-{n_train}-{k_train}.txt"
+        #transitions_path = f"results/transitions/{instance}/{instance}-{n_train}-{k_train}.txt"
+        transitions_path = None
 
         if use_saved_agent:
             nn_model = TorchModel.load(nfeatures, pth_path, args=args)
@@ -181,7 +182,7 @@ class TrainSmallInstanceCheckBigInstance(Experiment):
             neural_network = NeuralNetwork(nfeatures, args["nn_size"]).to("cpu")
             nn_model = TorchModel(nfeatures, network=neural_network, args=args)
             dqn_agent = DQN(env, nn_model, args, verbose=False)
-            dqn_agent.train(seconds=args["seconds"], max_steps=args["max_steps"], max_eps=args["max_eps"], pth_path=pth_path, transitions_path=transitions_path)
+            dqn_agent.train(seconds=args["seconds"], max_steps=args["max_steps"], max_eps=args["max_eps"], pth_path=pth_path, transitions_path=transitions_path, freq_save=args["freq_save"])
             print(f"Trained in instance: {instance} {n_train}-{k_train}\n")
             DQN.save(dqn_agent, pth_path)
 
@@ -195,6 +196,7 @@ class TrainSmallInstanceCheckBigInstance(Experiment):
         print(f"Runing DQN Agent in instance: {instance} {n_test}-{k_test}")
         res = self.run_instance(env, dqn_agent)
         self.print_res("DQN Agent: ", res)
+
     def curriculum_train(self, instance, train_args):
         path = self.get_fsp_path()
         args = self.default_args()
@@ -223,18 +225,19 @@ class TestTrainedInAllInstances(Experiment):
     def __init__(self, name='Test'):
         super().__init__(name)
 
-    def pre_select(self, instance, budget):
+    def pre_select(self, instance, budget, path):
         #path = self.get_fsp_path()
         #env = self.get_environment(instance, self.min_instance_size, self.min_instance_size, path)
 
         trained_agents = 5
-        all_models = []
-        for i in range(1, trained_agents+1):
-            all_models += [os.path.join(r, file) for r, d, f in os.walk(f"./results/models/{instance}/{i}/") for file in f]
+        #all_models = []
+        #for i in range(1, trained_agents+1):
+        all_models = [os.path.join(r, file) for r, d, f in os.walk(path) for file in f]
 
         print(all_models)
-        models = np.random.choice(all_models, 100)
+        models = np.random.choice(all_models, min(100, len(all_models)), replace=False)
         for model in models:
+            print(f"Runing: {model}")
             solved = self.run(instance, budget, model)
 
             # Save the info
@@ -259,12 +262,13 @@ class TestTrainedInAllInstances(Experiment):
         last_failed = False
         last_n = self.min_instance_size
         solved = 0
+        all_fail = False
 
         for instance, n, k in self.all_instances_of(instance):
             if n != last_n:
                 last_failed = False
 
-            if last_failed:
+            if last_failed or all_fail:
                 print(f"DQN Agent in instance: {instance} {n}-{k}: Failed")
                 res = {"expanded transitions": budget+1,
                     "expanded states": budget+1,
@@ -291,7 +295,10 @@ class TestTrainedInAllInstances(Experiment):
                 csv_path = f"./results/csv/{instance}.csv"
                 self.save_to_csv(csv_path, info)
 
-            if not res["failed"]:
+            if res["failed"]:
+                if k == 2:
+                    all_fail = True
+            else:
                 solved += 1
 
             last_failed = res["failed"]

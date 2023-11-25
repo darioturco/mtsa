@@ -207,10 +207,11 @@ class DQN(Agent):
         self.converged = False
         self.trained = False
 
-    def train(self, seconds=None, max_steps=None, max_eps=10000, pth_path=None, transitions_path=None, freq_save=100):
+    def train(self, seconds=None, max_steps=None, max_eps=10000, pth_path=None, transitions_path=None, freq_save=None):
 
         last_obs = None
-        self.freq_save = freq_save
+        if freq_save is not None:
+            self.freq_save = freq_save
 
         instance, n, k = self.env.get_instance_info()
         csv_path = f"./results/training/{instance}-{n}-{k}-partial.csv"
