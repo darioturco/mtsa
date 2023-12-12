@@ -216,7 +216,9 @@ class DQN(Agent):
         instance, n, k = self.env.get_instance_info()
         csv_path = f"./results/training/{instance}-{n}-{k}-partial.csv"
         acumulated_reward = 0
+        expansion_steps = 0
         all_rewards = []
+        all_expansions = []
         losses = []
         self.initializeBuffer()
 
@@ -241,6 +243,7 @@ class DQN(Agent):
             obs2, reward, done, info = self.env.step(a)
 
             acumulated_reward += reward
+            expansion_steps += 1
             if self.args["exp_replay"]:
                 if done:
                     for j in range(len(last_steps)):
@@ -264,8 +267,9 @@ class DQN(Agent):
                 #plt.pause(0.0001)
                 #plt.clf()
 
-                all_rewards.append(-acumulated_reward)
-                print(f"Step: {self.steps} - Epsode: {self.eps} - Reward: {-acumulated_reward} - Acumulated: {np.mean(all_rewards[-32:])} - Epsilon: {self.epsilon}")
+                all_rewards.append(acumulated_reward)
+                all_expansions.append(expansion_steps)
+                print(f"Step: {self.steps} - Epsode: {self.eps} - Expansions: {expansion_steps} - Reward: {acumulated_reward} - Acumulated: {np.mean(all_rewards[-32:])} - Epsilon: {self.epsilon}")
                 if self.eps % self.freq_save == 0:
                     if pth_path is not None:
                         if len(all_rewards) > 1000:
@@ -277,7 +281,7 @@ class DQN(Agent):
                             writer = csv.writer(f)
                             for i in range(self.freq_save - 1):
                                 idx = -self.freq_save + 1 + i
-                                writer.writerow([self.steps, all_rewards[idx], losses[idx]])
+                                writer.writerow([self.steps, all_expansions[idx], all_rewards[idx], losses[idx]])
 
                         print("Partial Saved!")
 
@@ -288,6 +292,7 @@ class DQN(Agent):
 
                 obs = self.env.reset()
                 acumulated_reward = 0
+                expansion_steps = 0
                 self.eps += 1
 
                 if max_steps is not None and self.steps >= max_steps:
@@ -306,9 +311,6 @@ class DQN(Agent):
 
             if seconds is not None and time.time() - self.training_start > seconds:
                 break
-
-
-
 
         return obs.copy()
 

@@ -21,12 +21,14 @@ import numpy as np
 
 
 class Environment:
-    def __init__(self, context, normalize_reward):
+    def __init__(self, context, heuristic_reward):
         """Environment base class.
             TODO are contexts actually part of the concept of an RL environment?
             """
         self.context = context
-        self.normalize_reward = normalize_reward
+        self.normalize_reward = False
+        self.heuristic_reward = heuristic_reward
+        self.heuristic_recomendations = None
         self.info = context.composition.get_info()
 
     def reset(self, new_composition=None):
@@ -43,11 +45,13 @@ class Environment:
 
     def step(self, action_idx):
         composition_graph = self.context.composition
-        composition_graph.expand(action_idx)  # TODO refactor. Analyzer should not be the expansion medium
+        if self.heuristic_reward:
+            self.heuristic_recomendations = list(self.context.composition.javaEnv.getHeuristicOrder())
+        composition_graph.expand(action_idx)
         if composition_graph.javaEnv.isFinished():
-            return None, self.reward(), True, self.get_info()
+            return None, self.reward(action_idx), True, self.get_info()
         else:
-            return self.states(), self.reward(), False, {}
+            return self.states(), self.reward(action_idx), False, {}
 
 
     def get_info(self):
@@ -58,11 +62,13 @@ class Environment:
             "expanded states": int(composition_dg.javaEnv.getExpandedStates())
         }
 
-    def reward(self):
+    def reward(self, action_idx):
         if self.normalize_reward:
             # TODO: Implement the normalize reward
             # return -1 / self.problem_size
             raise NotImplementedError
+        elif self.heuristic_reward:
+            return -self.heuristic_recomendations.index(action_idx) + 1
         else:
             return -1
 
@@ -84,7 +90,6 @@ class Environment:
     def close(self):
         pass
 
-#import gym
 class FeatureEnvironment(object):
     def __init__(self, context, normalize_reward):
         self.env = Environment(context, normalize_reward)
@@ -109,7 +114,6 @@ class FeatureEnvironment(object):
     def step(self, action):
         state, reward, done, info = self.env.step(action)
         return self.env.actions_to_features(state), reward, done, info
-
 
     def close(self):
         self.env.close()

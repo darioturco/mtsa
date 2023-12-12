@@ -2,70 +2,94 @@ package MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking;
 
 import MTSTools.ac.ic.doc.commons.relations.Pair;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
 import java.util.*;
 
 import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.DirectedControllerSynthesisBlocking;
-import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.abstraction.DebuggingAbstraction;
 import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.abstraction.HEstimate;
+import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.abstraction.HeuristicMode;
 import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.abstraction.Recommendation;
-import ai.onnxruntime.OrtException;
 import ltsa.dispatcher.TransitionSystemDispatcher;
 import ltsa.lts.*;
+import ltsa.ui.StandardOutput;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
 
 /** This class can be used from python with jpype */
 public class DCSForPython {
-    public FeatureBasedExplorationHeuristic<Long, String> heuristic;
+
     public DirectedControllerSynthesisBlocking<Long, String> dcs;
-    public FloatBuffer input_buffer;
-    DCSFeatures<Long, String> featureMaker;
+    public ExplorationHeuristic<Long, String> heuristic;
+    public HeuristicMode heuristicMode;
 
     public boolean started_synthesis;
-    public DCSForPython(String features_path, String labels_path, int max_frontier, CompositeState ltss_init){
-        this.featureMaker = new DCSFeatures<>(features_path, labels_path, max_frontier, ltss_init);
-        ByteBuffer bb = ByteBuffer.allocateDirect(featureMaker.n_features*4*max_frontier);
-        bb.order(ByteOrder.nativeOrder());
-        this.input_buffer = bb.asFloatBuffer();
+    // TODO: Rehacer el init, tiene muchos argunmentos que no se usan mas
+    public DCSForPython(String features_path, String labels_path, int max_frontier, CompositeState ltss_init, String heuristicMode){
         this.started_synthesis = false;
+        this.heuristicMode = HeuristicMode.valueOf(heuristicMode);
     }
 
-    /** restarts synthesis for a given fsp */
-    public void startSynthesis(String path) {
-        String[] s = path.split("-");
-        // Descomentar y revisar
-        int n = 3;//Integer.parseInt(s[s.length - 2]);
-        int k = 3;//Integer.parseInt(s[s.length - 1].split("\\.")[0]);
+    public static Pair<CompositeState, LTSOutput> compileFSP(String filename){
+        String currentDirectory = null;
+        try {
+            currentDirectory = (new File(".")).getCanonicalPath();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
-        Pair<CompositeState, LTSOutput> c = FeatureBasedExplorationHeuristic.compileFSP(path);
-        // c.first es un objeto con la lista de automatas a componer y las goals
-        // c.second es la salida en la que se escriben los errores (mucho no importa)
+        LTSInput input = new LTSInputString(readFile(filename));
+        LTSOutput output = new StandardOutput();
+
+        LTSCompiler compiler = new LTSCompiler(input, output, currentDirectory);
+        compiler.compile();
+        CompositeState c = compiler.continueCompilation("DirectedController");
+
+        TransitionSystemDispatcher.parallelComposition(c, output);
+
+        return new Pair<>(c, output);
+    }
+
+    public static String readFile(String filename) {
+        String result = null;
+        try {
+            BufferedReader file = new BufferedReader(new FileReader(filename));
+            String thisLine;
+            StringBuffer buff = new StringBuffer();
+            while ((thisLine = file.readLine()) != null)
+                buff.append(thisLine+"\n");
+            file.close();
+            result = buff.toString();
+        } catch (Exception e) {
+            System.err.print("Error reading FSP file " + filename + ": " + e);
+            System.exit(1);
+        }
+        return result;
+    }
+
+    public void startSynthesis(String path) {
+        // c.first is an object that contains the list of all automaton to compose
+        // c.second is the output where the errors are written (is not important)
+        Pair<CompositeState, LTSOutput> c = DCSForPython.compileFSP(path);
 
         DirectedControllerSynthesisBlocking<Long, String> dcs = TransitionSystemDispatcher.hcsInteractiveForBlocking(c.getFirst(), c.getSecond());
+
         if(dcs == null) fail("Could not start DCS for the given fsp");
-
-        this.heuristic = new FeatureBasedExplorationHeuristic<>("python", featureMaker, false);
         this.dcs = dcs;
+
+        this.heuristic = this.dcs.getHeuristic(this.heuristicMode);
+
         this.dcs.heuristic = this.heuristic;
-
-        this.heuristic.set_nk(n, k);
-        this.heuristic.setFeaturesBuffer(this.input_buffer);
-
-        this.heuristic.startSynthesis(this.dcs);
-        this.dcs.abstraction = new DebuggingAbstraction<>();
 
         this.dcs.setupInitialState();
         this.heuristic.filterFrontier();
-        this.heuristic.computeFeatures();
         this.started_synthesis = false;
-    }
-
-    public FloatBuffer getBuffer(){
-        return this.input_buffer;
     }
 
     public double getSynthesisTime(){
@@ -88,112 +112,93 @@ public class DCSForPython {
         return this.heuristic.frontierSize();
     }
 
-    public int getNumberOfFeatures(){
-        return featureMaker.n_features;
-    }
-
     public boolean isFinished(){
         return dcs.isFinished();
     }
 
     public Set<String> all_transition_labels(){
         if(!started_synthesis) System.out.println("Transition labels not computed yet, synthesis pending.");
-
         return (Set<String>) this.dcs.alphabet.actions;
+    }
 
-    }
-    public Set<String> all_transition_types(){
-        return this.featureMaker.labels_idx.keySet();
-    }
     public void expandAction(int idx){
         ActionWithFeatures<Long, String> stateAction = heuristic.removeFromFrontier(idx);
-        stateAction.state.removeRecommendation(stateAction);
-        //System.out.println(stateAction.state.toString() + " | " + stateAction.action);
-        Recommendation<String> recommendation = new Recommendation(stateAction.action, new HEstimate(1));
-        Compostate<Long, String> child = dcs.expand(stateAction.state, recommendation);
+        Compostate<Long, String> state = stateAction.state;
+        HAction<String> action = stateAction.action;
+
+        Compostate<Long, String> child = dcs.expand(state, action);
         if(!dcs.isFinished()){
             this.heuristic.filterFrontier();
-            this.heuristic.computeFeatures();
-        }
-        this.heuristic.lastExpandedStateAction = stateAction;
-        this.heuristic.expansionDone(stateAction.state, stateAction.action, child);
-
-    }
-
-    public int[] lastExpandedHashes(){
-        int[] hashes= {this.heuristic.lastExpandedFrom.hashCode(),
-                this.heuristic.lastExpandedStateAction.action.hashCode(),
-                this.heuristic.lastExpandedTo.hashCode(),
-                //this.heuristic.lastExpandedTo.marked? 1:0,
-                this.heuristic.lastExpandedStateAction.action.isControllable()? 1:0
-        };
-
-        return hashes;
-    }
-    public String[] lastExpandedStringIdentifiers(){
-        String[] hashes= {this.heuristic.lastExpandedFrom.toString(),
-                this.heuristic.lastExpandedStateAction.action.toString(),
-                this.heuristic.lastExpandedTo.toString(),
-                //this.heuristic.lastExpandedTo.marked? "1":"0",
-                this.heuristic.lastExpandedStateAction.action.isControllable()? "1":"0"};
-
-        return hashes;
-    }
-
-    public int getIndexOfStateAction(Pair<Compostate<Long, String>, HAction<String>> pairStateAction){
-        Compostate<Long, String> state = pairStateAction.getFirst();
-        HAction<String> action = pairStateAction.getSecond();
-        int idx = 0;
-        for(ActionWithFeatures<Long, String> actionWF : heuristic.explorationFrontier){
-            if(actionWF.action.toString().equals(action.toString()) && actionWF.state.toString().equals(state.toString())){
-                return idx;
-            }
-            idx++;
         }
 
-
-        return -1;
+        this.heuristic.setLastExpandedStateAction(stateAction);
+        this.heuristic.expansionDone(state, action, child);
+    }
+    public int getActionFronAuxiliarHeuristic(){
+        return heuristic.getNextActionIndex();
     }
 
-    public static void main(String[] args) throws OrtException {
+    public int getIndexOfStateAction(Pair<Compostate<Long, String>, HAction<String>> actionState){
+        return heuristic.getIndexOfStateAction(actionState);
+    }
+
+    public ArrayList<Integer> getHeuristicOrder(){
+        return heuristic.getOrder();
+    }
+
+    // This main is for testing purposes only
+    public static void main(String[] args)  {
         //String FSP_path = "/home/dario/Documents/Tesis/mtsa/maven-root/mtsa/target/test-classes/Blocking/ControllableFSPs/GR1test1.lts"; // Falla porque tiene guiones
         //String FSP_path = "F:\\UBA\\Tesis\\mtsa\\maven-root\\mtsa\\target\\test-classes\\Blocking\\ControllableFSPs\\GR1Test10.lts";
         //String FSP_path = "F:\\UBA\\Tesis\\mtsa\\maven-root\\mtsa\\target\\test-classes\\Blocking\\NoControllableFSPs\\GR1Test11.lts";
-        String FSP_path = "/home/dario/Documents/Tesis/Learning-Synthesis/fsp/Blocking/ControllableFSPs/GR1Test10.lts";
+        String FSP_path = "F:\\UBA\\Tesis\\mtsa\\MTSApy\\fsp\\TL\\TL-2-2.fsp";
+        //String FSP_path = "/home/dario/Documents/Tesis/Learning-Synthesis/fsp/Blocking/ControllableFSPs/GR1Test10.lts";
         //String FSP_path = "/home/dario/Documents/Tesis/Learning-Synthesis/fsp/DP/DP-2-2.fsp";
 
+        CompositeState ltss_init = DCSForPython.compileFSP(FSP_path).getFirst();
 
-
-        // This main is for testing purposes only
-        CompositeState ltss_init = FeatureBasedExplorationHeuristic.compileFSP(FSP_path).getFirst();
-        DCSForPython env = new DCSForPython(null, null,10000, ltss_init);
+        String heuristicMode = "Ready";
+        //String heuristicMode = "BFS";
+        //String heuristicMode = "Debugging";
+        DCSForPython env = new DCSForPython(null, null,10000, ltss_init, heuristicMode);
 
         Random rand = new Random();
-        List<Integer> list = Arrays.asList(0, 1, 1, 0, 0, 0, 0); // Lista para la intancia 10 Controlable
+        //List<Integer> list = Arrays.asList(0, 1, 1, 0, 0, 0, 0); // Lista para la intancia 10 Controlable
         //List<Integer> list = Arrays.asList(0, 1, 1); // Lista para la intancia 11 No Controlable
+        //List<Integer> list = Arrays.asList(2);
+        List<Integer> list = new ArrayList();
         int idx = 0;
         env.startSynthesis(FSP_path);
         int i = 0;
         while (!env.isFinished()) {
             System.out.println("----------------------------------: " + (i+1));
-            for(Compostate<Long, String> c : env.dcs.open){
-                System.out.println(c);
-            }
+            env.heuristic.printFrontier();
 
             if(i < list.size()){
                 idx = list.get(i);
             }else{
-                idx = rand.nextInt(env.frontierSize());
+                //idx = rand.nextInt(env.frontierSize());
+                if (env.getHeuristicOrder().contains(-1)) {
+                    System.out.println("Error");
+                    env.getHeuristicOrder();
+                }
+
+                System.out.println("Recomendation Order: " + env.getHeuristicOrder());
+                idx = env.getActionFronAuxiliarHeuristic();
             }
 
-            System.out.println("Expandido: " + env.heuristic.explorationFrontier.get(idx));
+            System.out.println("Expanded action: " + idx);
 
-            //env.expandAction(rand.nextInt(env.frontierSize()));
+            //for(Integer j : env.getHeuristicOrder()){
+            //    System.out.println("   " + j);
+            //}
+
             env.expandAction(idx);
             i = i + 1;
         }
         System.out.println("End Run :)");
     }
 }
+
 
 

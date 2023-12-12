@@ -1,12 +1,12 @@
 package MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking;
 
+import MTSTools.ac.ic.doc.commons.collections.BidirectionalMap;
 import MTSTools.ac.ic.doc.commons.relations.BinaryRelation;
 import MTSTools.ac.ic.doc.commons.relations.BinaryRelationImpl;
 import MTSTools.ac.ic.doc.commons.relations.Pair;
 import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.abstraction.HEstimate;
 import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.abstraction.Ranker;
 import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.abstraction.Recommendation;
-import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.ActionWithFeatures;
 
 import java.util.*;
 
@@ -20,12 +20,9 @@ import static org.junit.Assert.assertSame;
  *  the given problem can then be extracted directly from the partial
  *  construction achieved by using these states. */
 public class Compostate<State, Action> implements Comparable<Compostate<State, Action>> {
-    private final DirectedControllerSynthesisBlocking<State, Action> directedControllerSynthesisBlocking;
+    public final DirectedControllerSynthesisBlocking<State, Action> dcs;
     /** States by each LTS in the environment that conform this state. */
-    private final List<State> states; // Note: should be a set of lists for non-deterministic LTSs
-
-    /** The estimated distance to the goal from this state. */
-    public HEstimate estimate;
+    public final List<State> states; // Note: should be a set of lists for non-deterministic LTSs
 
     /** Indicates whether this state is a goal (1) or an error (-1) or not yet known (0). */
     public Status status;
@@ -36,50 +33,92 @@ public class Compostate<State, Action> implements Comparable<Compostate<State, A
     /** Depth at which this state has been expanded. */
     public int depth;
 
-    /** A ranking of the outgoing transitions from this state. */
-    public List<Recommendation<Action>> recommendations;
-
-    /** An iterator for the ranking of recommendations. */
-    private Iterator<Recommendation<Action>> recommendit;
-
-    /** Current recommendation (or null). */
-    public Recommendation<Action> recommendation;
-
-    /** Indicates whether the state is actively being used. */
-    public boolean live;
-
-    /** Indicates whether the state is in the open queue. */
-    public boolean inOpen;
-
     /** Indicates whether the state is controlled or not. */
     public boolean controlled;
 
-    /** Indicates what guarantees the compostate fulfills */
+    /** Indicates by guarantee number what guarantees the compostate fulfills */
     public final Set<Integer> markedByGuarantee;
 
-    /** Indicates what assumptions the compostate negates */
+    /** Indicates by assumptions number what assumptions the compostate negates */
     public final Set<Integer> markedByAssumption;
 
     private Integer loopID;
     private Integer bestDistToWinLoop;
 
     /** Children states expanded following a recommendation of this state. */
-    private final BinaryRelation<HAction<Action>, Compostate<State, Action>> exploredChildren;
+    public final BinaryRelation<HAction<Action>, Compostate<State, Action>> exploredChildren;
+
+    /** Actions expanded following a recommendation of this state. */
+    public final Set<HAction<Action>> exploredActions;
 
     /** Children states expanded through uncontrollable transitions. */
-    private final Set<Compostate<State, Action>> childrenExploredThroughUncontrollable;
+    public final Set<Compostate<State, Action>> childrenExploredThroughUncontrollable;
 
     /** Children states expanded through controllable transitions. */
-    private final Set<Compostate<State, Action>> childrenExploredThroughControllable;
+    public final Set<Compostate<State, Action>> childrenExploredThroughControllable;
 
     /** Parents that expanded into this state. */
-    private final BinaryRelation<HAction<Action>, Compostate<State, Action>> parents;
+    public final BinaryRelation<HAction<Action>, Compostate<State, Action>> parents;
 
     /** Set of actions enabled from this state. */
-    private final Set<HAction<Action>> transitions;
+    public final Set<HAction<Action>> transitions;
 
-    /** Stores target states (i.e., already visited marked states) to reach from this state. */
+    public HashSet<LinkedList<Integer>> arrivingPaths;
+
+    public boolean hasGoalChild = false;
+    public boolean hasErrorChild = false;
+    
+    /** if the state has a goal child, this action points to a goal child */
+    public HAction<Action> actionToGoal;
+    
+    /** Indicates whether this state was expanded by DCS */
+    public boolean wasExpanded = false;
+
+    // Variables for OpenSetExplorationHeuristic --------------------
+    /** all "colors" in these attributes, are the index of the LTS which marks that color */
+
+    /** The estimated distance to the goal from this state for each color. */
+    public Map<Integer, HEstimate> estimates;
+
+    /** A ranking of the outgoing transitions from this state for each color. */
+    public Map<Integer, List<Recommendation<Action>>> recommendations;
+
+    /** An iterator for the ranking of recommendations for each color. */
+    public Map<Integer,Iterator<Recommendation<Action>>> recommendit;
+
+    /** Current recommendation (or null) for each color. */
+    public Map<Integer, Recommendation<Action>> recommendation;
+
+    /** Indicates whether the state is actively being used. */
+    public boolean live;
+
+    /** Indicates whether the state is in the open queue of a specific color, by LTS index. */
+    public Map<Integer, Boolean> inOpen;
+    
+    /** Stores target states (i.e., already visited marked states) to reach from this state.
+     * targets[i] are the targets to reach in the i-th LTS*/
     public List<Set<State>> targets = emptyList();
+
+    private final Set<HAction<Action>> discardedActions;
+    private final HashMap<Integer,Set<HAction<Action>>> discardedActionsByColor;
+
+    private boolean cantWinByGuarantees = false;
+
+    /** Indicates that the state has a uncontrollable conflincting action */
+    public boolean heuristicStronglySuggestsIsError = false;
+
+    /** Set of vertices in the RA graph. */
+    public Set<HAction<Action>> vertices;
+
+    /** Edges in the RA graph. */
+    public BidirectionalMap<HAction<Action>, HAction<Action>> edges;
+
+    /** Cache of gaps between actions. */
+    public Map<HAction<Action>, Map<HAction<Action>, Integer>> gapCache;
+
+    public Map<HAction<Action>, Set<Integer>> readyInLTS;
+
+    // Variables for FrontierListExplorationHeuristic --------------------
 
     /** Number of uncontrollable transitions */
     public int uncontrollableTransitions;
@@ -90,96 +129,83 @@ public class Compostate<State, Action> implements Comparable<Compostate<State, A
     /** Number of uncontrollable transitions that were not yet expanded by DCS */
     public int uncontrollableUnexploredTransitions;
 
-    /** Indicates whether this state was expanded by DCS */
-    private boolean wasExpanded = false;
-
-    /** Indicates that the state has a uncontrollable conflincting action */
-    public boolean heuristicStronglySuggestsIsError = false;
-
-    /** Estimates of transitions, only used when using ra feature **/
-    //HashMap<HAction<State, Action>, HEstimate<State, Action>> estimates;
-
-
-
-    public HashSet<LinkedList<Integer>> arrivingPaths;
-
-    Map<HAction<Action>, List<State>> actionChildStates;
-
-    HashMap<HAction<Action>, ActionWithFeatures<State, Action>> actionsWithFeatures;
-
-    private boolean hasGoalChild = false;
-    private boolean hasErrorChild = false;
-
+    public Map<HAction<Action>, List<State>> actionChildStates;
 
     /** Constructor for a Composed State. */
-    public Compostate(DirectedControllerSynthesisBlocking<State, Action> directedControllerSynthesisBlocking, List<State> states) {
-        this.directedControllerSynthesisBlocking = directedControllerSynthesisBlocking;
+    public Compostate(DirectedControllerSynthesisBlocking<State, Action> dcs, List<State> states) {
+        this.dcs = dcs;
         this.states = states;
         this.status = Status.NONE;
         this.distance = DirectedControllerSynthesisBlocking.INF;
         this.depth = DirectedControllerSynthesisBlocking.INF;
         this.live = false;
-        this.inOpen = false;
+        this.inOpen = new HashMap<>();
+        this.estimates = new HashMap<>();
+        this.recommendation = new HashMap<>();
+        this.recommendit = new HashMap<>();
+        this.recommendations = new HashMap<>();
+
         this.controlled = true; // we assume the state is controlled until an uncontrollable recommendation is obtained
-        this.estimate = new HEstimate(1);
         this.exploredChildren = new BinaryRelationImpl<>();
+        this.exploredActions = new HashSet<>();
+        this.discardedActions = new HashSet<>();
+        this.discardedActionsByColor = new HashMap<>();
         this.childrenExploredThroughUncontrollable = new HashSet<>();
         this.childrenExploredThroughControllable = new HashSet<>();
         this.parents = new BinaryRelationImpl<>();
         this.loopID = -1;
         this.bestDistToWinLoop = -1;
         this.markedByGuarantee = new HashSet<>();
-        for(Map.Entry<Integer, Integer> entry : directedControllerSynthesisBlocking.guarantees.entrySet()) {
+        for(Map.Entry<Integer, Integer> entry : dcs.guarantees.entrySet()) {
             int gNumber = entry.getKey();
             int gIndex = entry.getValue();
 
-            if (directedControllerSynthesisBlocking.defaultTargets.get(gIndex).contains(states.get(gIndex))) {
+            this.inOpen.put(gIndex, false);
+            discardedActionsByColor.put(gIndex, new HashSet<>());
+
+            if (dcs.markedStates.get(gIndex).contains(states.get(gIndex))) {
                 markedByGuarantee.add(gNumber);
-                directedControllerSynthesisBlocking.composByGuarantee.get(gNumber).add(this);
+                dcs.composByGuarantee.get(gNumber).add(this);
             }
         }
 
         this.markedByAssumption = new HashSet<>();
-        for(Map.Entry<Integer, Integer> entry : directedControllerSynthesisBlocking.assumptions.entrySet()) {
+        for(Map.Entry<Integer, Integer> entry : dcs.assumptions.entrySet()) {
             int aNumber = entry.getKey();
             int aIndex = entry.getValue();
 
-            if (directedControllerSynthesisBlocking.defaultTargets.get(aIndex).contains(states.get(aIndex))) {
+            this.inOpen.put(aIndex, false);
+            discardedActionsByColor.put(aIndex, new HashSet<>());
+
+            if (dcs.markedStates.get(aIndex).contains(states.get(aIndex))) {
                 markedByAssumption.add(aNumber);
-                directedControllerSynthesisBlocking.notComposByAssumption.get(aNumber).add(this);
+                dcs.notComposByAssumption.get(aNumber).add(this);
             }
         }
 
         this.transitions = buildTransitions();
-        if (directedControllerSynthesisBlocking.heuristic != null){
-            directedControllerSynthesisBlocking.heuristic.initialize((Compostate<Long, String>) this);
-        }
+        dcs.heuristic.initialize(this);
     }
-
 
     /** Returns the states that conform this composed state. */
     public List<State> getStates() {
         return states;
     }
 
-
     /** Returns the distance from this state to the goal state (INF if not yet computed). */
     public int getDistance() {
         return distance;
     }
-
 
     /** Sets the distance from this state to the goal state. */
     public void setDistance(int distance) {
         this.distance = distance;
     }
 
-
     /** Returns the depth of this state in the exploration tree. */
     public int getDepth() {
         return depth;
     }
-
 
     /** Sets the depth for this state. */
     public void setDepth(int depth) {
@@ -187,63 +213,14 @@ public class Compostate<State, Action> implements Comparable<Compostate<State, A
             this.depth = depth;
     }
 
-
-    /** Indicates whether this state has been evaluated, that is, if it has
-     *  a valid ranking of recommendations. */
-    public boolean isEvaluated() {
-        return recommendations != null;
-    }
-
     public boolean isDeadlock(){
         return getTransitions().isEmpty();
     }
-
-
-    ///** Returns whether this state is marked (i.e., all its components are marked). */
-    //public boolean isMarked() { // removed during aggressive inlining
-    //  return marked;
-    //}
-
-
-    /** Returns the target states to be reached from this state as a list of sets,
-     *  which at the i-th position holds the set of target states of the i-th LTS. */
-    public List<Set<State>> getTargets() {
-        return targets;
-    }
-
-
-    /** Returns the target states of a given LTS to be reached from this state. */
-    @SuppressWarnings("unchecked")
-    public Set<State> getTargets(int lts) {
-        return targets.isEmpty() ? (Set<State>)emptySet() : targets.get(lts);
-    }
-
-
-    /** Sets the given set as target states for this state (creates
-     *  aliasing with the argument set). */
-    public void setTargets(List<Set<State>> targets) {
-        this.targets = targets;
-    }
-
-
-    /** Adds a state to this state's targets. */
-    public void addTargets(Compostate<State, Action> compostate) {
-        List<State> states = compostate.getStates();
-        if (targets.isEmpty()) {
-            targets = new ArrayList<>(directedControllerSynthesisBlocking.ltssSize);
-            for (int lts = 0; lts < directedControllerSynthesisBlocking.ltssSize; ++lts)
-                targets.add(new HashSet<>());
-        }
-        for (int lts = 0; lts < directedControllerSynthesisBlocking.ltssSize; ++lts)
-            targets.get(lts).add(states.get(lts));
-    }
-
 
     /** Returns this state's status. */
     public Status getStatus() {
         return status;
     }
-
 
     /** Sets this state's status. */
     public void setStatus(Status status) {
@@ -252,14 +229,9 @@ public class Compostate<State, Action> implements Comparable<Compostate<State, A
             this.status = status;
     }
 
-
     /** Indicates whether this state's status equals some other status. */
     public boolean isStatus(Status status) {
         return this.status == status;
-    }
-
-    public boolean isStatusNone() {
-        return isStatus(Status.NONE);
     }
 
     public void setLoopID(Integer loopID){
@@ -278,136 +250,14 @@ public class Compostate<State, Action> implements Comparable<Compostate<State, A
         return this.bestDistToWinLoop;
     }
 
-    /** Sorts this state's recommendations in order to be iterated properly. */
-    public Recommendation<Action> rankRecommendations() {
-        Recommendation<Action> result = null;
-        if (!recommendations.isEmpty()) {
-            recommendations.sort(new Ranker<>());
-            result = recommendations.get(0);
-        }
-        return result;
-    }
-
-
-    /** Sets up the recommendation list. */
-    public void setupRecommendations() {
-        if (recommendations == null)
-            recommendations = new ArrayList<>();
-    }
-
-
-    /** Adds a new recommendation to this state and returns whether an
-     *  error action has been introduced (no other recommendations should
-     *  be added after an error is detected).
-     *  Recommendations should not be added after they have been sorted and
-     *  with an iterator in use. */
-    public boolean addRecommendation(HAction<Action> action, HEstimate estimate) {
-        boolean uncontrollableAction = !action.isControllable();
-        if (controlled) { // may not work with lists of recommendations
-            if (uncontrollableAction)
-                controlled = false;
-        }
-        if (!estimate.isConflict()) // update recommendation
-            recommendations.add(new Recommendation(action, estimate));
-        boolean error = uncontrollableAction && estimate.isConflict();
-        if (error){// an uncontrollable state with at least one INF estimate is an automatic error
-            recommendations.clear();
-            this.setStatus(Status.ERROR);
-        }
-        return error;
-    }
-
-
-    /** Returns whether the iterator points to a valid recommendation. */
-    public boolean hasValidRecommendation() {
-        return /*isEvaluated()*/recommendations != null/**/ && recommendation != null; // replaced during aggressive inlining
-    }
-
-
-    /** Returns whether the iterator points to a valid uncontrollable recommendation. */
-    public boolean hasValidUncontrollableRecommendation() {
-        return /*hasValidRecommendation()*/recommendation != null/**/ && !recommendation.getAction().isControllable(); // replaced during aggressive inlining
-    }
-
-    /** Returns whether the iterator points to a valid controllable recommendation. */
-    public boolean hasValidControllableRecommendation() { //strongly relies on recommendations being uncontrollable first and controllable last
-        return recommendation != null && recommendations.get(recommendations.size() - 1).getAction().isControllable();
-    }
-
-    /** Elimina una recomendacion de la lista de recomendacion y updatea las recomendaciones*/
-    public void removeRecommendation(ActionWithFeatures<Long, String> action) {
-        if (recommendations.size() > 0) {
-            //// Elimina la recomendacion que tiene como accion action
-            int idxToRemove = -1;
-            int i = 0;
-            for(Recommendation<Action> r : recommendations){
-                if(r.getAction() == action.action){
-                    idxToRemove = i;
-                }
-                i++;
-            }
-
-            // assert("idxToRemove no deveria ser -1 porque eso significa que action no esta en las recomendadas")
-            if(idxToRemove == -1){
-                System.out.println("idxToRemove = -1 / Esto no deveria pasar");
-            }
-            recommendations.remove(idxToRemove);
-
-
-            // Vuelve a iniciar el iterador y updatea las variables recomendation
-            initRecommendations();
-        }
-    }
-
-    /** Advances the iterator to the next recommendation. */
-    public Recommendation<Action> nextRecommendation() {
-        Recommendation<Action> result = recommendation;
-        updateRecommendation();
-        return result;
-    }
-
-
-    /** Initializes the recommendation iterator guaranteeing representation invariants. */
-    public void initRecommendations() {
-        recommendit = recommendations.iterator();
-        updateRecommendation();
-    }
-
-
-    /** Initializes the recommendation iterator and current estimate for the state. */
-    private void updateRecommendation() {
-        if (recommendit.hasNext()) {
-            recommendation = recommendit.next();
-            estimate = recommendation.getEstimate(); // update this state estimate in case the state is reopened
-        } else {
-            recommendation = null;
-        }
-    }
-
-
-    /** Clears all recommendations from this state. */
-    public void clearRecommendations() {
-        if (isEvaluated()) {
-            recommendations.clear();
-            recommendit = null;
-            recommendation = null;
-        }
-    }
-
-
-    /** Returns whether this state is being actively used. */
-    public boolean isLive() {
-        return live;
-    }
-
     public boolean hasGoalChild(){
         return hasGoalChild;
     }
 
-    public void setHasGoalChild() {
+    public void setHasGoalChild(HAction<Action> actionToGoal) {
+        this.actionToGoal = actionToGoal;
         this.hasGoalChild = true;
     }
-
 
     public boolean hasErrorChild(){
         return hasErrorChild;
@@ -420,54 +270,15 @@ public class Compostate<State, Action> implements Comparable<Compostate<State, A
 
     /** Returns whether this state has a child with the given status. */
     public boolean hasStatusChild(Status status) {
-        boolean result = false;
-        for (Pair<HAction<Action>, Compostate<State, Action>> transition : getExploredChildren()) {
-            if (result = transition.getSecond().status == status) break;
-        }
-        return result;
+        for (Pair<HAction<Action>,Compostate<State, Action>> transition : getExploredChildren())
+            if (transition.getSecond().isStatus(status)) return true;
+        return false;
     }
-
-    public boolean hasStatusChildNone() {
-        Status status = Status.NONE;
-        return hasStatusChild(status);
-    }
-
-
-    /** Adds this state to the open queue (reopening it if was previously closed). */
-    public boolean open() {
-        assertSame("reopening compostate " + toString() + " with status != NONE", status, Status.NONE);
-        boolean result = false;
-        live = true;
-        if (!inOpen) {
-            if (inOpen = !hasStatusChild(Status.NONE)) {
-                result = directedControllerSynthesisBlocking.open.add(this);
-            } else { // we are reopening a state, thus we reestablish it's exploredChildren instead
-                for (Pair<HAction<Action>, Compostate<State, Action>> transition : getExploredChildren()) {
-                    Compostate<State, Action> child = transition.getSecond();
-                    if (child.isStatus(Status.NONE) && child.hasValidRecommendation()){
-                        if (!child.isLive())// || (!child.inOpen && !transition.getFirst().isControllable()))
-                            result |= child.open();
-                    }
-                }
-                if (inOpen = (!result || isControlled()))
-                    result = directedControllerSynthesisBlocking.open.add(this);
-            }
-        }
-        return result;
-    }
-
 
     /** Closes this state to avoid further exploration. */
     public void close() {
         live = false;
     }
-
-
-    /** Returns whether this state is controllable or not. */
-    public boolean isControlled() {
-        return controlled;
-    }
-
 
     /** Returns the set of actions enabled from this composed state. */
     public Set<HAction<Action>> getTransitions() {
@@ -477,34 +288,37 @@ public class Compostate<State, Action> implements Comparable<Compostate<State, A
     /** Initializes the set of actions enabled from this composed state. */
     private Set<HAction<Action>> buildTransitions() { // Note: here I can code the wia and ia behavior for non-deterministic ltss
         Set<HAction<Action>> result = new HashSet<>();
-        if (directedControllerSynthesisBlocking.facilitators == null) {
+        if (dcs.facilitators == null) {
             for (int i = 0; i < states.size(); ++i) {
-                for (Pair<Action,State> transition : directedControllerSynthesisBlocking.ltss.get(i).getTransitions(states.get(i))) {
-                    HAction<Action> action = directedControllerSynthesisBlocking.alphabet.getHAction(transition.getFirst());
-                    directedControllerSynthesisBlocking.allowed.add(i, action);
+                for (Pair<Action,State> transition : dcs.ltss.get(i).getTransitions(states.get(i))) {
+                    HAction<Action> action = dcs.alphabet.getHAction(transition.getFirst());
+                    dcs.allowed.add(i, action);
                 }
             }
         } else {
             for (int i = 0; i < states.size(); ++i)
-                if (!directedControllerSynthesisBlocking.facilitators.get(i).equals(states.get(i)))
-                    for (Pair<Action,State> transition : directedControllerSynthesisBlocking.ltss.get(i).getTransitions(directedControllerSynthesisBlocking.facilitators.get(i))) {
-                        HAction<Action> action = directedControllerSynthesisBlocking.alphabet.getHAction(transition.getFirst());
-                        directedControllerSynthesisBlocking.allowed.remove(i, action); // remove old non-shared facilitators transitions
+                if (!dcs.facilitators.get(i).equals(states.get(i)))
+                    for (Pair<Action,State> transition : dcs.ltss.get(i).getTransitions(dcs.facilitators.get(i))) {
+                        HAction<Action> action = dcs.alphabet.getHAction(transition.getFirst());
+                        dcs.allowed.remove(i, action); // remove old non-shared facilitators transitions
                     }
             for (int i = 0; i < states.size(); ++i)
-                if (!directedControllerSynthesisBlocking.facilitators.get(i).equals(states.get(i)))
-                    for (Pair<Action,State> transition : directedControllerSynthesisBlocking.ltss.get(i).getTransitions(states.get(i))) {
-                        HAction<Action> action = directedControllerSynthesisBlocking.alphabet.getHAction(transition.getFirst());
-                        directedControllerSynthesisBlocking.allowed.add(i, action); // add new non-shared facilitators transitions
+                if (!dcs.facilitators.get(i).equals(states.get(i)))
+                    for (Pair<Action,State> transition : dcs.ltss.get(i).getTransitions(states.get(i))) {
+                        HAction<Action> action = dcs.alphabet.getHAction(transition.getFirst());
+                        dcs.allowed.add(i, action); // add new non-shared facilitators transitions
                     }
         }
-        result.addAll(directedControllerSynthesisBlocking.allowed.getEnabled());
-        directedControllerSynthesisBlocking.facilitators = states;
+        result.addAll(dcs.allowed.getEnabled());
+        dcs.facilitators = states;
 
         //this removes mixed compostates, if there are uncontrollable transitions we ignore controllable ones
         boolean hasU = false;
         for(HAction<Action> ha : result){
-            if (!ha.isControllable()) hasU = true;
+            if (!ha.isControllable()){
+                hasU = true;
+                controlled = false;
+            }
         }
         if(hasU){
             result.removeIf(HAction::isControllable);
@@ -512,22 +326,29 @@ public class Compostate<State, Action> implements Comparable<Compostate<State, A
         return result;
     }
 
-
     /** Adds an expanded child to this state. */
     public void addChild(HAction<Action> action, Compostate<State, Action> child) {
         if(action.isControllable()){
             childrenExploredThroughControllable.add(child);
-        }else {
+        } else {
             childrenExploredThroughUncontrollable.add(child);
         }
 
         exploredChildren.addPair(action, child);
+        exploredActions.add(action);
     }
-
 
     /** Returns all transition leading to exploredChildren of this state. */
     public BinaryRelation<HAction<Action>, Compostate<State, Action>> getExploredChildren() {
         return exploredChildren;
+    }
+
+    public Set<HAction<Action>> getExploredActions() {
+        return exploredActions;
+    }
+
+    public Set<HAction<Action>> getDiscardedActions() {
+        return discardedActions;
     }
 
     public Set<Compostate<State, Action>> getChildrenExploredThroughUncontrollable() {
@@ -561,7 +382,6 @@ public class Compostate<State, Action> implements Comparable<Compostate<State, A
         return result;
     }
 
-
     /** Adds an expanded parent to this state. */
     public void addParent(HAction<Action> action, Compostate<State, Action> parent) {
         parents.addPair(action, parent);
@@ -585,22 +405,23 @@ public class Compostate<State, Action> implements Comparable<Compostate<State, A
     /** Compares two composed states by their estimated distance to a goal by (<=). */
     @Override
     public int compareTo(Compostate o) {
-        int result = estimate.compareTo(o.estimate);
-        if (result == 0)
-            result = this.depth - o.depth;
-        return result;
+        // int result = estimate.compareTo(o.estimate);
+        // if (result == 0)
+        //     result = this.depth - o.depth;
+        // return result;
+        return 1;
     }
 
 
     /** Clears the internal state removing parent and exploredChildren. */
     public void clear() {
         exploredChildren.clear();
+        exploredActions.clear();
         /** Indicates whether the procedure consider a non-blocking requirement (by default we consider a stronger goal). */
         boolean nonblocking = false;
         if (!nonblocking) // this is a quick fix to allow reopening weak states marked as errors
-            directedControllerSynthesisBlocking.compostates.remove(states);
+            dcs.compostates.remove(states);
     }
-
 
     /** Returns the string representation of a composed state. */
     @Override
@@ -616,4 +437,173 @@ public class Compostate<State, Action> implements Comparable<Compostate<State, A
         wasExpanded = true;
     }
 
+    // Methods used by OpenSetExplorationHeuristic -------------------
+
+    public HEstimate getEstimate(Integer color) {
+        return estimates.get(color);
+    }
+
+    /** Indicates whether this state has been evaluated, that is, if it has
+     *  a valid ranking of recommendations. */
+    public boolean isEvaluated(Integer color) {
+        return recommendations.get(color) != null;
+    }
+
+    /** Returns the target states to be reached from this state as a list of sets,
+     *  which at the i-th position holds the set of target states of the i-th LTS. */
+    public List<Set<State>> getTargets() {
+        return targets;
+    }
+
+    /** Returns the target states of a given LTS to be reached from this state. */
+    @SuppressWarnings("unchecked")
+    public Set<State> getTargets(int lts) {
+        return targets.isEmpty() ? (Set<State>)emptySet() : targets.get(lts);
+    }
+
+    /** Sets the given set as target states for this state (creates
+     *  aliasing with the argument set). */
+    public void setTargets(List<Set<State>> targets) {
+        this.targets = targets;
+    }
+
+    /** Adds a state to this state's targets. */
+    public void addTargets(Compostate<State, Action> compostate) {
+        List<State> states = compostate.getStates();
+        if (targets.isEmpty()) {
+            targets = new ArrayList<>(dcs.ltssSize);
+            for (int lts = 0; lts < dcs.ltssSize; ++lts)
+                targets.add(new HashSet<>());
+        }
+        //we only add the states that are marked for each relevant LTS, since only for those colors should we aim for this compostate
+        for(int lts : compostate.inOpen.keySet())
+            targets.get(lts).add(states.get(lts));
+        assert(targets.get(0).isEmpty()); //the first LTS is the plant, not a guarantee or assumption so it is useless for the abstractions
+    }
+
+    /** Sorts this state's recommendations in order to be iterated properly. */
+    public Recommendation<Action> rankRecommendations(Integer color) {
+        Recommendation<Action> result = null;
+        if (!recommendations.get(color).isEmpty()) {
+            recommendations.get(color).sort(new Ranker<>());
+            result = recommendations.get(color).get(0);
+        }
+        return result;
+    }
+
+    /** Sets up the recommendation list. */
+    public void setupRecommendations(Integer color) {
+        recommendations.computeIfAbsent(color, k -> new ArrayList<>());
+    }
+
+    /** Adds a new recommendation to this state and returns whether an
+     *  error action has been introduced (no other recommendations should
+     *  be added after an error is detected).
+     *  Recommendations should not be added after they have been sorted and
+     *  with an iterator in use. */
+    public boolean addRecommendation(Integer color, HAction<Action> action, HEstimate estimate) {
+        boolean uncontrollableAction = !action.isControllable();
+        if (controlled) { // may not work with lists of recommendations
+            if (uncontrollableAction)
+                controlled = false;
+        }
+        if (!estimate.isConflict()) {
+            // update recommendation
+            recommendations.get(color).add(new Recommendation<Action>(action, estimate));
+        } else {
+            discardedActionsByColor.get(color).add(action);
+
+            boolean discardedByAnyGuarantee = false;
+            boolean discardedByAllAssumptions = true;
+            //A state is surely ERROR only if it can't reach some guarantee AND it can't win by avoiding any assumption.
+            for(Integer gColor : dcs.guarantees.values()){
+                Set<HAction<Action>> discAct = discardedActionsByColor.get(gColor);
+                if(discAct.contains(action)){
+                    discardedByAnyGuarantee = true;
+                    break;
+                }
+            }
+            for(Integer aColor : dcs.assumptions.values()){
+                Set<HAction<Action>> discAct = discardedActionsByColor.get(aColor);
+                if(!discAct.contains(action)){
+                    discardedByAllAssumptions = false;
+                    break;
+                }
+            }
+            if(discardedByAnyGuarantee && discardedByAllAssumptions){
+                discardedActions.add(action);
+                if(uncontrollableAction){
+                    // an uncontrollable action with at least one INF guarantee estimate and all INF assumptions is an automatic error
+                    this.discardedActions.addAll(this.transitions);
+                    this.heuristicStronglySuggestsIsError = true;
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    public void markLoserForGuarantees(){
+        cantWinByGuarantees = true;
+    }
+
+    public boolean cantWinColor(Integer color){
+        return discardedActionsByColor.get(color).size() == transitions.size() ||
+                (cantWinByGuarantees && dcs.guarantees.containsValue(color));
+    }
+
+    /** Advances the iterator to the next recommendation. */
+    public Recommendation<Action> nextRecommendation(Integer color) {
+        Recommendation<Action> result = recommendation.get(color);
+        updateRecommendation(color);
+        return result;
+    }
+
+    /** Peek the next recommendation, without advancing the iterator. */
+    public Recommendation<Action> peekRecommendation(Integer color) {
+        return recommendation.get(color);
+    }
+
+    /** Initializes the recommendation iterator guaranteeing representation invariants. */
+    public void initRecommendations(Integer color) {
+        recommendit.put(color, recommendations.get(color).iterator());
+        updateRecommendation(color);
+    }
+
+    /** Initializes the recommendation iterator and current estimate for the state. */
+    public void updateRecommendation(Integer color) {
+        if (recommendit.get(color).hasNext()) {
+            recommendation.put(color, recommendit.get(color).next());
+
+            // update this state estimate in case the state is reopened
+            estimates.put(color, recommendation.get(color).getEstimate());
+        } else {
+            recommendation.put(color, null);
+        }
+    }
+
+    /** Clears all recommendations from this state. **/
+    public void clearRecommendations() {
+        recommendations.clear();
+        recommendit.clear();
+        recommendation.clear();
+    }
+
+    /** Clears RA structure after being evaluated for all colors **/
+    public void clearRA(){
+        vertices.clear();
+        edges.clear();
+        gapCache.clear();
+        readyInLTS.clear();
+    }
+
+    /** Returns whether this state is being actively used. */
+    public boolean isLive() {
+        return live;
+    }
+
+    /** Returns whether this state is controllable or not. */
+    public boolean isControlled() {
+        return controlled;
+    }
 }

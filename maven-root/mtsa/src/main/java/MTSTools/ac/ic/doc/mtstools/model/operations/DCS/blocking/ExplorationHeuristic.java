@@ -1,40 +1,51 @@
 package MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking;
 
 import MTSTools.ac.ic.doc.commons.relations.Pair;
-import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.nonblocking.abstraction.HAction;
+import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.Compostate;
+import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.HAction;
 
-import java.util.List;
-import java.util.Set;
+import java.util.ArrayList;
 
 public interface ExplorationHeuristic<State, Action> {
 
-    /*void setInitialState(Compostate<State, Action> initial);
+    void setLastExpandedStateAction(ActionWithFeatures<State, Action> stateAction);
+
+    int frontierSize();
+
+    void setInitialState(Compostate<State, Action> initial);
 
     boolean somethingLeftToExplore();
 
-    void expansionDone(Compostate<State, Action> first, HAction<State, Action> second, Compostate<State, Action> child);
+    void expansionDone(Compostate<State, Action> first, HAction<Action> second, Compostate<State, Action> child);
 
-    Pair<Compostate<State,Action>, HAction<State,Action>> getNextAction();
+    Pair<Compostate<State,Action>, HAction<Action>> getNextAction();
 
-    void notifyExpandingState(Compostate<State, Action> state, HAction<State, Action> action, Compostate<State, Action> child);
+    ArrayList<Integer> getOrder();
+
+    int getNextActionIndex();
+
+    ActionWithFeatures<State, Action> removeFromFrontier(int idx);
+
+    void filterFrontier();
+
+    void notifyExpandingState(Compostate<State, Action> state, HAction<Action> action, Compostate<State, Action> child);
 
     void notifyStateIsNone(Compostate<State, Action> state);
 
     void notifyStateSetErrorOrGoal(Compostate<State, Action> state);
 
-    void newState(Compostate<State, Action> state, Compostate<State, Action> parent, List<State> states);
+    void newState(Compostate<State, Action> state, Compostate<State, Action> parent);
 
-    void notifyExpansionDidntFindAnything(Compostate<State, Action> parent, HAction<State, Action> action, Compostate<State, Action> child);
+    void notifyExpansionDidntFindAnything(Compostate<State, Action> parent, HAction<Action> action, Compostate<State, Action> child);
 
     boolean fullyExplored(Compostate<State, Action> state);
 
     boolean hasUncontrollableUnexplored(Compostate<State, Action> state);
 
+    int getIndexOfStateAction(Pair<Compostate<State,Action>, HAction<Action>> actionState);
+
+    void printFrontier();
+
     void initialize(Compostate<State, Action> state);
 
-    void notifyClosedPotentiallyWinningLoop(Set<Compostate<State, Action>> loop);
-
-    void notifyPropagatingGoal(Set<Compostate<State, Action>> ancestors);
-
-    void startSynthesis(DirectedControllerSynthesisBlocking<State, Action> dcs);*/
 }

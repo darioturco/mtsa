@@ -21,17 +21,9 @@ public class Statistics {
     /** System wall clock in milliseconds at the end of the procedure. */
     private long ended;
 
-    /** System wall clock in milliseconds at the start of the heuristic procedure. */
-    private long started_heuristic;
-
-    /** System wall clock in milliseconds at the end of the heuristic procedure. */
-    private long ended_heuristic;
-
     /** Indicate if budget was exceeded, if established**/
     private boolean exceededBudget = false;
-    /** Execution time in milliseconds of the heuristic procedure. */
-    private long heuristic_time;
-    private String budgetExceededMessage = "";
+
     /**metrics to detect how well compositional approach works for different test cases*/
     private long findNewGoalsCalls;
     private long findNewErrorsCalls;
@@ -56,8 +48,6 @@ public class Statistics {
         propagateGoalsCalls = other.propagateGoalsCalls;
         propagateErrorsCalls = other.propagateErrorsCalls;
         maxMemoryUsed = other.maxMemoryUsed;
-        heuristic_time = other.heuristic_time;
-        exceededBudget = other.isExceededBudget();
     }
 
     public void incFindNewGoalsCalls() {
@@ -110,22 +100,12 @@ public class Statistics {
     public void end() {
         isRunning = false;
         ended = System.currentTimeMillis();
-        if(exceededBudget) budgetExceededMessage = "Expansion budget exceeded.";
-
     }
 
 
     /** Indicates if the heuristic procedure is running. */
     public boolean isRunning() {
         return isRunning;
-    }
-
-    public void startHeuristicTime() {
-        started_heuristic = System.currentTimeMillis();
-    }
-
-    public void endHeuristicTime() {
-        heuristic_time += System.currentTimeMillis() - started_heuristic;
     }
 
 
@@ -170,15 +150,12 @@ public class Statistics {
         propagateGoalsCalls = 0;
         propagateErrorsCalls = 0;
         maxMemoryUsed = 0;
-        heuristic_time = 0;
     }
 
 
     /** Returns a string with the statistic data. */
     @Override
     public String toString() {
-
-
         return  "ExpandedStates: " + expandedStates + "\n" +
                 "UsedStates: " + controllerUsedStates + "\n" +
                 "ExpandedTransitions: " + expandedTransitions + "\n" +
@@ -186,10 +163,7 @@ public class Statistics {
                 "Elapsed in Synthesis: " + (ended - started) + " ms\n" +
                 "findNewGoalsCalls: " + findNewGoalsCalls + ", findNewErrorsCalls: " + findNewErrorsCalls + "\n" +
                 "propagateGoalsCalls: " + propagateGoalsCalls + ", propagateErrorsCalls: " + propagateErrorsCalls + "\n" +
-                "maxMemoryUsed: " + formatMemory(maxMemoryUsed) + "\n" +
-                "heuristicTime: " + heuristic_time + " ms\n" +
-                "expansionBudgetExceeded: " + isExceededBudget() +"\n";
-
+                "maxMemoryUsed: " + formatMemory(maxMemoryUsed) + "\n";
     }
 
 
@@ -234,7 +208,7 @@ public class Statistics {
 
 
     /** Returns memory in human readable format. */
-    private String formatMemory(long memory) {
+    public static String formatMemory(long memory) {
         double kilo = 1024;
         double mega = 1024 * kilo;
         double giga = 1024 * mega;

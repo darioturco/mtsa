@@ -1,9 +1,11 @@
 package MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.abstraction;
 
 import MTSTools.ac.ic.doc.commons.relations.BinaryRelation;
+import MTSTools.ac.ic.doc.commons.relations.Pair;
 import MTSTools.ac.ic.doc.mtstools.model.LTS;
 import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.HAction;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -34,10 +36,12 @@ class HState<State, Action> {
     public final boolean marked;
 
     private final List<LTS<State, Action>> ltss;
+    private final Set<Action> actions;
+    private final Set<Action> selfloops;
 
 
     /**
-     * Constructor for an Heuristic State.
+     * Constructor for a Heuristic State.
      */
     public HState(int lts, State state, int hash, boolean marked, List<LTS<State,Action>> ltss) {
         this.lts = lts;
@@ -45,6 +49,14 @@ class HState<State, Action> {
         this.hash = hash;
         this.marked = marked;
         this.ltss = ltss;
+        this.actions = new HashSet<>();
+        this.selfloops = new HashSet<>();
+        for(Pair<Action, State> p : ltss.get(lts).getTransitions(state)){
+            if(p.getSecond() != null){
+                this.actions.add(p.getFirst());
+                if(p.getSecond() == state) this.selfloops.add(p.getFirst());
+            }
+        }
     }
 
 
@@ -66,8 +78,7 @@ class HState<State, Action> {
      * Returns if this state has a transition with the given action.
      */
     public boolean contains(HAction<Action> action) {
-        Set<State> targets = getTransitions().getImage(action.getAction());
-        return !(targets == null || targets.isEmpty());
+        return actions.contains(action.getAction());
     }
 
 
@@ -75,9 +86,8 @@ class HState<State, Action> {
      * Returns if this state has a self-loop transition with the given action.
      */
     public boolean isSelfLoop(HAction<Action> action) {
-        return getTransitions().getImage(action.getAction()).contains(this.state);
+        return selfloops.contains(action.getAction());
     }
-
 
     /**
      * The hash code for this state.

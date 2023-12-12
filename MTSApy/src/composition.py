@@ -14,7 +14,7 @@ if NONBLOCKING:
     print("WARNING: Runing NonBlocking environment")
     from MTSTools.ac.ic.doc.mtstools.model.operations.DCS.nonblocking import DirectedControllerSynthesisNonBlocking, FeatureBasedExplorationHeuristic, DCSForPython
 else:
-    from MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking import DirectedControllerSynthesisBlocking, FeatureBasedExplorationHeuristic, DCSForPython
+    from MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking import DCSForPython
 
 #FSP_PATH = "../fsp"
 #BENCHMARK_PROBLEMS = ["AT", "BW", "CM", "DP", "TA", "TL"]
@@ -54,16 +54,21 @@ class CompositionGraph(nx.DiGraph):
             problem_path = self._fsp_path
         else:
             problem_path = f"{self._fsp_path}/{self._problem}/{self._problem}-{self._n}-{self._k}.fsp"
-        c = FeatureBasedExplorationHeuristic.compileFSP(problem_path)
+        c = DCSForPython.compileFSP(problem_path)
+        #c = FeatureBasedExplorationHeuristic.compileFSP(problem_path) # Borrar
         ltss_init = c.getFirst()
         # TODO: turn it into a dictionary that goes from the state machine name into its respective digraph
         self._state_machines = [m.name for m in ltss_init.machines]
-        self.javaEnv = DCSForPython(None, None, 10000, ltss_init)
+        # self.auxiliar_heuristic = "BFS"
+        #self.auxiliar_heuristic = "Debugging"
+        self.auxiliar_heuristic = "Ready"
+        self.javaEnv = DCSForPython(None, None, 10000, ltss_init, self.auxiliar_heuristic)
+        #self.javaEnv = DCSForPython(None, None, 10000, ltss_init) # Borrar
         assert (self.javaEnv is not None)
 
         self.javaEnv.startSynthesis(problem_path)
         self._initial_state = self.javaEnv.dcs.initial
-        self.add_node(self._initial_state)
+        self.add_node(str(self._initial_state.toString()))
         self._alphabet = [e for e in self.javaEnv.dcs.alphabet.actions]
         self._alphabet.sort()
         return self
@@ -74,7 +79,7 @@ class CompositionGraph(nx.DiGraph):
         self.javaEnv.expandAction(idx)  # TODO check this is the same index as in the python frontier list
         new_state_action = self.getLastExpanded()
         controllability, label = self.getLastExpanded().action.isControllable(), self.getLastExpanded().action.toString()
-        self.add_node(self.last_expansion_child_state())
+        self.add_node(str(self.last_expansion_child_state().toString()))
         self.add_edge(new_state_action.state, self.last_expansion_child_state(), controllability=controllability,
                       label=label, action_with_features=new_state_action)
         self._expansion_order.append(self.getLastExpanded())
@@ -85,9 +90,12 @@ class CompositionGraph(nx.DiGraph):
     def last_expansion_source_state(self):
         return self.javaEnv.heuristic.lastExpandedFrom
 
-    def getFrontier(self): return self.javaEnv.heuristic.explorationFrontier
+    def getFrontier(self):
+        return self.javaEnv.heuristic.actionsToExplore
+        #return self.javaEnv.heuristic.explorationFrontier # Borrar
 
-    def getLastExpanded(self): return self.javaEnv.heuristic.lastExpandedStateAction
+    def getLastExpanded(self):
+        return self.javaEnv.heuristic.lastExpandedStateAction
 
     def _check_no_repeated_states(self):
         raise NotImplementedError
@@ -186,9 +194,9 @@ class CompositionAnalyzer:
         explored."""
         res = [0.0, 0.0, 0.0]
         if transition.child is not None:
-            res = [float(transition.child.status.toString() == "GOAL"),
-                   float(transition.child.status.toString() == "ERROR"),
-                   float(transition.child.status.toString() == "NONE")]
+            res = [float(str(transition.child.status.toString()) == "GOAL"),
+                   float(str(transition.child.status.toString()) == "ERROR"),
+                   float(str(transition.child.status.toString()) == "NONE")]
         return res
 
     def uncontrollable_neighborhood(self, transition):
@@ -199,8 +207,8 @@ class CompositionAnalyzer:
                 ]
 
     def explored_state_child(self, transition):
-        f1 = float(len(self.composition.out_edges(transition.state)) != transition.state.unexploredTransitions)
-        f2 = float(transition.child is not None and len(self.composition.out_edges(transition.child)) != transition.state.unexploredTransitions)
+        f1 = float(len(self.composition.out_edges(str(transition.state.toString()))) != transition.state.unexploredTransitions)
+        f2 = float(transition.child is not None and len(self.composition.out_edges(str(transition.child.toString()))) != transition.state.unexploredTransitions)
         return [f1, f2]
 
     def child_dealdlock(self, transition):

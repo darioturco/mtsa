@@ -43,13 +43,11 @@ class Experiment(object):
         finish = False
         rewards = []
         trace = []
-        expanded_fv = set()
 
         i = 0
 
         while not finish and i <= budget:
             idx = agent.get_action(state, 0, env)
-            expanded_fv.add(agent.feature_vector_to_number(state[idx]))
             state, reward, finish, info = env.step(idx)
             rewards.append(reward)
             trace.append(idx)
@@ -58,10 +56,57 @@ class Experiment(object):
         res = env.get_info()
         res["failed"] = not finish
         res["trace"] = trace
-        res["features vectores"] = expanded_fv
 
         env.close()
         return res
+
+    def run_agent(self, budget, agent, instance, save=True):
+        path = self.get_fsp_path()
+
+        last_failed = False
+        last_n = self.min_instance_size
+        solved = 0
+        all_fail = False
+
+        for instance, n, k in self.all_instances_of(instance):
+            if n != last_n:
+                last_failed = False
+
+            if last_failed or all_fail:
+                print(f"DQN Agent in instance: {instance} {n}-{k}: Failed")
+                res = {"expanded transitions": budget + 1,
+                       "expanded states": budget + 1,
+                       "synthesis time(ms)": 9999,
+                       "failed": True}
+            else:
+                env = self.get_environment(instance, n, k, path)
+
+                print(f"Runing DQN Agent in instance: {instance} {n}-{k}")
+                # print(f"Starting at: {datetime.datetime.now()}")
+                res = self.run_instance(env, agent, budget)
+                self.print_res("DQN Agent: ", res)
+
+            if save:
+                info = {"Instance": instance, "N": n, "K": k,
+                        "Model": "RA",
+                        "Transitions": res["expanded transitions"],
+                        "States": res["expanded states"],
+                        "Time(ms)": res["synthesis time(ms)"],
+                        "Failed": res["failed"]}
+
+                csv_path = f"./results/csv/{instance}.csv"
+                self.save_to_csv(csv_path, info)
+
+            if res["failed"]:
+                if k == 2:
+                    all_fail = True
+            else:
+                solved += 1
+
+            last_failed = res["failed"]
+            last_n = n
+
+        return solved
 
     def print_res(self, title, res):
         print(title)
@@ -86,17 +131,17 @@ class Experiment(object):
                 "buffer_size": 10000,
                 "n_step": 1,
                 "last_epsilon": 0.01,
-                "epsilon_decay_steps": 150000,   # 250000
+                "epsilon_decay_steps": 250000,   # 250000
                 "exp_replay": True,
                 "target_q": True,
                 "reset_target_freq": 10000,      # 10000
                 "batch_size": 10,
 
                 ### Miscellaneous
-                'freq_save': 5,
+                'freq_save': 50,
                 'seconds': None,
                 'max_steps': 400000,    # None
-                "max_eps": 10000
+                "max_eps": 12000
 
                 }
 
@@ -147,10 +192,10 @@ class Experiment(object):
             path = "F:\\UBA\\Tesis\\mtsa\\MTSApy\\fsp"  # For Windows
         return path
 
-    def get_environment(self, instance, n, k, path):
+    def get_environment(self, instance, n, k, path, reward_shaping=False):
         d = CompositionGraph(instance, n, k, path).start_composition()
         context = CompositionAnalyzer(d)
-        return FeatureEnvironment(context, False)
+        return FeatureEnvironment(context, reward_shaping)
 
     def get_complete_environment(self, instance, n, k, path):
         d = CompositionGraph(instance, n, k, path).start_composition()
@@ -164,9 +209,9 @@ class TrainSmallInstanceCheckBigInstance(Experiment):
     def __init__(self, name="Test"):
         super().__init__(name)
 
-    def train(self, instance, n_train, k_train, n_test, k_test, use_saved_agent=False):
+    def train(self, instance, n_train, k_train, n_test, k_test, use_saved_agent=False, reward_shaping=False):
         path = self.get_fsp_path()
-        env = self.get_environment(instance, n_train, k_train, path)
+        env = self.get_environment(instance, n_train, k_train, path, reward_shaping)
 
         nfeatures = env.get_nfeatures()
         args = self.default_args()
@@ -259,52 +304,10 @@ class TestTrainedInAllInstances(Experiment):
 
         nn_model = TorchModel.load(nfeatures, pth_path, args=args)
         dqn_agent = DQN(env, nn_model, args, verbose=False)
-        last_failed = False
-        last_n = self.min_instance_size
-        solved = 0
-        all_fail = False
 
-        for instance, n, k in self.all_instances_of(instance):
-            if n != last_n:
-                last_failed = False
+        return self.run_agent(budget, dqn_agent, instance, save)
 
-            if last_failed or all_fail:
-                print(f"DQN Agent in instance: {instance} {n}-{k}: Failed")
-                res = {"expanded transitions": budget+1,
-                    "expanded states": budget+1,
-                    "synthesis time(ms)": 9999,
-                    "failed": True,
-                    "features vectores": set()}
-            else:
-                env = self.get_environment(instance, n, k, path)
 
-                print(f"Runing DQN Agent in instance: {instance} {n}-{k}")
-                # print(f"Starting at: {datetime.datetime.now()}")
-                res = self.run_instance(env, dqn_agent, budget)
-                self.print_res("DQN Agent: ", res)
-
-            if save:
-                info = {"Instance": instance, "N": n, "K": k,
-                        "Model": pth_path,
-                        "Transitions": res["expanded transitions"],
-                        "States": res["expanded states"],
-                        "Time(ms)": res["synthesis time(ms)"],
-                        "Failed": res["failed"],
-                        "Features Vectors": res["features vectores"]}
-
-                csv_path = f"./results/csv/{instance}.csv"
-                self.save_to_csv(csv_path, info)
-
-            if res["failed"]:
-                if k == 2:
-                    all_fail = True
-            else:
-                solved += 1
-
-            last_failed = res["failed"]
-            last_n = n
-
-        return solved
 
 
 

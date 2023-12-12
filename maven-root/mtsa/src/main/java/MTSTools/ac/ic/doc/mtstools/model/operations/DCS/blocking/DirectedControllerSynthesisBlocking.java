@@ -1,7 +1,5 @@
 package MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking;
 
-import MTSSynthesis.ar.dc.uba.util.FormulaToMarkedLTS;
-import MTSSynthesis.controller.model.ControllerGoal;
 import MTSTools.ac.ic.doc.commons.collections.BidirectionalMap;
 import MTSTools.ac.ic.doc.commons.relations.Pair;
 import MTSTools.ac.ic.doc.mtstools.model.LTS;
@@ -9,18 +7,7 @@ import MTSTools.ac.ic.doc.mtstools.model.impl.LTSImpl;
 import MTSTools.ac.ic.doc.mtstools.model.impl.MarkedLTSImpl;
 import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.DirectedControllerSynthesis;
 import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.abstraction.*;
-import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.nonblocking.DirectedControllerSynthesisNonBlocking;
-import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.nonblocking.ExplorationHeuristic;
-import jargs.gnu.CmdLineParser;
-import ltsa.dispatcher.TransitionSystemDispatcher;
-import ltsa.lts.*;
-import ltsa.ui.StandardOutput;
-//import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.OpenSetExplorationHeuristic;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
 import java.util.*;
 
 import static java.util.Collections.*;
@@ -30,7 +17,6 @@ import java.util.logging.ConsoleHandler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-// Recordatorio: Revisar que los imports sean de Blocking
 
 /** This class contains the logic to synthesize a controller for
  *  a deterministic environment using an informed search procedure. */
@@ -42,11 +28,8 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
     /** Constant used to represent an undefined distance to the goal. */
     public static final int UNDEF = -1;
 
-    /** Indicates the maximun number of transition to expand */
-    public static int expansion_budget = -1;
-
     /** Indicates the abstraction to use in order to compute the heuristic. */
-    public static AbstractionMode mode = AbstractionMode.Ready;
+    public static HeuristicMode mode = HeuristicMode.Ready;
 
     /** List of LTS that compose the environment. Note that the marked ltss are a prefix of the list! */
     public List<LTS<State,Action>> ltss;
@@ -61,7 +44,7 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
     public Alphabet<Action> alphabet;
 
     /** Set of transitions enabled by default by each LTS. */
-    private TransitionSet<State, Action> base;
+    public TransitionSet<State, Action> base;
 
     /** Auxiliary transitions allowed by a given compostate. */
     public TransitionSet<State, Action> allowed;
@@ -69,11 +52,7 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
     /** Last states used to update the allowed transitions. */
     public List<State> facilitators;
 
-    /** Abstraction used to rank the transitions from a state. */
-    public Abstraction<State, Action> abstraction;
-
-    /** Queue of open states, the most promising state should be expanded first. */
-    public Queue<Compostate<State, Action>> open;
+    public ExplorationHeuristic<State, Action> heuristic;
 
     /** Cache of states mapped from their basic components. */
     public Map<List<State>,Compostate<State, Action>> compostates;
@@ -114,6 +93,9 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
     /** Contains the marked states per LTS. */
     public List<Set<State>> defaultTargets;
 
+    /** Contains the marked states per LTS. */
+    public List<Set<State>> markedStates;
+
     /** Initial state. */
     public Compostate<State, Action> initial;
 
@@ -123,10 +105,8 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
     /** Logger */
     private final Logger logger = Logger.getLogger(DirectedControllerSynthesisBlocking.class.getName());
 
-    /** Used Heuristic Object **/
-    public FeatureBasedExplorationHeuristic<Long, String> heuristic;
+    public List<Pair<Compostate<State, Action>, HAction<Action>>> synthesizeTrace;
 
-    /** Initialize the dcs for synthesis */
     public void setupSynthesis(List<LTS<State, Action>> ltss,
                                Set<Action> controllable,
                                boolean reachability,
@@ -145,7 +125,6 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
         logger.setLevel(Level.WARNING);
         handler.setLevel(Level.WARNING);
 
-        //
         this.ltss = ltss;
         this.ltssSize = ltss.size();
         this.controllable = controllable;
@@ -154,14 +133,13 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
         statistics.clear();
         statistics.start();
 
-        open = new PriorityQueue<>();
-
         compostates = new HashMap<>();
         transitions = new ArrayDeque<>(ltss.size());
         visited = new HashSet<>();
         loop = new HashSet<>();
         dag = new BidirectionalMap<>();
         auxiliarListStates = new ArrayList<>();
+        synthesizeTrace = new ArrayList<>();
         /** List of descendants of an state (used to close unnecessary descendants). */
         Deque<Compostate<State, Action>> descendants = new ArrayDeque<>();
 
@@ -171,7 +149,9 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
         this.assumptions = assumptions;
         checkGuarantees();
         allowed = base.clone();
+
         defaultTargets = buildDefaultTargets();
+        markedStates = buildMarkedStates();
         composByGuarantee = new ArrayList<>();
         for (int i = 0; i < guarantees.size(); i++) {
             composByGuarantee.add(new HashSet<>());
@@ -185,34 +165,20 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
         stratX = new HashMap<>();
     }
 
-    public static void setAbstractionMode(String heuristic){
-        if(heuristic != null) {
-            if(heuristic.equals("Debugging"))
-                mode = AbstractionMode.Debugging;
-            if(heuristic.equals("Ready"))
-                mode = AbstractionMode.Ready;
-            if(heuristic.equals("Monolitic"))
-                mode = AbstractionMode.Monotonic;
-        }else{
-            mode = AbstractionMode.Debugging;
+    public ExplorationHeuristic<State, Action> getHeuristic(HeuristicMode heuristicMode){
+        if(heuristicMode == HeuristicMode.Interactive){
+            // return new InteractiveExplorationHeuristic<>(this);
+        } else if(heuristicMode == HeuristicMode.BFS) {
+            return new FrontierListExplorationHeuristic<>();
+        } else if(heuristicMode == HeuristicMode.Random) {
+            //return new RandomExplorationHeuristic<>();
+        } else if(heuristicMode == HeuristicMode.Debugging) {
+            return new LexicographicExplorationHeuristic<>();
         }
+        return new OpenSetExplorationHeuristic<State, Action>(this, heuristicMode);
     }
 
-    public Abstraction<State, Action> get_abstraction(){
-        // TODO Complete this function and test it
-        // FIXME, this is only done here until it can be chosen from the FSP instead of hardcoded
-        Abstraction<State, Action> res;
-        //mode = AbstractionMode.Ready;
 
-        //return new DebuggingAbstraction<>();
-        if(mode == AbstractionMode.Monotonic){
-            return new MonotonicAbstraction<>(this.ltss, this.defaultTargets, this.base, this.alphabet);
-        }else{
-            return new ReadyAbstraction<>(this.ltss, this.defaultTargets, this.alphabet);
-        }
-
-
-    }
 
     /** This method starts the directed synthesis of a controller.
      *  @param ltss, a list of MarkedLTSs that compose the environment.
@@ -224,36 +190,35 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
      *      when composed with the environment reaches the goal, only by
      *      enabling or disabling controllable actions and monitoring
      *      uncontrollable actions. Or null if no such controller exists. */
-    public LTS<Long,Action> synthesize(
+    public LTS<Long, Action> synthesize(
         List<LTS<State, Action>> ltss,
         Set<Action> controllable,
         boolean reachability,
         HashMap<Integer, Integer> guarantees,
         HashMap<Integer, Integer> assumptions)
     {
-
         setupSynthesis(ltss, controllable, reachability, guarantees, assumptions);
 
-
-        abstraction = get_abstraction();
+        // FIXME, this is only done here until it can be chosen from the FSP instead of hardcoded
+        heuristic = getHeuristic(mode);
 
         initial = buildInitialState();
-        if(initial.isStatus(Status.NONE)) initial.open();
+        heuristic.setInitialState(initial);
+        initial.setExpanded();
 
-        while (!open.isEmpty() && initial.isStatus(Status.NONE)) {
-            Compostate<State, Action> next = open.remove();
-            evaluate(next);
-            doOpen(next);
-
-            //expansion_budget = -1 significa que no se limita la cantidad de expansiones
-            if(expansion_budget==0) {
-                return null;
-            }
-            else if (expansion_budget>0) expansion_budget--;
+        int t = 0;
+        while (!isFinished() && heuristic.somethingLeftToExplore()) {
+            Pair<Compostate<State, Action>, HAction<Action>> stateAction = heuristic.getNextAction();
+            Compostate<State, Action> child = expand(stateAction.getFirst(), stateAction.getSecond());
+            heuristic.expansionDone(stateAction.getFirst(), stateAction.getSecond(), child);
+            synthesizeTrace.add(stateAction);
+            if(t % 50 == 0) statistics.toLive(); // recording memory usage
+            t++;
         }
-
-        assertFalse("Finished because open was empty, shouldn't be the case", initial.isStatus(Status.NONE));
+        statistics.toLive(); // recording memory usage
+        assertTrue("Finished because there was nothing left to explore, shouldn't be the case", isFinished());
         statistics.end();
+
         LTS<Long,Action> result;
         if(isGoal(initial)){
             result = buildController();
@@ -264,37 +229,16 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
         return result;
     }
 
-    // TODO: escribir el comentario de esta funcion (inspirarse en el de synthetize)
-    public List<Pair<Compostate<State, Action>, HAction<Action>>> getTraceSynthesize(
-            List<LTS<State, Action>> ltss,
-            Set<Action> controllable,
-            boolean reachability,
-            HashMap<Integer, Integer> guarantees,
-            HashMap<Integer, Integer> assumptions,
-            Abstraction abstractionObj)
-    {
-
-        setupSynthesis(ltss, controllable, reachability, guarantees, assumptions);
-        abstraction = abstractionObj;
-        mode = AbstractionMode.Ready;
-
+    void setupInitialState(){
         initial = buildInitialState();
-        if(initial.isStatus(Status.NONE)) initial.open();
-
-        Recommendation<Action> recommendation;
-        List<Pair<Compostate<State, Action>, HAction<Action>>> result = new ArrayList<>();
-        while (!open.isEmpty() && initial.isStatus(Status.NONE)) {
-            Compostate<State, Action> next = open.remove();
-            evaluate(next);
-            recommendation = doOpen(next);
-            result.add(new Pair<>(next, recommendation.getAction()));
-        }
-
-        assertFalse("Finished because open was empty, shouldn't be the case", initial.isStatus(Status.NONE));
-        statistics.end();
-        return result;
+        heuristic.setInitialState(initial);
+        initial.setExpanded();
     }
 
+    public boolean isFinished(){
+        return !isNone(initial);
+    }
+    
     private void checkGuarantees(){
         for(Integer gIndex : guarantees.values()){
             LTS<State, Action> lts = ltss.get(gIndex);
@@ -316,6 +260,23 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
     }
 
     /** Returns a list of marked states per LTS. */
+    private List<Set<State>> buildMarkedStates() {
+        List<Set<State>> result = new ArrayList<>();
+        for (int i = 0; i < ltssSize; ++i) {
+            LTS<State,Action> lts = ltss.get(i);
+            Set<State> markedStates = new HashSet<>();
+            if (lts instanceof MarkedLTSImpl) {
+                markedStates.addAll(((MarkedLTSImpl<State,Action>)lts).getMarkedStates());
+            } else {
+                markedStates.addAll(lts.getStates());
+                markedStates.remove(-1L); // -1 is never marked since it is used to represent errors
+            }
+            result.add(markedStates);
+        }
+        return result;
+    }
+
+    /** Returns a list of marked states per LTS. */
     private List<Set<State>> buildDefaultTargets() {
         List<Set<State>> result = new ArrayList<>();
         for (int i = 0; i < ltssSize; ++i) {
@@ -332,54 +293,49 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
         return result;
     }
 
-
     /** Returns the statistic information about the procedure. */
     public Statistics getStatistics() {
         return statistics;
     }
-
 
     /** Creates (or retrieves from cache) a state in the composition given
      *  a list with its base components.
      *  @param states, a list of states with one state per LTS in the
      *         environment, the position of each state in the list (its index)
      *         reflects to which LTS that state belongs. */
-    private Compostate<State, Action> buildCompostate(List<State> states) {
+    private Compostate<State, Action> buildCompostate(List<State> states, Compostate<State, Action> parent) {
         Compostate<State, Action> result = compostates.get(states);
         if (result == null) {
-            statistics.incExpandedStates();
             result = new Compostate<>(this, states);
             compostates.put(states, result);
-
-            if(heuristic != null){
-                statistics.startHeuristicTime();
-                heuristic.newState((Compostate<Long, String>) result, (List<Long>) states);
-                statistics.endHeuristicTime();
+            statistics.incExpandedStates();
+            heuristic.newState(result, parent);
+            if(result.getStates().contains(-1L) || heuristic.fullyExplored(result)){
+                setError(result);
             }
-
-
-            // Estaba en el refactor ed non-blocking, no se si deberia estar aca o no
-            ////if (result.getStates().contains(-1L) || heuristic.fullyExplored(result)) {
-            ////    setError(result);
-            ////}
         }
         return result;
     }
 
+    public boolean canReachMarkedFrom(List<State> childStates){
+        /*if(canReachMarkedInLts == null) return true;
+        for(int i = 0; i < childStates.size(); i++){
+            if (!canReachMarkedInLts.get(i).contains(childStates.get(i))) {
+                return false;
+            }
+        }*/
+        return true;
+    }
 
     /** Creates the controller's initial state. */
     private Compostate<State, Action> buildInitialState() {
         List<State> states = new ArrayList<>(ltss.size());
         for (LTS<State,Action> lts : ltss)
             states.add(lts.getInitialState());
-        Compostate<State, Action> initialComp = buildCompostate(states); // for non-deterministic LTS I need the tau-closure as a set of initial states
-        if (initialComp.markedByGuarantee.size() > 0)
-            initialComp.addTargets(initialComp);
+        Compostate<State, Action> initialComp = buildCompostate(states, null); // for non-deterministic LTS I need the tau-closure as a set of initial states
         initialComp.setDepth(0);
 
-        abstraction.eval(initialComp);
         if(isError(initialComp)){
-            setError(initialComp);
             logger.finer("Initial compostate " + initialComp.toString() + " is an error");
         }
 
@@ -387,67 +343,26 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
     }
 
 
-    /** Evaluates through the heuristic the next state to be opened (if necessary). */
-    private void evaluate(Compostate<State, Action> compostate) {
-        if (compostate.isLive()) //FIXME PONER UN ASSERT
-            abstraction.eval(compostate);
-    }
-
-
-    /** Expands the next recommendation of an open state and opens its child.
-     *  If no further recommendations are available the state is marked as an
-     *  error, and the error is propagated to its ancestors.
-     *  If the state is controllable and has further recommendations the parent
-     *  state is left open and competes with its exploredChildren in the open queue.
-     *  This avoids a DFS type of search. On the other hand, uncontrollable
-     *  states are never left opened since all its exploredChildren need to be explored
-     *  eventually, thus a DFS to a failure is used instead. */
-    private Recommendation<Action> doOpen(Compostate<State, Action> compostate) {
-        compostate.inOpen = false;
-        if (!compostate.isLive() || compostate.getStates() == null) {
-            return null;
-        }
-        assertTrue("compostate to open doesn't have valid recommendation", compostate.hasValidRecommendation());
-
-        Recommendation<Action> recommendation = compostate.nextRecommendation();
-        //System.out.println(compostate + " | " + recommendation.getAction());
-        expand(compostate, recommendation);
-        if (compostate.isControlled() && compostate.hasValidRecommendation() && compostate.isStatus(Status.NONE))
-            compostate.open();
-        return recommendation;
-    }
-
-
     /** Expands a state following a given recommendation from a parent compostate.
      *  Internally this populates the transitions and expanded lists. */
-    Compostate<State, Action> expand(Compostate<State, Action> state, Recommendation<Action> recommendation) {
+    Compostate<State, Action> expand(Compostate<State, Action> compostate, HAction<Action> action) {
+        Compostate<State, Action> childCompostate = buildCompostate(getChildStates(compostate, action), compostate);
         statistics.incExpandedTransitions();
+        compostate.addChild(action, childCompostate);
+        childCompostate.addParent(action, compostate);
 
-        HAction<Action> action = recommendation.getAction();
-
-        List<State> childStates = getChildStates(state, action);
-        Compostate<State, Action> child = buildCompostate(childStates);
-
-        state.addChild(action, child);
-        child.addParent(action, state);
-
-
-
-        child.setTargets(state.getTargets());
-        if (child.markedByGuarantee.size() > 0)
-            child.addTargets(child);
-        if (!child.isEvaluated())
-            abstraction.eval(child);
-        if (isError(child)){
-            setError(child);
-            logger.finer("Expanding child compostate " + child.toString() + " is an error");
+        heuristic.notifyExpandingState(compostate, action, childCompostate);
+        explore(compostate, action, childCompostate);
+        childCompostate.setExpanded();
+        
+        if (isError(childCompostate)){
+            logger.finer("Expanding child compostate " + childCompostate.toString() + " is an error");
         }
 
-        explore(state, recommendation, child);
-        return child;
+        return childCompostate;
     }
 
-    List<State> getChildStates(Compostate<State, Action> compostate, HAction<Action> action) {
+    public List<State> getChildStates(Compostate<State, Action> compostate, HAction<Action> action) {
         List<State> parentStates = compostate.getStates();
         int size = parentStates.size();
         for (int i = 0; i < size; ++i) {
@@ -483,14 +398,18 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
      *  If the child is already live this method does nothing, otherwise the
      *  child is evaluated with the heuristic and opened. */
     private void explore(Compostate<State, Action> parent,
-                         Recommendation<Action> recommendation,
+                         HAction<Action> action,
                          Compostate<State, Action> child) {
-        assert(!isError(parent) && !isGoal(parent));  //the parent should be NONE, otherwise exploring is useless
-        logger.fine(parent.toString() + " -> " + recommendation.toString() + " -> " + child.toString());
-        if (isError(child) ){
+        assert(isNone(parent));  //the parent should be NONE, otherwise exploring is useless
+        logger.fine(parent.toString() + " -> " + action.toString() + " -> " + child.toString());
+        if (isError(child) || child.heuristicStronglySuggestsIsError) {
+            if(!isError(child)){
+                setError(child);
+            }
             propagateError(newHashSet(child), newHashSet(parent));
 
         } else if (isGoal(child) ){
+            parent.setHasGoalChild(action);
             propagateGoal(newHashSet(child), newHashSet(parent));
 
         } else if(closingALoop(child, parent)){
@@ -511,21 +430,25 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
             }
 
         } else { // otherwise we keep exploring
-            if (!child.isLive()) {
-                expandChild(child);
-            }
+            heuristic.notifyExpansionDidntFindAnything(parent, action, child);
         }
 
         clearLoopDetection();
     }
 
+    public void setHeuristic(ExplorationHeuristic<State, Action> heuristic){
+        if(heuristic != null) {
+            this.heuristic = heuristic;
+        }
+    }
+
     private boolean canBeWinningLoop(Set<Compostate<State, Action>> c){
-        Set<Integer> markedInLoop = new HashSet<>();
+        Set<Integer> markedColorsInLoop = new HashSet<>();
         for(Compostate<State, Action> comp : c){
-            markedInLoop.addAll(comp.markedByGuarantee);
+            markedColorsInLoop.addAll(comp.markedByGuarantee);
             if(!comp.markedByAssumption.isEmpty()) return true;
         }
-        return markedInLoop.size() == guarantees.size();
+        return markedColorsInLoop.size() == guarantees.size();
     }
 
     private Set<Compostate<State, Action>> playerCanForceWinMax(Set<Compostate<State, Action>> c, boolean allowNones){
@@ -561,8 +484,8 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
         boolean hasUncontrollableToUnexplored = false;
         boolean hasUncontrollableToTargetOrGoal = false;
 
-        if(v.hasValidRecommendation()){
-            if(v.hasValidUncontrollableRecommendation()){
+        if(!heuristic.fullyExplored(v)){
+            if(heuristic.hasUncontrollableUnexplored(v)){
                 hasUncontrollableToUnexplored = true;
             } else{
                 hasControllableToUnexplored = true;
@@ -613,6 +536,7 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
 
     private Set<Compostate<State, Action>> findNewGoals() {
         logger.finest("we are gatheringGoals with c: " + loop.toString());
+        statistics.incFindNewGoalsCalls();
 
         Set<Compostate<State, Action>> newGoals = tripleFixPoint(loop, true, false);
         logger.finest("newGoals: " + newGoals.toString());
@@ -626,7 +550,7 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
             ++loopID;
         }
         for (Compostate<State, Action> state:loop){
-            if(!newGoals.contains(state) && state.hasValidRecommendation()) state.open();
+            if(!newGoals.contains(state) && !heuristic.fullyExplored(state)) heuristic.notifyStateIsNone(state);
         }
         return newGoals;
     }
@@ -635,6 +559,7 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
     /**funciona porque ya se sabe que o no tiene todos los markings dentro del loop, o gatherGoal dio vacio*/
     private Set<Compostate<State, Action>> findNewErrors() {
         logger.finer("we are gatheringErrors with loop: " + loop.toString());
+        statistics.incFindNewErrorsCalls();
 
         Set<Compostate<State, Action>> c = new HashSet<>(loop);
         int previous_size = 0;
@@ -656,7 +581,7 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
             setError(state);
         }
         for (Compostate<State, Action> state:loop){
-            if(!trueErrors.contains(state) && state.hasValidRecommendation()) state.open();
+            if(!trueErrors.contains(state)) heuristic.notifyStateIsNone(state);
         }
 
         return trueErrors;
@@ -738,6 +663,8 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
 
     private void propagateGoal(Set<Compostate<State, Action>> newGoals, Set<Compostate<State, Action>> parent) {
         logger.finest("we are propagatingGoals from: " + newGoals.toString());
+        statistics.incPropagateGoalsCalls();
+
         Set<Compostate<State, Action>> toCheck = new HashSet<>();
         if (parent == null) {
             for (Compostate<State, Action> state : newGoals) {
@@ -786,8 +713,8 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
 
         statesToReopen.removeAll(propagatedGoals);
         for(Compostate<State, Action> state : statesToReopen){
-            if(state.hasValidRecommendation() && state.isStatus(Status.NONE)){
-                state.open();
+            if(!heuristic.fullyExplored(state) && state.isStatus(Status.NONE)){
+                heuristic.notifyStateIsNone(state);
             }
         }
 
@@ -837,15 +764,13 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
                         toCheck.addAll(s.getParentsOfStatus(Status.NONE));
                     }
                 }
-                if (current.isStatus(Status.NONE)) statesToReopen.add(current);
+                if (isNone(current)) statesToReopen.add(current);
             }
         }
 
         statesToReopen.removeAll(propagatedErrors);
         for(Compostate<State, Action> state : statesToReopen){
-            if(state.hasValidRecommendation()){
-                state.open();
-            }
+            heuristic.notifyStateIsNone(state);
         }
 
         logger.finer("Propagated error to: " + propagatedErrors.toString());
@@ -882,8 +807,8 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
         boolean hasControllableToUnexplored = false;
         boolean hasUncontrollableToUnexplored = false;
 
-        if (v.hasValidRecommendation()) {
-            if (v.hasValidUncontrollableRecommendation()) {
+        if (!heuristic.fullyExplored(v)) {
+            if (heuristic.hasUncontrollableUnexplored(v)) {
                 hasUncontrollableToUnexplored = true;
             } else {
                 hasControllableToUnexplored = true;
@@ -933,7 +858,7 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
             }
         }
 
-        return state.hasValidRecommendation() && canAvoidAncestors;
+        return !heuristic.fullyExplored(state) && canAvoidAncestors;
     }
 
     private boolean updateDistanceToWinLoop(Compostate<State, Action> state) {
@@ -977,7 +902,7 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
             }
         }
 
-        if(state.hasValidRecommendation() || hasUncontrollableOut){
+        if(!heuristic.fullyExplored(state) || hasUncontrollableOut){
             return true;
         }
 
@@ -994,7 +919,7 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
 
     private boolean forcedToError(Compostate<State, Action> state) {
         boolean existsActionLeadingToNoneOrGoal = false;
-        boolean fullyExplored = state.recommendation == null;
+        boolean fullyExplored = heuristic.fullyExplored(state);
 
         for (Compostate<State, Action> child : state.getChildrenExploredThroughUncontrollable()){
             if(isError(child)){
@@ -1018,19 +943,13 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
 //-----------------------------------------------
 
     private boolean closingALoop(Compostate<State, Action> child, Compostate<State, Action> parent) {
-        if (child.isEvaluated()) // if the child has already been considered then we might be closing a loop
+        if (child.wasExpanded()){
             buildAncestorsDAG(child, parent);
-        return !dag.getK(child).isEmpty(); // if we closed a loop
-    }
-
-    private void expandChild(Compostate<State, Action> child) {
-        if (!child.isEvaluated())
-            abstraction.eval(child);
-        if (child.hasValidRecommendation()) {
-            child.open();
+            return !dag.getK(child).isEmpty(); // if we closed a loop
+        } else {
+            return false;
         }
     }
-
 
     /** Clears internal data used for efficient loop detection. */
     private void clearLoopDetection() {
@@ -1078,14 +997,19 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
         assert loop.contains(child); // Check this is an actual loop.
     }
 
-    /** Returns whether a given state is an error or not. */
-    private boolean isError(Compostate<State, Action> compostate) {
-        return compostate.isStatus(Status.ERROR) || compostate.getStates().contains(-1L) || compostate.isDeadlock();
+    public Compostate<State,Action> getInitial(){
+        return initial;
     }
 
+    /** Returns whether a given state is an error or not. */
+    private boolean isError(Compostate<State, Action> compostate) {
+        return compostate.isStatus(Status.ERROR);
+    }
+
+
     /** Marks a given state as an error. */
-    private void setError(Compostate<State, Action> state) {
-        assertFalse(state.isStatus(Status.GOAL));
+    public void setError(Compostate<State, Action> state) {
+        assertFalse(isGoal(state));
 
         state.setStatus(Status.ERROR);
         broadcastNewClosedChildToParents(state, Status.ERROR);
@@ -1096,10 +1020,15 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
         for (Pair<HAction<Action>,Compostate<State, Action>> ancestorActionAndState : state.getParents()) {
             Compostate<State, Action> ancestor = ancestorActionAndState.getSecond();
             if(status == Status.ERROR) ancestor.setHasErrorChild();
-            if(status == Status.GOAL) ancestor.setHasGoalChild();
+            HAction<Action> action = ancestorActionAndState.getFirst();
+            if(status == Status.GOAL) ancestor.setHasGoalChild(action);
         }
     }
 
+    /** Returns whether a given state is a goal or not. */
+    public boolean isNone(Compostate<State, Action> compostate) {
+        return compostate.isStatus(Status.NONE);
+    }
 
     /** Returns whether a given state is a goal or not. */
     public boolean isGoal(Compostate<State, Action> compostate) {
@@ -1109,40 +1038,35 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
 
     /** Marks a given state as a goal. */
     private void setGoal(Compostate<State, Action> state, HAction<Action> action) {
-        assertFalse(state.isStatus(Status.ERROR));
+        assertFalse(isError(state));
 
         if(action == null){
-            for (Pair<HAction<Action>,Compostate<State, Action>> transition : state.getExploredChildren()) {
-                action = transition.getFirst();
-                Compostate<State, Action> child = transition.getSecond();
+            // fixme: tiene sentido tener esto y también a potentially good transition? (tomi)
+            if(state.actionToGoal != null){
+                action = state.actionToGoal;
+            } else {
+                for (Pair<HAction<Action>,Compostate<State, Action>> transition : state.getExploredChildren()) {
+                    action = transition.getFirst();
+                    Compostate<State, Action> child = transition.getSecond();
 
-                if(child.isStatus(Status.GOAL)) break; //fixme una mejor manera de hacer esto sin recorrer todo
-                //antes usaba state.potenciallyGoodTransition, ver de usar eso o hacer algo mejor todavia
+                    if(child.isStatus(Status.GOAL)) break;
+                }
             }
         }
-
 
         state.setStatus(Status.GOAL);
         broadcastNewClosedChildToParents(state, Status.GOAL);
         int distance = state.getChildDistance(action);
         if (distance < INF) distance++;
-//        logger.finest(state.toString() + "marked as goal with distance " + distance);
-        setDistanceToGoal(state, distance);
+        // System.err.println(state + "marked as goal with distance " + distance);
+        if (distance < state.getDistance())
+            state.setDistance(distance);
+        setFinal(state);
     }
-
-
-    /** Marks a given state as a goal. */
-    private void setDistanceToGoal(Compostate<State, Action> compostate, int distance) {
-        if (distance < compostate.getDistance())
-            compostate.setDistance(distance);
-        setFinal(compostate);
-    }
-
 
     /** Marks a given state as final, closing it and releasing some resources. */
     private void setFinal(Compostate<State, Action> compostate) {
-        compostate.close();
-        compostate.clearRecommendations();
+        heuristic.notifyStateSetErrorOrGoal(compostate);
     }
 
     private Pair<Compostate<State, Action>,Integer> cPair(Compostate<State, Action> c, Integer j){
@@ -1331,7 +1255,6 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
         return result;
     }
 
-
     /** Auxiliary function to put an element into a map, but keeping the maximum if already set. */
     public static <K, V extends Comparable<V>> boolean putmax(Map<K, V> map, K key, V value) {
         boolean result;
@@ -1341,123 +1264,4 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
         }
         return result;
     }
-
-    public void setHeuristic(ExplorationHeuristic<State, Action> heuristic){
-        /*if(heuristic == null) {
-            System.out.println("Heuristic was null, creating new heuristic.");
-            if (mode == DirectedControllerSynthesisNonBlocking.HeuristicMode.TrainedAgent) {
-                MTSTools.ac.ic.doc.mtstools.model.operations.DCS.nonblocking.DCSFeatures<State, Action> featureMaker = new DCSFeatures<>(null, null, 1000000, null);
-                this.heuristic = new MTSTools.ac.ic.doc.mtstools.model.operations.DCS.nonblocking.FeatureBasedExplorationHeuristic<>("random", featureMaker, false);
-            } else {
-                this.heuristic = new OpenSetExplorationHeuristic<>(mode);
-            }
-        } else {
-            this.heuristic = heuristic;
-        }*/
-    }
-
-    void setupInitialState(){
-        initial = buildInitialState();
-        heuristic.setInitialState((Compostate<Long, String>) initial) ;
-        initial.setExpanded();
-    }
-
-    private boolean isNone(Compostate<State,Action> state) {
-        return state.isStatus(Status.NONE);
-    }
-
-    public boolean isFinished(){
-        return !isNone(initial);
-    }
-
-    public boolean canReachMarkedFrom(List<State> childStates){
-        /*if(canReachMarkedInLts == null) return true;
-        for(int i = 0; i < childStates.size(); i++){
-            if (!canReachMarkedInLts.get(i).contains(childStates.get(i))) {
-                return false;
-            }
-        }*/
-        return true;
-    }
-
-    public static void main(String[] args) {
-        //args = new String[7];
-        //args[0] = "java";
-        //args[1] = "-h";
-        //args[2] = "Ready";
-        //args[3] = "-i";
-        //args[4] = "F:\\UBA\\Tesis\\mtsa\\MTSApy\\fsp/DP/DP-6-9.fsp"; // Can be {monolitic, ready, dummy, bfs, rl, debugging} by default is debugging
-        //"/home/dario/Documents/Tesis/mtsa/MTSApy/fsp/Blocking/ControllableFSPs/GR1Test10.lts";
-        //args[5] = "-e";
-        //args[6] = "5000";
-
-        // -h Ready -i F:\UBA\Tesis\mtsa\MTSApy\fsp/TL/TL-2-2.fsp -e 5000
-
-        //args[2] = "fsp_path";
-        //args[2] = "fsp_path";
-        //args[2] = "fsp_path";
-
-        CmdLineParser cmdParser= new CmdLineParser();
-        CmdLineParser.Option fsp_path_opt = cmdParser.addStringOption('i', "file");
-        CmdLineParser.Option heuristic_opt = cmdParser.addStringOption('h', "heuristic");
-        CmdLineParser.Option model_path_opt = cmdParser.addStringOption('m', "model");
-        CmdLineParser.Option features_path_opt = cmdParser.addStringOption('c', "features");
-        CmdLineParser.Option labels_path_opt = cmdParser.addStringOption('l', "labels");
-        CmdLineParser.Option max_frontier_opt = cmdParser.addIntegerOption('f', "max_frontier");
-        CmdLineParser.Option expansion_budget = cmdParser.addIntegerOption('e',"expbud");
-        CmdLineParser.Option debug_opt = cmdParser.addBooleanOption('d', "debug");
-
-
-
-        try {
-            cmdParser.parse(args);
-        } catch (CmdLineParser.OptionException e) {
-            System.out.println("Invalid option: " + e.getMessage() + "\n");
-            System.exit(0);
-        }
-
-        String fsp_path = (String)cmdParser.getOptionValue(fsp_path_opt);
-        String model_path = (String)cmdParser.getOptionValue(model_path_opt);
-        String heuristic = (String)cmdParser.getOptionValue(heuristic_opt);
-        String features_path = (String)cmdParser.getOptionValue(features_path_opt);
-        String labels_path = (String)cmdParser.getOptionValue(labels_path_opt);
-
-        Integer max_frontier = (Integer)cmdParser.getOptionValue(max_frontier_opt);
-        Integer expansionBudgetValue = (Integer)cmdParser.getOptionValue(expansion_budget);
-        Boolean b = (Boolean) cmdParser.getOptionValue(debug_opt);
-        boolean debugging = b != null && b;
-
-        try {
-            Pair<CompositeState, LTSOutput> c = FeatureBasedExplorationHeuristic.compileFSP(fsp_path);
-            if(expansionBudgetValue!=null) DirectedControllerSynthesisBlocking.expansion_budget = expansionBudgetValue;
-            DirectedControllerSynthesisBlocking.setAbstractionMode(heuristic);
-            CompositeState compositeState = c.getFirst();
-            LTSOutput output = c.getSecond();
-            ControllerGoal<String> goal = compositeState.goal;
-
-            if(TransitionSystemDispatcher.checkGuaranteesAndAssumptions(goal, output)){
-                return;
-            }
-
-            Pair<List<LTS<Long, String>>, Set<String>> p = TransitionSystemDispatcher.getLTSs(compositeState);
-            List<LTS<Long, String>> ltss = p.getFirst();
-            Set<String> actions = p.getSecond();
-
-            Pair<HashMap<Integer, Integer>, HashMap<Integer, Integer>> pairGuaranteesAndAssumptions = TransitionSystemDispatcher.getGuaranteesAndAssumptions(goal, ltss, actions, output);
-            HashMap<Integer, Integer> guarantees =  pairGuaranteesAndAssumptions.getFirst();
-            HashMap<Integer, Integer> assumptions = pairGuaranteesAndAssumptions.getSecond();
-
-            if(TransitionSystemDispatcher.filterActions(compositeState, ltss, assumptions, guarantees, output)){
-                return;
-            }
-
-            DirectedControllerSynthesisBlocking<Long,String> dcs = new DirectedControllerSynthesisBlocking<>();
-            dcs.synthesize(ltss, goal.getControllableActions(), goal.isReachability(), guarantees, assumptions);
-
-            System.out.println(dcs.statistics);
-        } catch (OutOfMemoryError e){
-            System.out.println("OutOfMem error during exploration");
-        }
-    }
-
 }

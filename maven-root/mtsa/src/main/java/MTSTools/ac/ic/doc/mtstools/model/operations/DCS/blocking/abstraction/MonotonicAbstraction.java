@@ -115,7 +115,8 @@ public class MonotonicAbstraction<State, Action> implements Abstraction<State, A
      */
     @Override
     public void eval(Compostate<State, Action> compostate) {
-        if (!compostate.isEvaluated()) {
+        // TODO color
+        if (!compostate.isEvaluated(0)) {
             clear();
             buildMA(compostate);
             evaluateMA(compostate);
@@ -243,15 +244,16 @@ public class MonotonicAbstraction<State, Action> implements Abstraction<State, A
      * Extracts recommendations for the given state using the computed estimates.
      */
     private void extractRecommendations(Compostate<State, Action> compostate) {
-        compostate.setupRecommendations();
+        // TODO color
+        compostate.setupRecommendations(0);
         for (HAction<Action> action : compostate.getTransitions()) {
             HEstimate estimate = estimates.get(action);
             estimate.reduceMax();
-            if (compostate.addRecommendation(action, estimate))
+            if (compostate.addRecommendation(0, action, estimate))
                 break;
         }
-        compostate.rankRecommendations();
-        compostate.initRecommendations();
+        compostate.rankRecommendations(0);
+        compostate.initRecommendations(0);
     }
 
 

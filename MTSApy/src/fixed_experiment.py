@@ -5,6 +5,7 @@ from src.environment import Environment, FeatureEnvironment, FeatureCompleteEnvi
 from src.agents.dqn import DQN, NeuralNetwork, TorchModel
 from src.agents.random import RandomAgent
 from src.experiments import Experiment
+from src.agents.RA import RA
 
 class RunRAInAllInstances(Experiment):
     def __init__(self, name="Test"):
@@ -85,6 +86,10 @@ class RunRAInAllInstances(Experiment):
                     "Failed": -1 < budget < results["expanded transitions"]}
 
             self.save_to_csv(csv_path, info)
+
+    def run2(self, budget, instance, save=True):
+        return self.run_agent(budget, RA(), instance, save)
+
 
 class RunRandomInAllInstances(Experiment):
     def __init__(self, name="Test"):

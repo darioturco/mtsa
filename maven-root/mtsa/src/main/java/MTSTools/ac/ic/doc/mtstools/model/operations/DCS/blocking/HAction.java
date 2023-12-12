@@ -34,7 +34,6 @@ public class HAction<Action> implements Comparable<HAction<Action>> {
     @Override
     public boolean equals(Object obj) {
         boolean result = false;
-        // Revisar y comparar con HAction.equals de nonBlocking
         if (obj instanceof HAction) {
             @SuppressWarnings("unchecked")
             HAction other = (HAction) obj;
