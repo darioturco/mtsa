@@ -80,6 +80,8 @@ public class Compostate<State, Action> implements Comparable<Compostate<State, A
     /** The estimated distance to the goal from this state for each color. */
     public Map<Integer, HEstimate> estimates;
 
+    public final Integer uncontrollablesCount;
+
     /** A ranking of the outgoing transitions from this state for each color. */
     public Map<Integer, List<Recommendation<Action>>> recommendations;
 
@@ -185,6 +187,7 @@ public class Compostate<State, Action> implements Comparable<Compostate<State, A
 
         this.transitions = buildTransitions();
         dcs.heuristic.initialize(this);
+        this.uncontrollablesCount = countUncontrollables();
     }
 
     /** Returns the states that conform this composed state. */
@@ -572,6 +575,9 @@ public class Compostate<State, Action> implements Comparable<Compostate<State, A
 
     /** Initializes the recommendation iterator and current estimate for the state. */
     public void updateRecommendation(Integer color) {
+        if(recommendit.get(color) == null){
+            return;
+        }
         if (recommendit.get(color).hasNext()) {
             recommendation.put(color, recommendit.get(color).next());
 
@@ -605,5 +611,20 @@ public class Compostate<State, Action> implements Comparable<Compostate<State, A
     /** Returns whether this state is controllable or not. */
     public boolean isControlled() {
         return controlled;
+    }
+
+    private Integer countUncontrollables() {
+        Integer result = 0;
+        for (HAction<Action> a : this.transitions) {
+            if (!a.isControllable()) result++;
+        }
+        return result;
+    }
+
+    public boolean hasControllableNone() {
+        for (Pair<HAction<Action>, Compostate<State, Action>> transition : getExploredChildren())
+            if (transition.getFirst().isControllable() && transition.getSecond().isStatus(Status.NONE))
+                return true;
+        return false;
     }
 }

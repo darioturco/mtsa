@@ -7,6 +7,8 @@ import MTSTools.ac.ic.doc.mtstools.model.impl.LTSImpl;
 import MTSTools.ac.ic.doc.mtstools.model.impl.MarkedLTSImpl;
 import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.DirectedControllerSynthesis;
 import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.abstraction.*;
+import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.ExplorationHeuristic;
+import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.abstraction.HeuristicMode;
 
 import java.util.*;
 
@@ -105,7 +107,11 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
     /** Logger */
     private final Logger logger = Logger.getLogger(DirectedControllerSynthesisBlocking.class.getName());
 
+    /** When syntetize, save all the pair State, Action  that were expand */
     public List<Pair<Compostate<State, Action>, HAction<Action>>> synthesizeTrace;
+
+    /** Object that recopile information about the instance that this DCS solves */
+    public InstanceAnalyzer analyzer;
 
     public void setupSynthesis(List<LTS<State, Action>> ltss,
                                Set<Action> controllable,
@@ -133,6 +139,7 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
         statistics.clear();
         statistics.start();
 
+        analyzer = new InstanceAnalyzer(this);
         compostates = new HashMap<>();
         transitions = new ArrayDeque<>(ltss.size());
         visited = new HashSet<>();
@@ -174,11 +181,11 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
             //return new RandomExplorationHeuristic<>();
         } else if(heuristicMode == HeuristicMode.Debugging) {
             return new LexicographicExplorationHeuristic<>();
+        } else if(heuristicMode == HeuristicMode.Complete) {
+            return new CompleteExplorationHeuristic<>(this);
         }
-        return new OpenSetExplorationHeuristic<State, Action>(this, heuristicMode);
+        return new OpenSetExplorationHeuristic<>(this, heuristicMode);
     }
-
-
 
     /** This method starts the directed synthesis of a controller.
      *  @param ltss, a list of MarkedLTSs that compose the environment.
@@ -212,7 +219,7 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
             Compostate<State, Action> child = expand(stateAction.getFirst(), stateAction.getSecond());
             heuristic.expansionDone(stateAction.getFirst(), stateAction.getSecond(), child);
             synthesizeTrace.add(stateAction);
-            if(t % 50 == 0) statistics.toLive(); // recording memory usage
+            if(t % 100 == 0) statistics.toLive(); // recording memory usage
             t++;
         }
         statistics.toLive(); // recording memory usage
@@ -1005,7 +1012,6 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
     private boolean isError(Compostate<State, Action> compostate) {
         return compostate.isStatus(Status.ERROR);
     }
-
 
     /** Marks a given state as an error. */
     public void setError(Compostate<State, Action> state) {

@@ -64,12 +64,19 @@ public class ReadyAbstraction<State, Action> implements Abstraction<State, Actio
     private final List<LTS<State, Action>> ltss;
     private final Alphabet<Action> alphabet;
     private final List<Set<State>> defaultTargets;
+    private List<Set<State>> knownMarked;
+    private List<Set<State>> goals;
 
     /** Whether the debug log is activated or not. */
     private final static Boolean DEBUG_LOG = false;
 
     /** the objetctive the RA aims to */
     private final Integer color;
+
+    // Experimental variables
+    public static Boolean CONSIDERAR_GOALS = true; // Not Working
+    public static Boolean CONSIDERAR_ESTRUCTURA = true;
+    public static Boolean INTENTA_SIMULAR_OPEN = false; // Not Working
 
     /** Used to log internal RA calculations for debugging purposes. */
     private static void debugLog(Object log, Object... strFmtArgs) {
@@ -108,9 +115,40 @@ public class ReadyAbstraction<State, Action> implements Abstraction<State, Actio
             int controllable2 = r2.getAction().isControllable() ? 1 : 0;
             int result = controllable1 - controllable2;
 
-            // If equal controllability, compare their first recommendation
-            if (result == 0)
-                result = controllable1 == 1 ? r1.compareTo(r2) : r2.compareTo(r1);
+
+
+            // Codigo original
+            boolean original_code = false;
+            if(original_code){
+                // If equal controllability, compare their first recommendation
+                if (result == 0)
+                    result = controllable1 == 1 ? r1.compareTo(r2) : r2.compareTo(r1);
+            }else{
+                if (result == 0 && controllable1 == 0) { // If both uncontrollable
+                    result = r2.compareTo(r1);
+                } else if (result == 0 && controllable1 == 1) { //  If both controllable
+                    if (CONSIDERAR_ESTRUCTURA) {
+                        if (c1.uncontrollablesCount == 0 && c2.uncontrollablesCount > 0) {
+                            result = -1;
+                        } else if (c2.uncontrollablesCount == 0 && c1.uncontrollablesCount > 0) {
+                            result = 1;
+                        } else {
+                            boolean pending1 = c1.hasControllableNone();
+                            boolean pending2 = c2.hasControllableNone();
+                            if (pending1 && !pending2) {
+                                result = 1;
+                            } else if (pending2 && !pending1) {
+                                return -1;
+                            } else {
+                                result = r1.compareTo(r2);
+                            }
+                        }
+
+                    } else {
+                        result = r1.compareTo(r2);
+                    }
+                }
+            }
 
             // Depth is the tiebreaker
             if (result == 0)
@@ -174,10 +212,31 @@ public class ReadyAbstraction<State, Action> implements Abstraction<State, Actio
     /** Evaluates the abstraction by building and exploring the RA. */
     @Override
     public void eval(Compostate<State, Action> compostate) {
-        clear();
-        buildRA(compostate);
-        evaluateRA(compostate);
-        extractRecommendations(compostate);
+        if (!compostate.isEvaluated(color)) {
+            /*this.knownMarked = knownMarked;
+            if (CONSIDERAR_GOALS) {
+                this.goals = goals;
+                computeMarkedOrGoalReachableStates();
+            }*/
+            clear();
+            buildRA(compostate);
+            evaluateRA(compostate);
+            extractRecommendations(compostate);
+        }
+    }
+
+    /** Computes for each state in each LTS which other *marked* or *goal* states can reach and in how many steps. */
+    private void computeMarkedOrGoalReachableStates() {
+        /*
+        markedOrGoalReachableStates = new InitMap<>(HashMap.class);
+        for (HState<State, Action> source : manyStepsReachableStates.keySet()) {
+            Map<HState<State, Action>, Map<HAction<Action>, Integer>> markedOrGoalStatesFromSource = markedOrGoalReachableStates.get(source);
+            Map<HState<State, Action>, Map<HAction<Action>, Integer>> reachableStatesFromSource = manyStepsReachableStates.get(source);
+            for (HState<State, Action> destination : reachableStatesFromSource.keySet()) {
+                if (destination.marked || (!destination.state.equals(-1L) && this.goals.get(destination.lts).contains(destination.state)))
+                    markedOrGoalStatesFromSource.put(destination, reachableStatesFromSource.get(destination));
+            }
+        }*/
     }
 
 

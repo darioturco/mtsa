@@ -289,7 +289,6 @@ class DQN(Agent):
                         with open(transitions_path, 'w') as f:
                             f.write(str(self.expanded_transitions))
 
-
                 obs = self.env.reset()
                 acumulated_reward = 0
                 expansion_steps = 0

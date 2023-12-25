@@ -1,24 +1,4 @@
-
-### El enviroment debe tener:
-#  - una funcion de init
-#  - una funion "reset"
-#  - una funcion "step"
-
-"""
-class Environment:
-    def __init__(self):
-        pass
-
-    def reset(self):
-        pass
-
-    def step(self, action):
-        # Assert
-        pass
-
-"""
 import numpy as np
-
 
 class Environment:
     def __init__(self, context, heuristic_reward):

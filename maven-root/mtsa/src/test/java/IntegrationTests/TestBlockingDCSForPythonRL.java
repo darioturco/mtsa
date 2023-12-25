@@ -10,7 +10,7 @@ import MTSTools.ac.ic.doc.commons.relations.Pair;
 import MTSTools.ac.ic.doc.mtstools.model.LTS;
 import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.*;
 import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.abstraction.Abstraction;
-import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.abstraction.DebuggingAbstraction;
+import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.abstraction.HeuristicMode;
 import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.abstraction.Recommendation;
 import MTSTools.ac.ic.doc.mtstools.model.operations.impl.WeakAlphabetMergeBuilder;
 import ltsa.control.ControllerGoalDefinition;
@@ -53,7 +53,7 @@ public class TestBlockingDCSForPythonRL {
     @Test
     public void testControllability() throws Exception {
         String FSP_Path = ltsFile.toString();
-        Pair<CompositeState, LTSOutput> c = FeatureBasedExplorationHeuristic.compileFSP(FSP_Path);
+        Pair<CompositeState, LTSOutput> c = DCSForPython.compileFSP(FSP_Path);
         CompositeState compositeState = c.getFirst();
         LTSOutput output = c.getSecond();
         ControllerGoal<String> goal = compositeState.goal;
@@ -80,21 +80,27 @@ public class TestBlockingDCSForPythonRL {
 
         DirectedControllerSynthesisBlocking<Long,String> dcs = new DirectedControllerSynthesisBlocking<>();
 
+        String heuristicModeString = "Ready";
+        HeuristicMode heuristicMode = HeuristicMode.valueOf(heuristicModeString);
+        ExplorationHeuristic<Long, String> heuristic = dcs.getHeuristic(heuristicMode);
+        dcs.heuristic = heuristic;
+
+
         //System.out.println("***********************************************************************************");
         //System.out.println("Synthesizing controller by DCS...");
 
-        List<Pair<Compostate<Long, String>, HAction<String>>> expansionList = dcs.getTraceSynthesize(
+        dcs.synthesize(
                 ltss,
                 goal.getControllableActions(),
                 goal.isReachability(),
                 guarantees,
-                assumptions,
-                new DebuggingAbstraction<>()
+                assumptions
         );
 
+        List<Pair<Compostate<Long, String>, HAction<String>>> expansionList = dcs.synthesizeTrace;
         //System.out.println("------------------------------------------------");
 
-        DCSForPython env = new DCSForPython(null, null,10000, compositeState);
+        DCSForPython env = new DCSForPython(heuristicModeString);
         env.startSynthesis(FSP_Path);
         int idx;
         Iterator<Pair<Compostate<Long, String>, HAction<String>>> it = expansionList.iterator();

@@ -64,10 +64,6 @@ public class OpenSetExplorationHeuristic<State, Action> implements ExplorationHe
     public Compostate<State, Action> lastExpandedTo = null;
     public Compostate<State, Action> lastExpandedFrom = null;
     public ActionWithFeatures<State, Action> lastExpandedStateAction = null;
-
-    public void setLastExpandedStateAction(ActionWithFeatures<State, Action> stateAction){
-        this.lastExpandedStateAction = stateAction;
-    }
     
     public OpenSetExplorationHeuristic(
             DirectedControllerSynthesisBlocking<State,Action> dcs,
@@ -147,12 +143,9 @@ public class OpenSetExplorationHeuristic<State, Action> implements ExplorationHe
         int openSize = openCopy.size();
         for(int i=0 ; i<openSize ; i++){
             Compostate<State, Action> state = openCopy.remove();
-
             List<Recommendation<Action>> recommendations = state.recommendations.get(currentTargetLTSIndex);
 
-            if(recommendations == null){
-                res.add(-1);
-            }else{
+            if(recommendations != null){
                 for(Recommendation<Action> recommendation : recommendations){
                     HAction<Action> action = recommendation.getAction();
                     int index = getIndexOfStateAction(new Pair<>(state, action));
@@ -161,23 +154,7 @@ public class OpenSetExplorationHeuristic<State, Action> implements ExplorationHe
                     }
                 }
             }
-
-
-
-            /*Recommendation<Action> recommendation = state.peekRecommendation(currentTargetLTSIndex);
-            if(recommendation == null){
-                // TODO: Check how to fix this
-                res.add(-1);
-            }else {
-                HAction<Action> action = recommendation.getAction();
-                int index = getIndexOfStateAction(new Pair<>(state, action));
-                if (index != -1) {
-                    res.add(index);
-                }
-            }*/
         }
-
-        //System.out.println(res);
 
         // Add all the transition that are not in res
         for(int i=0 ; i<actionsToExplore.size() ; i++){
@@ -240,6 +217,10 @@ public class OpenSetExplorationHeuristic<State, Action> implements ExplorationHe
         return false;
     }
 
+    public void setLastExpandedStateAction(ActionWithFeatures<State, Action> stateAction){
+        this.lastExpandedStateAction = stateAction;
+    }
+
     public ArrayList<ActionWithFeatures<State, Action>> getFrontier(){return actionsToExplore;}
     public int frontierSize(){
         return actionsToExplore.size();
@@ -250,7 +231,6 @@ public class OpenSetExplorationHeuristic<State, Action> implements ExplorationHe
     private void updateOpen(Integer color){
         Queue<Compostate<State, Action>> open = opens.get(color);
         if(open.isEmpty()) return;
-
         Compostate<State,Action> state = null;
 
         while(true){
@@ -270,7 +250,7 @@ public class OpenSetExplorationHeuristic<State, Action> implements ExplorationHe
                         state.getExploredActions().contains(state.peekRecommendation(color).getAction())){
                     state.updateRecommendation(color);
                 }
-                if(state.peekRecommendation(color) != null){
+                if (state.peekRecommendation(color) != null) {
                     addToOpen(color, state);
                 } else {
                     System.out.println("CHECK! State was actually fullyExplored");
@@ -302,11 +282,6 @@ public class OpenSetExplorationHeuristic<State, Action> implements ExplorationHe
                 }
             }
         }
-
-        //if (!allActionsToExplore.contains(state)){
-        //    allActionsToExplore.add(state);
-        //    addTransitionsToFrontier(state);
-        //}
 
         return result;
     }
@@ -456,8 +431,8 @@ public class OpenSetExplorationHeuristic<State, Action> implements ExplorationHe
     }
 
     public boolean fullyExplored(Compostate<State, Action> state) {
-        //return (state.getExploredActions().size() + state.getDiscardedActions().size()) >= state.transitions.size();
-        return (state.getExploredActions().size()) >= state.transitions.size();
+        return (state.getExploredActions().size() + state.getDiscardedActions().size()) >= state.transitions.size();
+        //return (state.getExploredActions().size()) >= state.transitions.size();
         //puede ser que este cambio rompa casos si recommendation era null antes de ver todas las transiciones
     }
     

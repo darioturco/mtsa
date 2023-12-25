@@ -21,13 +21,13 @@ public class FrontierListExplorationHeuristic<State, Action> implements Explorat
     public Compostate<State, Action> lastExpandedFrom = null;
     public ActionWithFeatures<State, Action> lastExpandedStateAction = null;
 
-    public void setLastExpandedStateAction(ActionWithFeatures<State, Action> stateAction){
-        this.lastExpandedStateAction = stateAction;
-    }
-
     public FrontierListExplorationHeuristic() {
         this.explorationFrontier = new LinkedList<>();
         this.actionsToExplore = new ArrayList<>();
+    }
+
+    public void setLastExpandedStateAction(ActionWithFeatures<State, Action> stateAction){
+        this.lastExpandedStateAction = stateAction;
     }
 
     public void setInitialState(Compostate<State, Action> initial) {
@@ -152,18 +152,17 @@ public class FrontierListExplorationHeuristic<State, Action> implements Explorat
 
     }
 
-
     public void notifyStateSetErrorOrGoal(Compostate<State, Action> state) {
+
+    }
+
+    public void notifyExpansionDidntFindAnything(Compostate<State, Action> parent, HAction<Action> action, Compostate<State, Action> child) {
 
     }
 
     public void newState(Compostate<State, Action> state, Compostate<State, Action> parent) {
         if(state.isStatus(Status.NONE))
             addTransitionsToFrontier(state);
-    }
-
-    public void notifyExpansionDidntFindAnything(Compostate<State, Action> parent, HAction<Action> action, Compostate<State, Action> child) {
-
     }
 
     public boolean fullyExplored(Compostate<State, Action> state) {

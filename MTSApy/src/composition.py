@@ -30,12 +30,15 @@ class CompositionGraph(nx.DiGraph):
     #  - CM (Cat and Mouse)
     #  - Custom (n and k are ingnored and you can pass a custom path in the start_composition function)
 
+    @staticmethod
+    def getDCSForPython():
+        return DCSForPython
+
     def __init__(self, problem, n, k, fsp_path):
         super().__init__()
         self._problem, self._n, self._k = problem, n, k
         self._fsp_path = fsp_path
         self._initial_state = None
-        self._state_machines = []
         self._frontier = []
         self._started, self._completed = False, False
         self._alphabet = []
@@ -54,19 +57,15 @@ class CompositionGraph(nx.DiGraph):
             problem_path = self._fsp_path
         else:
             problem_path = f"{self._fsp_path}/{self._problem}/{self._problem}-{self._n}-{self._k}.fsp"
-        c = DCSForPython.compileFSP(problem_path)
-        #c = FeatureBasedExplorationHeuristic.compileFSP(problem_path) # Borrar
-        ltss_init = c.getFirst()
-        # TODO: turn it into a dictionary that goes from the state machine name into its respective digraph
-        self._state_machines = [m.name for m in ltss_init.machines]
-        # self.auxiliar_heuristic = "BFS"
-        #self.auxiliar_heuristic = "Debugging"
-        self.auxiliar_heuristic = "Ready"
-        self.javaEnv = DCSForPython(None, None, 10000, ltss_init, self.auxiliar_heuristic)
-        #self.javaEnv = DCSForPython(None, None, 10000, ltss_init) # Borrar
-        assert (self.javaEnv is not None)
 
+        # self.auxiliar_heuristic = "BFS"
+        # self.auxiliar_heuristic = "Debugging"
+        # self.auxiliar_heuristic = "Ready"
+        self.auxiliar_heuristic = "Complete"
+        self.javaEnv = DCSForPython(self.auxiliar_heuristic)
+        assert (self.javaEnv is not None)
         self.javaEnv.startSynthesis(problem_path)
+
         self._initial_state = self.javaEnv.dcs.initial
         self.add_node(str(self._initial_state.toString()))
         self._alphabet = [e for e in self.javaEnv.dcs.alphabet.actions]
@@ -92,7 +91,6 @@ class CompositionGraph(nx.DiGraph):
 
     def getFrontier(self):
         return self.javaEnv.heuristic.actionsToExplore
-        #return self.javaEnv.heuristic.explorationFrontier # Borrar
 
     def getLastExpanded(self):
         return self.javaEnv.heuristic.lastExpandedStateAction

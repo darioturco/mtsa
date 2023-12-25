@@ -48,4 +48,6 @@ public interface ExplorationHeuristic<State, Action> {
 
     void initialize(Compostate<State, Action> state);
 
+    ArrayList<ActionWithFeatures<State, Action>> getFrontier();
+
 }

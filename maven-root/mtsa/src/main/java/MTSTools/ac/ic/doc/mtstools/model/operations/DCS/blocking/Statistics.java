@@ -35,6 +35,14 @@ public class Statistics {
 
     private boolean isRunning = false;
 
+    private long started_heuristic;
+
+    /** System wall clock in milliseconds at the end of the heuristic procedure. */
+    private long ended_heuristic;
+
+    /** Execution time in milliseconds of the heuristic procedure. */
+    private long heuristic_time;
+
     public void copyValues(Statistics other) {
         expandedStates = other.getExpandedStates();
         controllerUsedStates = other.controllerUsedStates;
@@ -150,6 +158,7 @@ public class Statistics {
         propagateGoalsCalls = 0;
         propagateErrorsCalls = 0;
         maxMemoryUsed = 0;
+        heuristic_time = 0;
     }
 
 
@@ -206,7 +215,6 @@ public class Statistics {
         return result;
     }
 
-
     /** Returns memory in human readable format. */
     public static String formatMemory(long memory) {
         double kilo = 1024;
@@ -224,4 +232,11 @@ public class Statistics {
         return result;
     }
 
+    public void startHeuristicTime() {
+        started_heuristic = System.currentTimeMillis();
+    }
+
+    public void endHeuristicTime() {
+        heuristic_time += System.currentTimeMillis() - started_heuristic;
+    }
 }

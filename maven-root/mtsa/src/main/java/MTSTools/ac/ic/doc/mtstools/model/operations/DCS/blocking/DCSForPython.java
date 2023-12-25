@@ -14,6 +14,7 @@ import java.util.*;
 import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.DirectedControllerSynthesisBlocking;
 import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.abstraction.HEstimate;
 import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.abstraction.HeuristicMode;
+import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.abstraction.ReadyAbstraction;
 import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.abstraction.Recommendation;
 import ltsa.dispatcher.TransitionSystemDispatcher;
 import ltsa.lts.*;
@@ -31,7 +32,7 @@ public class DCSForPython {
 
     public boolean started_synthesis;
     // TODO: Rehacer el init, tiene muchos argunmentos que no se usan mas
-    public DCSForPython(String features_path, String labels_path, int max_frontier, CompositeState ltss_init, String heuristicMode){
+    public DCSForPython(String heuristicMode){
         this.started_synthesis = false;
         this.heuristicMode = HeuristicMode.valueOf(heuristicMode);
     }
@@ -89,7 +90,7 @@ public class DCSForPython {
 
         this.dcs.setupInitialState();
         this.heuristic.filterFrontier();
-        this.started_synthesis = false;
+        this.started_synthesis = true;
     }
 
     public double getSynthesisTime(){
@@ -116,6 +117,11 @@ public class DCSForPython {
         return dcs.isFinished();
     }
 
+    public void setFlags(boolean CONSIDERAR_GOALS, boolean CONSIDERAR_ESTRUCTURA){
+        ReadyAbstraction.CONSIDERAR_GOALS = CONSIDERAR_GOALS;
+        ReadyAbstraction.CONSIDERAR_ESTRUCTURA = CONSIDERAR_ESTRUCTURA;
+    }
+
     public Set<String> all_transition_labels(){
         if(!started_synthesis) System.out.println("Transition labels not computed yet, synthesis pending.");
         return (Set<String>) this.dcs.alphabet.actions;
@@ -133,6 +139,9 @@ public class DCSForPython {
 
         this.heuristic.setLastExpandedStateAction(stateAction);
         this.heuristic.expansionDone(state, action, child);
+        if(!isFinished()) {
+            this.heuristic.somethingLeftToExplore();
+        }
     }
     public int getActionFronAuxiliarHeuristic(){
         return heuristic.getNextActionIndex();
@@ -146,30 +155,64 @@ public class DCSForPython {
         return heuristic.getOrder();
     }
 
+    public static int syntetizeWithHeuristic(String FSP_path, String heuristic, int budget, boolean verbose){
+        DCSForPython env = new DCSForPython(heuristic);
+        env.setFlags(false, false);
+        env.startSynthesis(FSP_path);
+
+        int idx;
+        int i = 0;
+        while (!env.isFinished() && i < budget) {
+            idx = env.getActionFronAuxiliarHeuristic();
+            if(verbose){
+                System.out.println("----------------------------------: " + (i+1));
+                System.out.println("Expanded: " + env.heuristic.getFrontier().get(idx));
+            }
+
+            env.expandAction(idx);
+            i = i + 1;
+        }
+
+        return i;
+    }
+
     // This main is for testing purposes only
     public static void main(String[] args)  {
+
+        /*
+        for(int n=2;n<=15;n++){
+            int res = 0;
+            for(int k=2;k<=15 && res<15000;k++){
+                res = DCSForPython.syntetizeWithHeuristic("F:\\UBA\\Tesis\\mtsa\\MTSApy\\fsp\\CM\\CM-" + n + "-" + k + ".fsp", "Ready", 15000, false);
+                System.out.println("Result of CM-" + n + "-" + k +": " + res);
+            }
+        }*/
+
+
+        String instance = "CM";
+
         //String FSP_path = "/home/dario/Documents/Tesis/mtsa/maven-root/mtsa/target/test-classes/Blocking/ControllableFSPs/GR1test1.lts"; // Falla porque tiene guiones
-        //String FSP_path = "F:\\UBA\\Tesis\\mtsa\\maven-root\\mtsa\\target\\test-classes\\Blocking\\ControllableFSPs\\GR1Test10.lts";
+        //String FSP_path = "F:\\UBA\\Tesis\\mtsa\\maven-root\\mtsa\\target\\test-classes\\Blocking\\ControllableFSPs\\GR1Test43.lts";
         //String FSP_path = "F:\\UBA\\Tesis\\mtsa\\maven-root\\mtsa\\target\\test-classes\\Blocking\\NoControllableFSPs\\GR1Test11.lts";
-        String FSP_path = "F:\\UBA\\Tesis\\mtsa\\MTSApy\\fsp\\TL\\TL-2-2.fsp";
+        String FSP_path = "F:\\UBA\\Tesis\\mtsa\\MTSApy\\fsp\\" + instance + "\\" + instance + "-2-2.fsp";
         //String FSP_path = "/home/dario/Documents/Tesis/Learning-Synthesis/fsp/Blocking/ControllableFSPs/GR1Test10.lts";
         //String FSP_path = "/home/dario/Documents/Tesis/Learning-Synthesis/fsp/DP/DP-2-2.fsp";
 
-        CompositeState ltss_init = DCSForPython.compileFSP(FSP_path).getFirst();
-
-        String heuristicMode = "Ready";
+        //String heuristicMode = "Ready";
+        String heuristicMode = "Complete";
         //String heuristicMode = "BFS";
         //String heuristicMode = "Debugging";
-        DCSForPython env = new DCSForPython(null, null,10000, ltss_init, heuristicMode);
+        DCSForPython env = new DCSForPython(heuristicMode);
+        env.startSynthesis(FSP_path);
+        env.dcs.analyzer.setInstance(instance, 2, 2);
+        env.dcs.analyzer.printInformation();
 
         Random rand = new Random();
-        //List<Integer> list = Arrays.asList(0, 1, 1, 0, 0, 0, 0); // Lista para la intancia 10 Controlable
-        //List<Integer> list = Arrays.asList(0, 1, 1); // Lista para la intancia 11 No Controlable
-        //List<Integer> list = Arrays.asList(2);
+        //List<Integer> list = Arrays.asList(1, 1, 2); // Lista para la intancia 11 No Controlable
         List<Integer> list = new ArrayList();
         int idx = 0;
-        env.startSynthesis(FSP_path);
         int i = 0;
+
         while (!env.isFinished()) {
             System.out.println("----------------------------------: " + (i+1));
             env.heuristic.printFrontier();
@@ -178,21 +221,10 @@ public class DCSForPython {
                 idx = list.get(i);
             }else{
                 //idx = rand.nextInt(env.frontierSize());
-                if (env.getHeuristicOrder().contains(-1)) {
-                    System.out.println("Error");
-                    env.getHeuristicOrder();
-                }
-
-                System.out.println("Recomendation Order: " + env.getHeuristicOrder());
                 idx = env.getActionFronAuxiliarHeuristic();
             }
 
-            System.out.println("Expanded action: " + idx);
-
-            //for(Integer j : env.getHeuristicOrder()){
-            //    System.out.println("   " + j);
-            //}
-
+            System.out.println("Expanded: " + env.heuristic.getFrontier().get(idx));
             env.expandAction(idx);
             i = i + 1;
         }

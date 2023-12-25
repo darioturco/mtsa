@@ -28,6 +28,7 @@ import MTSTools.ac.ic.doc.mtstools.model.operations.*;
 import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.DirectedControllerSynthesis;
 import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.DirectedControllerSynthesisBlocking;
 import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.Statistics;
+import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.abstraction.HeuristicMode;
 import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.monolithicDirector.DirectedControllerSynthesisMonolithicDirector;
 import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.nonblocking.DirectedControllerSynthesisNonBlocking;
 import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.nonblocking.ExplorationHeuristic;
@@ -861,8 +862,7 @@ public class TransitionSystemDispatcher {
             }.start();
         }
 
-        dcs.setHeuristic(heuristic);
-
+        DirectedControllerSynthesisBlocking.mode = HeuristicMode.Ready;
 		LTS<Long,String> controller = dcs.synthesize(
 			ltss, goal.getControllableActions(), goal.isReachability(), guarantees, assumptions);
 

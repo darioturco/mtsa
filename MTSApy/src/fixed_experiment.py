@@ -6,89 +6,65 @@ from src.agents.dqn import DQN, NeuralNetwork, TorchModel
 from src.agents.random import RandomAgent
 from src.experiments import Experiment
 from src.agents.RA import RA
+import time
 
 class RunRAInAllInstances(Experiment):
     def __init__(self, name="Test"):
         super().__init__(name)
 
-    def read_lines(self, lines):
-        results = {}
-        results["expanded transitions"] = int(lines[0][len('ExpandedTransitions: '):])
-        results["expanded states"] = 0
-        results["synthesis time(ms)"] = int(lines[2][len('Elapsed in Synthesis: '):-3])
-        results["OutOfMem"] = False
-        results["Exception"] = False
-        return results
+    def run(self, budget, instance, save=True, verbose=False):
+        path = self.get_fsp_path()
+        DCSForPython = CompositionGraph.getDCSForPython()
 
-    def read_results(self, lines, err_lines, command_run):
+        last_failed = False
+        last_n = self.min_instance_size
+        solved = 0
+        all_fail = False
 
-        if np.any(["OutOfMem" in line for line in err_lines]):
-            print(f"Out of memory")
-            self.debug_output = None
-            results = {"expanded transitions": np.nan, "expanded states": np.nan, "synthesis time(ms)": np.nan, "OutOfMem": True}
+        for instance, n, k in self.all_instances_of(instance):
+            if n != last_n:
+                last_failed = False
 
-        else:
-            try:
-                results = self.read_lines(lines)
+            if last_failed or all_fail:
+                expanded = budget + 1
+                print(f"RA Agent in instance: {instance} {n}-{k}: Failed")
+                duration = 9999
 
-            except BaseException as err:
-                results = {"expanded transitions": np.nan, "synthesis time(ms)": np.nan, "OutOfMem": False,
-                           "expanded states": np.nan, "Exception": True}
-
-                print("Exception!", " ".join(command_run))
-
-                if np.any([("Frontier" in line) for line in err_lines]):
-                    print("Frontier did not fit in the buffer.")
-                else:
-                    for line in lines:
-                        print(line)
-                    for line in err_lines:
-                        print(line)
-
-        return results
-
-    def run(self, budget):
-        if "linux" in self.platform:
-            path = "/home/dario/Documents/Tesis/Learning-Synthesis/fsp"  # For Linux
-            mtsa_path = './mtsa.jar'
-        else:
-            path = "F:\\UBA\\Tesis\\mtsa\\MTSApy\\fsp"  # For Windows
-            mtsa_path = 'F:\\UBA\\Tesis\\mtsa\\maven-root\\mtsa\\target\\mtsa.jar'
-
-        for instance, n, k in self.all_instances_iterator():
-            fsp_path = f"{path}/{instance}/{instance}-{n}-{k}.fsp"
-            command = ["java", "-classpath", mtsa_path,
-                       "MTSTools/ac/ic/doc/mtstools/model/operations/DCS/blocking/DirectedControllerSynthesisBlocking",
-                       "-h", "Ready", "-i", fsp_path, "-e", str(budget)]
-
-            try:
-                proc = subprocess.run(command,
-                                  stdout=subprocess.PIPE,
-                                  stderr=subprocess.PIPE,
-                                  universal_newlines=True)
-                failed = False
-            except Exception as e:
-                failed = True
-
-            if failed or proc.returncode == 124:
-                print("Failed")
-                results = {"expanded transitions": np.nan, "synthesis time(ms)": np.nan, "OutOfMem": False}
             else:
-                lines = proc.stdout.split("\n")[2:]
-                err_lines = proc.stderr.split("\n")
-                results = self.read_results(lines, err_lines, command)
+                start = time.time()
 
-            csv_path = f"./results/csv/RA.csv"
-            info = {"Instance": instance, "N": n, "K": k,
-                    "Transitions": results["expanded transitions"],
-                    "States": results["expanded states"],
-                    "Time": results["synthesis time(ms)"],
-                    "Failed": -1 < budget < results["expanded transitions"]}
+                #expanded = DCSForPython.syntetizeWithHeuristic(f"{path}/{instance}/{instance}-{n}-{k}.fsp", "Complete", budget, verbose)
+                expanded = DCSForPython.syntetizeWithHeuristic(f"{path}/{instance}/{instance}-{n}-{k}.fsp", "Complete", budget, verbose)
+                end = time.time()
+                duration = (end - start) * 1000
+                print(f"RA Agent in instance: {instance} {n}-{k}:")
+                print(f"   Expanded Transitions: {expanded}")
+                print(f"   Syntesis Time: {duration:.3f} ms\n")
 
-            self.save_to_csv(csv_path, info)
 
-    def run2(self, budget, instance, save=True):
-        return self.run_agent(budget, RA(), instance, save)
+            failed = (expanded >= budget)
+            if save:
+                info = {"Instance": instance, "N": n, "K": k,
+                        "Model": "RA",
+                        "Transitions": expanded,
+                        "States": -1,
+                        "Time(ms)": round(duration),
+                        "Failed": failed}
+
+                csv_path = f"./results/csv/{instance}.csv"
+                self.save_to_csv(csv_path, info)
+
+            if failed:
+                if k == 2:
+                    all_fail = True
+            else:
+                solved += 1
+
+            last_failed = failed
+            last_n = n
+
+        return solved
+
 
 
 class RunRandomInAllInstances(Experiment):
