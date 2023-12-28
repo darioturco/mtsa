@@ -183,6 +183,8 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
             return new LexicographicExplorationHeuristic<>();
         } else if(heuristicMode == HeuristicMode.Complete) {
             return new CompleteExplorationHeuristic<>(this);
+        } else if(heuristicMode == HeuristicMode.CMHeuristic) {
+            return new CatAndMouseExplorationHeuristic<>();
         }
         return new OpenSetExplorationHeuristic<>(this, heuristicMode);
     }

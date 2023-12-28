@@ -196,7 +196,7 @@ public class DCSForPython {
         //String FSP_path = "F:\\UBA\\Tesis\\mtsa\\maven-root\\mtsa\\target\\test-classes\\Blocking\\NoControllableFSPs\\GR1Test11.lts";
         //String FSP_path = "F:\\UBA\\Tesis\\mtsa\\MTSApy\\fsp\\" + instance + "\\" + instance + "-2-2.fsp";
         //String FSP_path = "/home/dario/Documents/Tesis/Learning-Synthesis/fsp/Blocking/ControllableFSPs/GR1Test10.lts";
-        String FSP_path = "/home/dario/Documents/Tesis/mtsa/MTSApy/fsp/CM/CM-2-2.fsp";
+        String FSP_path = "/home/dario/Documents/Tesis/mtsa/MTSApy/fsp/CM/CM-2-5.fsp";
 
         //String heuristicMode = "Ready";
         String heuristicMode = "Complete";
@@ -204,6 +204,7 @@ public class DCSForPython {
         //String heuristicMode = "Interactive";
         //String heuristicMode = "BFS";
         //String heuristicMode = "Debugging";
+        //String heuristicMode = "CMHeuristic";
         DCSForPython env = new DCSForPython(heuristicMode);
         env.startSynthesis(FSP_path);
         env.dcs.analyzer.setInstance(instance, 2, 2);
