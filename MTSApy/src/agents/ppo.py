@@ -22,6 +22,9 @@ class PPO(Agent):
         self.model = self.init_model()
         self.callback = PPOCallback(self.batch_size)
 
+    def get_name(self):
+        return "PPO"
+
     def init_model(self):
         return MaskablePPO(MaskableActorCriticPolicy,
                             self.env,

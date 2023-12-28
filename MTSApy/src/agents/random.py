@@ -6,6 +6,9 @@ class RandomAgent(Agent):
     def __init__(self, env=None):
         super().__init__(env)
 
+    def get_name(self):
+        return "Random"
+
     def train(self, *args, **kwargs):
         pass
 

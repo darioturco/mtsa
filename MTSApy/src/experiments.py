@@ -88,7 +88,7 @@ class Experiment(object):
 
             if save:
                 info = {"Instance": instance, "N": n, "K": k,
-                        "Model": "RA",
+                        "Name": agent.get_name(),
                         "Transitions": res["expanded transitions"],
                         "States": res["expanded states"],
                         "Time(ms)": res["synthesis time(ms)"],

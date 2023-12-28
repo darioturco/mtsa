@@ -47,6 +47,7 @@ class TorchModel(Model):
 
         self.has_learned_something = False
         self.losses = []
+        self.path = ""
 
     def eval_batch(self, ss):
         return np.array([self.eval(s) for s in ss])
@@ -121,6 +122,7 @@ class TorchModel(Model):
         network = torch.load(path)
         new_model = cls(nfeatures, network, args)
         new_model.has_learned_something = True
+        new_model.path = path
         return new_model
 
 
@@ -188,6 +190,9 @@ class DQN(Agent):
         self.last_best = None
         self.converged = False
         self.freq_save = args['freq_save']
+
+    def get_name(self):
+        return self.model.path
 
     def initializeBuffer(self):
         """ Initialize replay buffer uniformly with experiences """

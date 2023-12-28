@@ -109,56 +109,56 @@ def graph_training_process(sliding_window=5, repetitions=5, save_path=None, use_
             plt.savefig(f"{save_path}/{instance}_all.png")
         plt.show()
 
-def compare_random_and_RL():
-    #random_data = pd.read_csv("./results/csv/random budget=5000 repetitions=100.csv")
-    random_data = pd.read_csv("./results/csv/random.csv")
-    for instance in BENCHMARK_PROBLEMS:
-        data_instance = pd.read_csv(f"./results/csv/{instance}.csv")
-        random_data_instance = random_data[random_data["Instance"] == instance]
+def check_method_in_instance(instance, method):
+    data = pd.read_csv(f"./results/csv/{instance}.csv")
 
+    instance_matrix = []
+    for n in range(15, 1, -1):
+        row = []
+        for k in range(2, 16):
+            print(data[data["N"] == n][data["K"] == k][data["Method"] == method]["Transitions"])
+            value = int(data[data["N"] == n][data["K"] == k][data["Method"] == method]["Transitions"])
+            print(f"N = {n} - K = {k} -> {method}: {value}")
 
-        #instance_matrix = [[int(data_instance[data_instance["N"] == n and data_instance["K"] == k]["Transitions"][0]) for k in range(2, 16)] for n in range(2, 16)]
-        instance_matrix = []
-        for n in range(2, 16):
-            row = []
-            for k in range(2, 16):
-                rl_value = int(data_instance[data_instance["N"] == n][data_instance["K"] == k]["Transitions"])
-                random_value = int(random_data_instance[random_data_instance["N"] == n][random_data_instance["K"] == k]["Transitions (mean)"])
-                print(f"N = {n} - K = {k} -> RL: {rl_value} - Random: {random_value}")
-                row.append(rl_value - random_value)
-            instance_matrix.append(row)
+            row.append(value)
+        instance_matrix.append(row)
 
-        instance_matrix = np.array(instance_matrix, dtype=int)
-        sn.heatmap(instance_matrix, annot=True, fmt=".0f")
+    instance_matrix = np.array(instance_matrix, dtype=int)
+    sn.heatmap(instance_matrix, annot=False, fmt=".0f")
 
-        plt.xticks(np.arange(0.5, 14.5, 1), range(2, 16))
-        plt.yticks(np.arange(0.5, 14.5, 1), range(2, 16))
+    plt.title(f"{instance} - {method}")
+    plt.xlabel("K")
+    plt.ylabel("N")
+    plt.xticks(np.arange(0.5, 14.5, 1), range(2, 16))
+    plt.yticks(np.arange(13.5, -0.5, -1), range(2, 16))
 
-        plt.show()
+    plt.show()
 
-def comparative_bar_plot():
-    random_data = pd.read_csv("./results/csv/random.csv")
-    ra_data = pd.read_csv("./results/csv/Ready Abstraction.csv")
-    data = {"Random": {}, "RL": {}, "RA": {}}
+def comparative_bar_plot(data=None):
     instances = ["AT", "BW", "DP", "TA", "TL", "CM"][::-1]
-    for instance in instances:
-        random_instance = random_data[random_data["Instance"] == instance]
-        data["Random"][instance] = random_instance[random_instance["Failed"] < 99].count()["Failed"]
+    if data is None:
+        random_data = pd.read_csv("./results/csv/random.csv")
+        ra_data = pd.read_csv("./results/csv/Ready Abstraction.csv")
+        data = {"Random": {}, "RL": {}, "RA": {}}
 
-        ra_instance = ra_data[ra_data["Instance"] == instance]
-        data["RA"][instance] = ra_instance[ra_instance["Failed"] == False].count()["Failed"]
+        for instance in instances:
+            random_instance = random_data[random_data["Instance"] == instance]
+            data["Random"][instance] = random_instance[random_instance["Failed"] < 99].count()["Failed"]
 
-        rl_instance = pd.read_csv(f"./results/csv/{instance}.csv")
-        data["RL"][instance] = rl_instance[rl_instance["Failed"] == False].count()["Failed"]
+            ra_instance = ra_data[ra_data["Instance"] == instance]
+            data["RA"][instance] = ra_instance[ra_instance["Failed"] == False].count()["Failed"]
+
+            rl_instance = pd.read_csv(f"./results/csv/{instance}.csv")
+            data["RL"][instance] = rl_instance[rl_instance["Failed"] == False].count()["Failed"]
 
     print(data)
 
-    heigths = []
+    heights = []
     for i in instances:
-        heigths.append(np.array([data[algo][i] for algo in data.keys()]))
+        heights.append(np.array([data[algo][i] for algo in data.keys()]))
 
-    for h in range(len(heigths) - 1, -1, -1):
-        plt.bar(list(data.keys()), sum([heigths[i] for i in range(h + 1)]), label=instances[h])
+    for h in range(len(heights) - 1, -1, -1):
+        plt.bar(list(data.keys()), sum([heights[i] for i in range(h + 1)]), label=instances[h])
 
     for x, (k, v) in enumerate(data.items()):
         totals = [0]
@@ -183,12 +183,25 @@ if __name__ == "__main__":
 
     #graph_training_process(sliding_window=500, repetitions=5, save_path='./results/plots', use_steps=True)
 
-    comparative_bar_plot()
+
+    comparative_bar_plot(data={"Random": {"AT": 23, "BW": 21, "DP": 42, "TA": 42, "TL": 129, "CM": 0},
+                               "2-2": {"AT": 50, "BW": 65, "DP": 121, "TA": 70, "TL": 196, "CM": 0},
+                               "3-3": {"AT": 49, "BW": 44, "DP": 126, "TA": 69, "TL": 196, "CM": 0},
+                               "dCL": {"AT": 43, "BW": 45, "DP": 126, "TA": 68, "TL": 196, "CM": 0},
+                               "kCL": {"AT": 64, "BW": 39, "DP": 112, "TA": 83, "TL": 196, "CM": 0},
+                               "RA": {"AT": 81, "BW": 28, "DP": 122, "TA": 42, "TL": 196, "CM": 0},
+                               "RA Mejora": {"AT": 57, "BW": 121, "DP": 140, "TA": 70, "TL": 196, "CM": 0}})
 
 
 
 
-    #compare_random_and_RL()
+
+    #check_method_in_instance("BW", "2-2")
+    #check_method_in_instance("DP", "2-2")
+    #check_method_in_instance("AT", "2-2")
+    #check_method_in_instance("BW", "kCL")
+    #check_method_in_instance("DP", "kCL")
+    #check_method_in_instance("AT", "kCL")
 
 
 
