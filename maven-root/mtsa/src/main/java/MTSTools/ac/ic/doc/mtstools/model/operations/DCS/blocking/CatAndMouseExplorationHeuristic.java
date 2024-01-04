@@ -1,18 +1,10 @@
 package MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking;
 
-import MTSTools.ac.ic.doc.commons.collections.BidirectionalMap;
-import MTSTools.ac.ic.doc.commons.collections.InitMap;
 import MTSTools.ac.ic.doc.commons.relations.Pair;
-import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.abstraction.*;
 
 import java.util.*;
-import java.util.logging.ConsoleHandler;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
-import static java.util.Collections.emptyList;
-
-public class RandomExplorationHeuristic<State, Action>  implements ExplorationHeuristic<State, Action>  {
+public class CatAndMouseExplorationHeuristic<State, Action> implements ExplorationHeuristic<State, Action> {
     public LinkedList<Pair<Compostate<State, Action>, HAction<Action>>> explorationFrontier;
     public ArrayList<ActionWithFeatures<State, Action>> actionsToExplore;
 
@@ -25,15 +17,15 @@ public class RandomExplorationHeuristic<State, Action>  implements ExplorationHe
     public Compostate<State, Action> lastExpandedFrom = null;
     public ActionWithFeatures<State, Action> lastExpandedStateAction = null;
 
-    public Random random;
+    int n = 2;
+    int k = 5; // TODO: change this hardcored value
 
-    public RandomExplorationHeuristic() {
+    public CatAndMouseExplorationHeuristic() {
         this.explorationFrontier = new LinkedList<>();
         this.actionsToExplore = new ArrayList<>();
-        this.random = new Random();
     }
 
-    public void setLastExpandedStateAction(ActionWithFeatures<State, Action> stateAction){
+    public void setLastExpandedStateAction(ActionWithFeatures<State, Action> stateAction) {
         this.lastExpandedStateAction = stateAction;
     }
 
@@ -44,8 +36,11 @@ public class RandomExplorationHeuristic<State, Action>  implements ExplorationHe
         return !explorationFrontier.isEmpty();
     }
 
-    public ArrayList<ActionWithFeatures<State, Action>> getFrontier(){return actionsToExplore;}
-    public int frontierSize(){
+    public ArrayList<ActionWithFeatures<State, Action>> getFrontier() {
+        return actionsToExplore;
+    }
+
+    public int frontierSize() {
         return actionsToExplore.size();
     }
 
@@ -62,22 +57,63 @@ public class RandomExplorationHeuristic<State, Action>  implements ExplorationHe
         }
 
         stateAction.getFirst().unexploredTransitions--;
-        if(!stateAction.getSecond().isControllable())
+        if (!stateAction.getSecond().isControllable())
             stateAction.getFirst().uncontrollableUnexploredTransitions--;
         return stateAction;
     }
 
+    public boolean isCatMove(String action){
+        return (action.contains("cat.") && action.contains(".move"));
+    }
+
     public int getNextActionIndex() {
-        return random.nextInt(actionsToExplore.size());
+        int idx = 0;
+        int peso = 0;
+        int position = -1;
+
+
+
+
+
+        for(int i=actionsToExplore.size()-1;i>=0;i--){
+
+            String action = actionsToExplore.get(i).action.toString();
+            if(action.contains("safe")){
+                return i; // There is no better option
+            } else if (action.contains("cat.turn")) {
+                peso = 4;
+                idx = i;
+            } else if (isCatMove(action) && peso < 3) {
+                //catState = actionsToExplore.get(i).state.toString();
+                // TODO: eliminar lo del catState (no tiene ningun impacto)
+                peso = 3;
+                idx = i;
+            } else if (action.contains("mouse.turn") && peso < 2) {
+                peso = 2;
+                idx = i;
+            } else if (action.contains("mouse.") && peso < 1) {
+                int new_position = Integer.parseInt(action.substring(7).replaceAll("[^0-9]", ""));
+
+                if(Math.abs(new_position - k) < Math.abs(position - k)){
+                    idx = i;
+                    position = new_position;
+                }
+
+                if(position == k){
+                    peso = 1;
+                }
+            }
+        }
+
+        return idx;
     }
 
     public ArrayList<Integer> getOrder(){
+        // TODO: Completar esta funcion
+
         ArrayList<Integer> res = new ArrayList<>();
-        for(int i=0 ; i<explorationFrontier.size() ; i++){
-            res.add(i);
-        }
-        Collections.shuffle(res);
         return res;
+
     }
 
     public ActionWithFeatures<State, Action> removeFromFrontier(int idx) {
@@ -181,8 +217,9 @@ public class RandomExplorationHeuristic<State, Action>  implements ExplorationHe
 
     public void printFrontier(){
         System.out.println("Frontier: ");
-        for(ActionWithFeatures<State, Action> stateAction : actionsToExplore){
-            System.out.println(new StringBuilder(stateAction.state.toString() + " | " + stateAction.action.toString()));
+        for(int i = 0 ; i<actionsToExplore.size() ; i++){
+            ActionWithFeatures<State, Action> stateAction = actionsToExplore.get(i);
+            System.out.println(i + ": " + stateAction.state.toString() + " | " + stateAction.action.toString());
         }
     }
 

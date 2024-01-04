@@ -1,18 +1,10 @@
 package MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking;
 
-import MTSTools.ac.ic.doc.commons.collections.BidirectionalMap;
-import MTSTools.ac.ic.doc.commons.collections.InitMap;
 import MTSTools.ac.ic.doc.commons.relations.Pair;
-import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.abstraction.*;
 
 import java.util.*;
-import java.util.logging.ConsoleHandler;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
-import static java.util.Collections.emptyList;
-
-public class RandomExplorationHeuristic<State, Action>  implements ExplorationHeuristic<State, Action>  {
+public class InteractiveExplorationHeuristic<State, Action> implements ExplorationHeuristic<State, Action> {
     public LinkedList<Pair<Compostate<State, Action>, HAction<Action>>> explorationFrontier;
     public ArrayList<ActionWithFeatures<State, Action>> actionsToExplore;
 
@@ -25,12 +17,14 @@ public class RandomExplorationHeuristic<State, Action>  implements ExplorationHe
     public Compostate<State, Action> lastExpandedFrom = null;
     public ActionWithFeatures<State, Action> lastExpandedStateAction = null;
 
-    public Random random;
+    public DirectedControllerSynthesisBlocking dcs;
+    public Scanner scaner;
 
-    public RandomExplorationHeuristic() {
+    public InteractiveExplorationHeuristic(DirectedControllerSynthesisBlocking dcs) {
         this.explorationFrontier = new LinkedList<>();
         this.actionsToExplore = new ArrayList<>();
-        this.random = new Random();
+        this.dcs = dcs;
+        this.scaner = new Scanner(System.in);
     }
 
     public void setLastExpandedStateAction(ActionWithFeatures<State, Action> stateAction){
@@ -68,16 +62,32 @@ public class RandomExplorationHeuristic<State, Action>  implements ExplorationHe
     }
 
     public int getNextActionIndex() {
-        return random.nextInt(actionsToExplore.size());
+        int idx = -1;
+        while(idx == -1) {
+            System.out.println("Enter a number between 0 and " + (actionsToExplore.size()-1));
+            try {
+                String data = scaner.nextLine();
+                idx = Integer.valueOf(data);
+
+                if(!(idx >= 0 && idx < actionsToExplore.size())){
+                    throw new Exception();
+                }
+
+            } catch (Exception e) {
+                System.out.println("Incorrect number");
+                idx = -1;
+            }
+        }
+
+        return idx;
     }
 
     public ArrayList<Integer> getOrder(){
+        // TODO: Completar esta funcion
+
         ArrayList<Integer> res = new ArrayList<>();
-        for(int i=0 ; i<explorationFrontier.size() ; i++){
-            res.add(i);
-        }
-        Collections.shuffle(res);
         return res;
+
     }
 
     public ActionWithFeatures<State, Action> removeFromFrontier(int idx) {
@@ -181,8 +191,9 @@ public class RandomExplorationHeuristic<State, Action>  implements ExplorationHe
 
     public void printFrontier(){
         System.out.println("Frontier: ");
-        for(ActionWithFeatures<State, Action> stateAction : actionsToExplore){
-            System.out.println(new StringBuilder(stateAction.state.toString() + " | " + stateAction.action.toString()));
+        for(int i = 0 ; i<actionsToExplore.size() ; i++){
+            ActionWithFeatures<State, Action> stateAction = actionsToExplore.get(i);
+            System.out.println(i + ": " + stateAction.state.toString() + " | " + stateAction.action.toString());
         }
     }
 

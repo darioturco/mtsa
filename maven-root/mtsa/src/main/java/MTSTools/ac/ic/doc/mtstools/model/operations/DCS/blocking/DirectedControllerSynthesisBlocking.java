@@ -174,15 +174,17 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
 
     public ExplorationHeuristic<State, Action> getHeuristic(HeuristicMode heuristicMode){
         if(heuristicMode == HeuristicMode.Interactive){
-            // return new InteractiveExplorationHeuristic<>(this);
+            return new InteractiveExplorationHeuristic<>(this);
         } else if(heuristicMode == HeuristicMode.BFS) {
             return new FrontierListExplorationHeuristic<>();
         } else if(heuristicMode == HeuristicMode.Random) {
-            //return new RandomExplorationHeuristic<>();
+            return new RandomExplorationHeuristic<>();
         } else if(heuristicMode == HeuristicMode.Debugging) {
             return new LexicographicExplorationHeuristic<>();
         } else if(heuristicMode == HeuristicMode.Complete) {
             return new CompleteExplorationHeuristic<>(this);
+        } else if(heuristicMode == HeuristicMode.CMHeuristic) {
+            return new CatAndMouseExplorationHeuristic<>();
         }
         return new OpenSetExplorationHeuristic<>(this, heuristicMode);
     }
