@@ -189,12 +189,13 @@ public class DCSForPython {
         }*/
 
 
-        String instance = "CM";
+        String instance = "DP";
 
         //String FSP_path = "/home/dario/Documents/Tesis/mtsa/maven-root/mtsa/target/test-classes/Blocking/ControllableFSPs/GR1test1.lts"; // Falla porque tiene guiones
         //String FSP_path = "F:\\UBA\\Tesis\\mtsa\\maven-root\\mtsa\\target\\test-classes\\Blocking\\ControllableFSPs\\GR1Test43.lts";
         //String FSP_path = "F:\\UBA\\Tesis\\mtsa\\maven-root\\mtsa\\target\\test-classes\\Blocking\\NoControllableFSPs\\GR1Test11.lts";
         String FSP_path = "F:\\UBA\\Tesis\\mtsa\\MTSApy\\fsp\\" + instance + "\\" + instance + "-2-2.fsp";
+        //String FSP_path = "F:\\UBA\\Tesis\\mtsa\\MTSApy\\fsp\\Syntetic\\instance1.fsp";
         //String FSP_path = "/home/dario/Documents/Tesis/Learning-Synthesis/fsp/Blocking/ControllableFSPs/GR1Test10.lts";
         //String FSP_path = "/home/dario/Documents/Tesis/Learning-Synthesis/fsp/DP/DP-2-2.fsp";
 

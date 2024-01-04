@@ -177,8 +177,7 @@ class CompositionAnalyzer:
 
     def marked_state(self, transition):
         """Whether s and s ′ ∈ M E p ."""
-        # Le falta una feature a esta funcion (deberia devolver una lista de 2 elementos)
-        return [float(transition.childMarked)]
+        return [float(transition.state.isMarked()), float(transition.childMarked)]
 
     def current_phase(self, transition):
         return [float(self.composition.javaEnv.dcs.heuristic.goals_found > 0),
@@ -213,7 +212,8 @@ class CompositionAnalyzer:
         return [float(transition.child is not None and len(transition.child.getTransitions()) == 0)]
 
     def isLastExpanded(self, transition):
-        return [float(self.composition.getLastExpanded() == transition)]
+        #return [float(self.composition.getLastExpanded() == transition)]
+        return [float(transition.state == transition.dcs.heuristic.lastExpandedTo), float(transition.state == transition.dcs.heuristic.lastExpandedFrom)]
 
     def remove_indices(self, transition_label: str):
         res = ""

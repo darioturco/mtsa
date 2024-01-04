@@ -5,8 +5,11 @@ import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.Compostate;
 import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.HAction;
 
 import java.util.ArrayList;
+import java.util.Set;
 
 public interface ExplorationHeuristic<State, Action> {
+
+    int currentTargetLTSIndex = 0;
 
     void setLastExpandedStateAction(ActionWithFeatures<State, Action> stateAction);
 
@@ -31,6 +34,8 @@ public interface ExplorationHeuristic<State, Action> {
     void notifyExpandingState(Compostate<State, Action> state, HAction<Action> action, Compostate<State, Action> child);
 
     void notifyStateIsNone(Compostate<State, Action> state);
+
+    void notifyClosedPotentiallyWinningLoop(Set<Compostate<State, Action>> loop);
 
     void notifyStateSetErrorOrGoal(Compostate<State, Action> state);
 

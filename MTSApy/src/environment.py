@@ -83,7 +83,7 @@ class FeatureEnvironment(object):
 
 
     def reset(self, new_composition=None):
-        state = self.env.reset()
+        state = self.env.reset(new_composition)
         return self.env.actions_to_features(state)
         #return self.env.actions_to_features(state), False
 

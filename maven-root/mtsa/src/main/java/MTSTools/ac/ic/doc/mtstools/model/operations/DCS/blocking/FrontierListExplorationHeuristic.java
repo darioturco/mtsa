@@ -2,10 +2,7 @@ package MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking;
 
 import MTSTools.ac.ic.doc.commons.relations.Pair;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 
 /** Exploration heuristic with minimal behavior */
 public class FrontierListExplorationHeuristic<State, Action> implements ExplorationHeuristic<State, Action> {
@@ -124,7 +121,6 @@ public class FrontierListExplorationHeuristic<State, Action> implements Explorat
         }
     }
 
-
     public void addTransitionsToFrontier(Compostate<State, Action> state) {
         updateState(state);
         for (HAction<Action> action : state.transitions){
@@ -147,6 +143,9 @@ public class FrontierListExplorationHeuristic<State, Action> implements Explorat
 
     }
 
+    public void notifyClosedPotentiallyWinningLoop(Set<Compostate<State, Action>> loop) {
+        closed_potentially_winning_loops++;
+    }
 
     public void notifyStateIsNone(Compostate<State, Action> state) {
 

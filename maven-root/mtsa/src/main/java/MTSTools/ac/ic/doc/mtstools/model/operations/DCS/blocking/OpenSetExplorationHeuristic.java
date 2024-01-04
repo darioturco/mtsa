@@ -430,6 +430,10 @@ public class OpenSetExplorationHeuristic<State, Action> implements ExplorationHe
         }
     }
 
+    public void notifyClosedPotentiallyWinningLoop(Set<Compostate<State, Action>> loop) {
+        closed_potentially_winning_loops++;
+    }
+
     public boolean fullyExplored(Compostate<State, Action> state) {
         return (state.getExploredActions().size() + state.getDiscardedActions().size()) >= state.transitions.size();
         //return (state.getExploredActions().size()) >= state.transitions.size();

@@ -544,6 +544,7 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
     private Set<Compostate<State, Action>> findNewGoals() {
         logger.finest("we are gatheringGoals with c: " + loop.toString());
         statistics.incFindNewGoalsCalls();
+        heuristic.notifyClosedPotentiallyWinningLoop(loop);
 
         Set<Compostate<State, Action>> newGoals = tripleFixPoint(loop, true, false);
         logger.finest("newGoals: " + newGoals.toString());

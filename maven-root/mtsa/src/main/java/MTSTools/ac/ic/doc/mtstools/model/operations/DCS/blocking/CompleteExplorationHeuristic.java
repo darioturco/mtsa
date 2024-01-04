@@ -50,7 +50,6 @@ public class CompleteExplorationHeuristic<State, Action> implements ExplorationH
     public ArrayList<ActionWithFeatures<State, Action>> actionsToExplore;
     public ArrayList<Compostate<State, Action>> allActionsToExplore;
 
-    //// Update this values
     public int goals_found = 0;
     public int marked_states_found = 0;
     public int closed_potentially_winning_loops = 0;
@@ -291,6 +290,10 @@ public class CompleteExplorationHeuristic<State, Action> implements ExplorationH
         }
     }
 
+    public void notifyClosedPotentiallyWinningLoop(Set<Compostate<State, Action>> loop) {
+        closed_potentially_winning_loops ++;
+    }
+
     public void setInitialState(Compostate<State, Action> state) {
         newState(state, null);
         addToAllFrontier(state);
@@ -305,7 +308,11 @@ public class CompleteExplorationHeuristic<State, Action> implements ExplorationH
         if(parent != null){
             state.setTargets(parent.getTargets());
         }
+
         state.addTargets(state); //we always call addTargets, if the state is not marked, it will not be added to any list
+        if(state.isMarked()) {
+            marked_states_found++;
+        }
 
         for (Abstraction<State,Action> abstraction : abstractions.values()) {
             abstraction.eval(state);
@@ -378,6 +385,9 @@ public class CompleteExplorationHeuristic<State, Action> implements ExplorationH
     public void notifyStateSetErrorOrGoal(Compostate<State, Action> state) {
         state.close();
         state.clearRecommendations();
+        if(state.isStatus(Status.GOAL)){
+            goals_found++;
+        }
     }
 
     public void notifyExpandingState(Compostate<State, Action> parent, HAction<Action> action, Compostate<State, Action> state) {

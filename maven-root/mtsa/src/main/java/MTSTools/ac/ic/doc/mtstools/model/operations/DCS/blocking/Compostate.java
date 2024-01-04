@@ -237,6 +237,12 @@ public class Compostate<State, Action> implements Comparable<Compostate<State, A
         return this.status == status;
     }
 
+    /** Indicates whether this state is marked by guarantee. */
+    public boolean isMarked(){
+        return markedByGuarantee.contains(dcs.heuristic.currentTargetLTSIndex);
+        //return false;
+    }
+
     public void setLoopID(Integer loopID){
         this.loopID = loopID;
     }

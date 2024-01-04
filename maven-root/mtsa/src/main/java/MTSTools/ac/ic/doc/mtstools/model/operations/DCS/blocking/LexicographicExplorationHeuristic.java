@@ -155,6 +155,10 @@ public class LexicographicExplorationHeuristic<State, Action> implements Explora
     public void notifyStateIsNone(Compostate<State, Action> state) {
     }
 
+    public void notifyClosedPotentiallyWinningLoop(Set<Compostate<State, Action>> loop) {
+        closed_potentially_winning_loops++;
+    }
+
     public void notifyStateSetErrorOrGoal(Compostate<State, Action> state) {
     }
 
