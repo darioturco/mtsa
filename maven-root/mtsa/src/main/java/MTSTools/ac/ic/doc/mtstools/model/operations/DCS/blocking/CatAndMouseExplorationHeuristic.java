@@ -17,12 +17,17 @@ public class CatAndMouseExplorationHeuristic<State, Action> implements Explorati
     public Compostate<State, Action> lastExpandedFrom = null;
     public ActionWithFeatures<State, Action> lastExpandedStateAction = null;
 
-    int n = 2;
-    int k = 5; // TODO: change this hardcored value
+    public DirectedControllerSynthesisBlocking<State,Action> dcs;
 
-    public CatAndMouseExplorationHeuristic() {
+    int n;
+    int k;
+
+    public CatAndMouseExplorationHeuristic(DirectedControllerSynthesisBlocking<State,Action> dcs) {
         this.explorationFrontier = new LinkedList<>();
         this.actionsToExplore = new ArrayList<>();
+        this.dcs = dcs;
+        this.n = dcs.n;
+        this.k = dcs.k;
     }
 
     public void setLastExpandedStateAction(ActionWithFeatures<State, Action> stateAction) {
@@ -70,10 +75,6 @@ public class CatAndMouseExplorationHeuristic<State, Action> implements Explorati
         int idx = 0;
         int peso = 0;
         int position = -1;
-
-
-
-
 
         for(int i=actionsToExplore.size()-1;i>=0;i--){
 
@@ -192,6 +193,10 @@ public class CatAndMouseExplorationHeuristic<State, Action> implements Explorati
 
     public void notifyStateIsNone(Compostate<State, Action> state) {
 
+    }
+
+    public void notifyClosedPotentiallyWinningLoop(Set<Compostate<State, Action>> loop) {
+        closed_potentially_winning_loops++;
     }
 
     public void notifyStateSetErrorOrGoal(Compostate<State, Action> state) {

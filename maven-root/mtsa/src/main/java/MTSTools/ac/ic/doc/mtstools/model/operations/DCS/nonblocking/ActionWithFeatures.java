@@ -10,6 +10,7 @@ public class ActionWithFeatures<State, Action> {
     List<State> childStates;
     FeatureBasedExplorationHeuristic<State, Action> heuristic;
     boolean childMarked;
+    int n;
 
     float[] feature_vector;
 

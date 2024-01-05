@@ -168,6 +168,10 @@ public class InteractiveExplorationHeuristic<State, Action> implements Explorati
 
     }
 
+    public void notifyClosedPotentiallyWinningLoop(Set<Compostate<State, Action>> loop) {
+        closed_potentially_winning_loops ++;
+    }
+
     public void notifyStateSetErrorOrGoal(Compostate<State, Action> state) {
 
     }

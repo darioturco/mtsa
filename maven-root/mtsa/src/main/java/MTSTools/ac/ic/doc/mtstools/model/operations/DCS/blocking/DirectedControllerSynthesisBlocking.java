@@ -110,8 +110,9 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
     /** When syntetize, save all the pair State, Action  that were expand */
     public List<Pair<Compostate<State, Action>, HAction<Action>>> synthesizeTrace;
 
-    /** Object that recopile information about the instance that this DCS solves */
-    public InstanceAnalyzer analyzer;
+    public int n=-1;
+    public int k=-1;
+    public String instance="";
 
     public void setupSynthesis(List<LTS<State, Action>> ltss,
                                Set<Action> controllable,
@@ -138,8 +139,7 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
 
         statistics.clear();
         statistics.start();
-
-        analyzer = new InstanceAnalyzer(this);
+        
         compostates = new HashMap<>();
         transitions = new ArrayDeque<>(ltss.size());
         visited = new HashSet<>();
@@ -184,7 +184,7 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
         } else if(heuristicMode == HeuristicMode.Complete) {
             return new CompleteExplorationHeuristic<>(this);
         } else if(heuristicMode == HeuristicMode.CMHeuristic) {
-            return new CatAndMouseExplorationHeuristic<>();
+            return new CatAndMouseExplorationHeuristic<>(this);
         }
         return new OpenSetExplorationHeuristic<>(this, heuristicMode);
     }
@@ -336,6 +336,22 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
         return true;
     }
 
+    public void load_data(String path){
+        try{
+            String subPath = path.split("-")[0];
+            int l = subPath.length();
+            instance = path.split("-")[0].substring(l-2, l);
+
+            Scanner s = new Scanner(path).useDelimiter("[^\\d]+");
+            n = s.nextInt();
+            k = s.nextInt();
+        }catch(Exception e){
+            instance = "";
+            n = -1;
+            k = -1;
+        }
+    }
+
     /** Creates the controller's initial state. */
     private Compostate<State, Action> buildInitialState() {
         List<State> states = new ArrayList<>(ltss.size());
@@ -356,6 +372,7 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
      *  Internally this populates the transitions and expanded lists. */
     Compostate<State, Action> expand(Compostate<State, Action> compostate, HAction<Action> action) {
         Compostate<State, Action> childCompostate = buildCompostate(getChildStates(compostate, action), compostate);
+        childCompostate.updateMissions(compostate, action);
         statistics.incExpandedTransitions();
         compostate.addChild(action, childCompostate);
         childCompostate.addParent(action, compostate);

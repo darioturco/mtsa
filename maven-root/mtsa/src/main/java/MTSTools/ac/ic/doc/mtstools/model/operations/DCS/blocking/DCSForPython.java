@@ -85,9 +85,8 @@ public class DCSForPython {
         this.dcs = dcs;
 
         this.heuristic = this.dcs.getHeuristic(this.heuristicMode);
-
         this.dcs.heuristic = this.heuristic;
-
+        this.dcs.load_data(path);
         this.dcs.setupInitialState();
         this.heuristic.filterFrontier();
         this.started_synthesis = true;
@@ -189,14 +188,14 @@ public class DCSForPython {
         }*/
 
 
-        String instance = "CM";
+        String instance = "BW";
 
         //String FSP_path = "/home/dario/Documents/Tesis/mtsa/maven-root/mtsa/target/test-classes/Blocking/ControllableFSPs/GR1test1.lts"; // Falla porque tiene guiones
         //String FSP_path = "F:\\UBA\\Tesis\\mtsa\\maven-root\\mtsa\\target\\test-classes\\Blocking\\ControllableFSPs\\GR1Test43.lts";
         //String FSP_path = "F:\\UBA\\Tesis\\mtsa\\maven-root\\mtsa\\target\\test-classes\\Blocking\\NoControllableFSPs\\GR1Test11.lts";
-        //String FSP_path = "F:\\UBA\\Tesis\\mtsa\\MTSApy\\fsp\\" + instance + "\\" + instance + "-2-2.fsp";
+        String FSP_path = "F:\\UBA\\Tesis\\mtsa\\MTSApy\\fsp\\" + instance + "\\" + instance + "-2-2.fsp";
         //String FSP_path = "/home/dario/Documents/Tesis/Learning-Synthesis/fsp/Blocking/ControllableFSPs/GR1Test10.lts";
-        String FSP_path = "/home/dario/Documents/Tesis/mtsa/MTSApy/fsp/CM/CM-2-5.fsp";
+        //String FSP_path = "/home/dario/Documents/Tesis/mtsa/MTSApy/fsp/CM/CM-2-2.fsp";
 
         //String heuristicMode = "Ready";
         String heuristicMode = "Complete";
@@ -207,12 +206,12 @@ public class DCSForPython {
         //String heuristicMode = "CMHeuristic";
         DCSForPython env = new DCSForPython(heuristicMode);
         env.startSynthesis(FSP_path);
-        env.dcs.analyzer.setInstance(instance, 2, 2);
-        env.dcs.analyzer.printInformation();
+
+        //env.dcs.analyzer.printInformation();
 
         Random rand = new Random();
         //List<Integer> list = Arrays.asList(1, 1, 2); // Lista para la intancia 11 No Controlable
-        List<Integer> list = new ArrayList();
+        List<Integer> list = Arrays.asList();
         int idx = 0;
         int i = 0;
 

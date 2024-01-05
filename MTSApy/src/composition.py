@@ -36,7 +36,7 @@ class CompositionGraph(nx.DiGraph):
 
     def __init__(self, problem, n, k, fsp_path):
         super().__init__()
-        self._problem, self._n, self._k = problem, n, k
+        self.problem, self.n, self.k = problem, n, k
         self._fsp_path = fsp_path
         self._initial_state = None
         self._frontier = []
@@ -48,15 +48,15 @@ class CompositionGraph(nx.DiGraph):
         self.javaEnv = None
 
     def reset_from_copy(self):
-        return self.__class__(self._problem, self._n, self._k, self._fsp_path).start_composition()
+        return self.__class__(self.problem, self.n, self.k, self._fsp_path).start_composition()
 
     def start_composition(self):
         assert (self._initial_state is None)
         self._started = True
-        if self._problem == "Custom":
+        if self.problem == "Custom":
             problem_path = self._fsp_path
         else:
-            problem_path = f"{self._fsp_path}/{self._problem}/{self._problem}-{self._n}-{self._k}.fsp"
+            problem_path = f"{self._fsp_path}/{self.problem}/{self.problem}-{self.n}-{self.k}.fsp"
 
         # self.auxiliar_heuristic = "BFS"
         # self.auxiliar_heuristic = "Debugging"
@@ -118,7 +118,7 @@ class CompositionGraph(nx.DiGraph):
         return self.javaEnv.isFinished()
 
     def get_info(self):
-        return {"problem": self._problem, "n": self._n, "k": self._k}
+        return {"problem": self.problem, "n": self.n, "k": self.k}
 
 
 class CompositionAnalyzer:
@@ -140,6 +140,13 @@ class CompositionAnalyzer:
         self._feature_methods = [self.event_label_feature, self.state_label_feature, self.controllable, self.marked_state,
                                  self.current_phase, self.child_node_state, self.uncontrollable_neighborhood,
                                  self.explored_state_child, self.isLastExpanded, self.child_dealdlock]
+
+        self._feature_methods += self.features_ofinstance()
+
+    def features_ofinstance(self):
+        if self.composition.problem == "DP":
+            
+        return []
 
     def test_features_on_transition(self, transition):
         res = []
