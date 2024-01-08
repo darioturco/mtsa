@@ -138,9 +138,9 @@ class Experiment(object):
                 "batch_size": 10,
 
                 ### Miscellaneous
-                'freq_save': 50,
+                'freq_save': 20, # 50 # Usar 20 con CM
                 'seconds': None,
-                'max_steps': 400000,    # None
+                'max_steps': 500000,    # None
                 "max_eps": 12000
 
                 }
@@ -209,7 +209,7 @@ class TrainSmallInstanceCheckBigInstance(Experiment):
     def __init__(self, name="Test"):
         super().__init__(name)
 
-    def train(self, instance, n_train, k_train, n_test, k_test, use_saved_agent=False, reward_shaping=False):
+    def train(self, instance, n_train, k_train, use_saved_agent=False, reward_shaping=False):
         path = self.get_fsp_path()
         env = self.get_environment(instance, n_train, k_train, path, reward_shaping)
 
@@ -231,16 +231,16 @@ class TrainSmallInstanceCheckBigInstance(Experiment):
             print(f"Trained in instance: {instance} {n_train}-{k_train}\n")
             DQN.save(dqn_agent, pth_path)
 
-        env.reset(CompositionGraph(instance, n_test, k_test, path).start_composition())
-        random_agent = RandomAgent()
+        #env.reset(CompositionGraph(instance, n_test, k_test, path).start_composition())
+        #random_agent = RandomAgent()
 
-        print(f"Runing Random Agent in instance: {instance} {n_test}-{k_test}")
-        res = self.run_instance(env, random_agent)
-        self.print_res("Random Agent: ", res)
+        #print(f"Runing Random Agent in instance: {instance} {n_test}-{k_test}")
+        #res = self.run_instance(env, random_agent)
+        #self.print_res("Random Agent: ", res)
 
-        print(f"Runing DQN Agent in instance: {instance} {n_test}-{k_test}")
-        res = self.run_instance(env, dqn_agent)
-        self.print_res("DQN Agent: ", res)
+        #print(f"Runing DQN Agent in instance: {instance} {n_test}-{k_test}")
+        #res = self.run_instance(env, dqn_agent)
+        #self.print_res("DQN Agent: ", res)
 
     def curriculum_train(self, instance, train_args):
         path = self.get_fsp_path()

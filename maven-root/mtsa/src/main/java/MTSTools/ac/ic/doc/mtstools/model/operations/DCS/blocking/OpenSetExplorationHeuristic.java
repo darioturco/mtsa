@@ -118,7 +118,7 @@ public class OpenSetExplorationHeuristic<State, Action> implements ExplorationHe
     }
 
     /*this assumes updateOpen was called just before, so getNextState returns an action that was not previously explored*/
-    public Pair<Compostate<State,Action>, HAction<Action>> getNextAction() {
+    public Pair<Compostate<State,Action>, HAction<Action>> getNextAction(boolean updateUnexploredTransaction) {
         assert(!opens.get(currentTargetLTSIndex).isEmpty());
         Compostate<State,Action> state = getNextState(currentTargetLTSIndex);
         Recommendation<Action> recommendation = state.nextRecommendation(currentTargetLTSIndex);
@@ -129,9 +129,9 @@ public class OpenSetExplorationHeuristic<State, Action> implements ExplorationHe
     }
 
     public int getNextActionIndex() {
-        int res = getIndexOfStateAction(getNextAction());
+        int res = getIndexOfStateAction(getNextAction(true));
         while(res == -1){
-            res = getIndexOfStateAction(getNextAction());
+            res = getIndexOfStateAction(getNextAction(true));
         }
         return res;
     }
@@ -372,7 +372,7 @@ public class OpenSetExplorationHeuristic<State, Action> implements ExplorationHe
 
         if (!allActionsToExplore.contains(state) && state.isStatus(Status.NONE)){
             allActionsToExplore.add(state);
-            addTransitionsToFrontier(state);
+            addTransitionsToFrontier(state, parent);
         }
     }
 
@@ -397,10 +397,10 @@ public class OpenSetExplorationHeuristic<State, Action> implements ExplorationHe
         }
     }
 
-    public void addTransitionsToFrontier(Compostate<State, Action> state) {
+    public void addTransitionsToFrontier(Compostate<State, Action> state, Compostate<State, Action> parent) {
         updateState(state);
         for (HAction<Action> action : state.transitions) {
-            actionsToExplore.add(new ActionWithFeatures<>(state, action));
+            actionsToExplore.add(new ActionWithFeatures<>(state, action, parent));
         }
     }
 

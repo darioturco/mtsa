@@ -4,19 +4,21 @@ import numpy as np
 import seaborn as sn
 
 OUTPUT_FOLDER = "./results/plots/"
-BENCHMARK_PROBLEMS = ["AT", "BW", "DP", "TA", "TL", "CM"]
+#BENCHMARK_PROBLEMS = ["AT", "BW", "DP", "TA", "TL", "CM"]
 #BENCHMARK_PROBLEMS = ["AT", "BW", "TA", "TL", "CM"]
-#BENCHMARK_PROBLEMS = ["TA"]
+BENCHMARK_PROBLEMS = ["DP"]
 
-def graph_individual_training_process(sliding_window=5, save_path=None, use_steps=False):
+def graph_individual_training_process(sliding_window=5, save_path=None, use_steps=False, problems=None, graph_loss=False):
     #random_data = pd.read_csv("./results/csv/random budget=5000 repetitions=100.csv")
     random_data = pd.read_csv("./results/csv/random.csv")
     ra_data = pd.read_csv("./results/csv/Ready Abstraction.csv")
     limit = 1200000
-    graph_loss = True
 
-    for instance in BENCHMARK_PROBLEMS:
-        rl_path = f"./results/training/{instance}-2-2-partial1.csv"
+    if problems is None:
+        problems = BENCHMARK_PROBLEMS
+
+    for instance in problems:
+        rl_path = f"./results/training/{instance}-2-2-partial.csv"
         rewards, episodes, steps, rewards_win, losses = get_info_of_instance(rl_path, sliding_window, limit)
 
         random_mean = -int(random_data[(random_data["Instance"] == instance) & (random_data["N"] == 2) & (random_data["K"] == 2)]["Transitions (mean)"])
@@ -55,8 +57,8 @@ def get_info_of_instance(rl_path, sliding_window, limit):
     data_instance = pd.read_csv(rl_path, names=['Step', "Reward", "Loss"])
     rewards = list(data_instance["Reward"])
     episodes = range(len(rewards) - sliding_window)
-    steps = [sum(rewards[:eps]) for eps in range(len(episodes))]
-    rewards_win = [-np.mean(rewards[eps: eps + sliding_window]) for eps in episodes]
+    steps = [-sum(rewards[:eps]) for eps in range(len(episodes))]
+    rewards_win = [np.mean(rewards[eps: eps + sliding_window]) for eps in episodes]
     losses = [np.mean(data_instance["Loss"][eps: eps + sliding_window]) for eps in range(len(episodes))]
     return rewards[:limit], episodes[:limit], steps[:limit], rewards_win[:limit], losses[:limit]
 
@@ -178,19 +180,19 @@ def comparative_bar_plot(data=None):
 
 if __name__ == "__main__":
     print("Plotting...")
-    #graph_individual_training_process(sliding_window=500, save_path='./results/plots', use_steps=True)
-    #graph_individual_training_process(sliding_window=500, save_path=None, use_steps=True)
+    #graph_individual_training_process(sliding_window=500, save_path='./results/plots', use_steps=True, problems=BENCHMARK_PROBLEMS)
+    graph_individual_training_process(sliding_window=500, save_path=None, use_steps=True, problems=["TL"])
 
     #graph_training_process(sliding_window=500, repetitions=5, save_path='./results/plots', use_steps=True)
 
 
-    comparative_bar_plot(data={"Random": {"AT": 23, "BW": 21, "DP": 42, "TA": 42, "TL": 129, "CM": 0},
-                               "2-2": {"AT": 50, "BW": 65, "DP": 121, "TA": 70, "TL": 196, "CM": 0},
-                               "3-3": {"AT": 49, "BW": 44, "DP": 126, "TA": 69, "TL": 196, "CM": 0},
-                               "dCL": {"AT": 43, "BW": 45, "DP": 126, "TA": 68, "TL": 196, "CM": 0},
-                               "kCL": {"AT": 64, "BW": 39, "DP": 112, "TA": 83, "TL": 196, "CM": 0},
-                               "RA": {"AT": 81, "BW": 28, "DP": 122, "TA": 42, "TL": 196, "CM": 0},
-                               "RA Mejora": {"AT": 57, "BW": 121, "DP": 140, "TA": 70, "TL": 196, "CM": 0}})
+    #comparative_bar_plot(data={"Random": {"AT": 23, "BW": 21, "DP": 42, "TA": 42, "TL": 129, "CM": 0},
+     #                          "2-2": {"AT": 50, "BW": 65, "DP": 121, "TA": 70, "TL": 196, "CM": 0},
+     #                          "3-3": {"AT": 49, "BW": 44, "DP": 126, "TA": 69, "TL": 196, "CM": 0},
+     #                          "dCL": {"AT": 43, "BW": 45, "DP": 126, "TA": 68, "TL": 196, "CM": 0},
+     #                          "kCL": {"AT": 64, "BW": 39, "DP": 112, "TA": 83, "TL": 196, "CM": 0},
+     #                          "RA": {"AT": 81, "BW": 28, "DP": 122, "TA": 42, "TL": 196, "CM": 0},
+      #                         "RA Mejora": {"AT": 57, "BW": 121, "DP": 140, "TA": 70, "TL": 196, "CM": 0}})
 
 
 

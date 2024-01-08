@@ -139,14 +139,19 @@ class CompositionAnalyzer:
         self._fast_no_indices_alphabet_dict = bidict(self._fast_no_indices_alphabet_dict)
         self._feature_methods = [self.event_label_feature, self.state_label_feature, self.controllable, self.marked_state,
                                  self.current_phase, self.child_node_state, self.uncontrollable_neighborhood,
-                                 self.explored_state_child, self.isLastExpanded, self.child_dealdlock]
+                                 self.explored_state_child, self.isLastExpanded, self.child_dealdlock, self.mission_feature]
 
-        self._feature_methods += self.features_ofinstance()
+        #self._feature_methods += self.features_ofinstance()
+
+
 
     def features_ofinstance(self):
         if self.composition.problem == "DP":
-            
+            return [1.0]
         return []
+
+    def mission_feature(self, transition):
+        return [float(transition.missionComplete)]
 
     def test_features_on_transition(self, transition):
         res = []

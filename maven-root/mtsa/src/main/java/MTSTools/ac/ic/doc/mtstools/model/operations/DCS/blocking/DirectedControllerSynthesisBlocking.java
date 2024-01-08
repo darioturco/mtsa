@@ -110,8 +110,8 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
     /** When syntetize, save all the pair State, Action  that were expand */
     public List<Pair<Compostate<State, Action>, HAction<Action>>> synthesizeTrace;
 
-    public int n=-1;
-    public int k=-1;
+    public int n=0;
+    public int k=0;
     public String instance="";
 
     public void setupSynthesis(List<LTS<State, Action>> ltss,
@@ -217,7 +217,7 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
 
         int t = 0;
         while (!isFinished() && heuristic.somethingLeftToExplore()) {
-            Pair<Compostate<State, Action>, HAction<Action>> stateAction = heuristic.getNextAction();
+            Pair<Compostate<State, Action>, HAction<Action>> stateAction = heuristic.getNextAction(true);
             Compostate<State, Action> child = expand(stateAction.getFirst(), stateAction.getSecond());
             heuristic.expansionDone(stateAction.getFirst(), stateAction.getSecond(), child);
             synthesizeTrace.add(stateAction);
@@ -347,8 +347,8 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
             k = s.nextInt();
         }catch(Exception e){
             instance = "";
-            n = -1;
-            k = -1;
+            n = 0;
+            k = 0;
         }
     }
 
@@ -371,8 +371,9 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
     /** Expands a state following a given recommendation from a parent compostate.
      *  Internally this populates the transitions and expanded lists. */
     Compostate<State, Action> expand(Compostate<State, Action> compostate, HAction<Action> action) {
+        compostate.missionVector = compostate.missionsCompletes.get(action);
         Compostate<State, Action> childCompostate = buildCompostate(getChildStates(compostate, action), compostate);
-        childCompostate.updateMissions(compostate, action);
+        //childCompostate.updateMissions(compostate, action);
         statistics.incExpandedTransitions();
         compostate.addChild(action, childCompostate);
         childCompostate.addParent(action, compostate);
@@ -512,7 +513,7 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
 
         if(!heuristic.fullyExplored(v)){
             if(heuristic.hasUncontrollableUnexplored(v)){
-                hasUncontrollableToUnexplored = true;
+                hasUncontrollableToUnexplored = true; // En Ready pasa por aca
             } else{
                 hasControllableToUnexplored = true;
             }
@@ -947,6 +948,11 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
     private boolean forcedToError(Compostate<State, Action> state) {
         boolean existsActionLeadingToNoneOrGoal = false;
         boolean fullyExplored = heuristic.fullyExplored(state);
+
+        // TODO: Is not necesary to continue if fully Explored is false
+        //if(!heuristic.fullyExplored(state)){
+        //    return false;
+        //}
 
         for (Compostate<State, Action> child : state.getChildrenExploredThroughUncontrollable()){
             if(isError(child)){

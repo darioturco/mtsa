@@ -322,12 +322,19 @@ class DQN(Agent):
         """ Gets epsilon-greedy action using self.model """
         if env is None:
             env = self.env
+
+        #print(f"State FV: {s}\n - {len(s)}")
+        #env.composite. printFrontier()
+        #env.getJavaEnv().dcs.heuristic.printFrontier()
+
+        res = 0
         if np.random.rand() <= epsilon:
-            return np.random.randint(len(s))
+            res = np.random.randint(len(s))
         else:
-            #features = env.actions_to_features(s)
-            #return self.model.best(features)
-            return self.model.best(s)
+            res = self.model.best(s)
+
+        #print(f"Expanded: {res}")
+        return res
 
     def update(self, obs, action, reward, obs2):
         """ Gets epsilon-greedy action using self.model """

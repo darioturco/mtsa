@@ -6,9 +6,9 @@ FSP_PATH = "./fsp"
 BENCHMARK_PROBLEMS = ["AT", "BW", "DP", "TA", "TL", "CM"]
 
 if __name__ == "__main__":
-    instancia = "DP"
-    TrainSmallInstanceCheckBigInstance().train(instancia, 2, 2, 4, 4, use_saved_agent=False, reward_shaping=True)
-    #TestTrainedInAllInstances().pre_select(instancia, 2000, f"./results/models/{instancia}")
+    instancia = "CM"
+    TrainSmallInstanceCheckBigInstance().train(instancia, 2, 2, use_saved_agent=False, reward_shaping=False)
+    #TestTrainedInAllInstances().pre_select(instancia, 1000, f"./results/models/{instancia}/NFV")
 
 
 

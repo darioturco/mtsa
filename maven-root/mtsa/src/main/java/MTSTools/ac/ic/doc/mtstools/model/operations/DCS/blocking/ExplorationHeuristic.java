@@ -21,7 +21,7 @@ public interface ExplorationHeuristic<State, Action> {
 
     void expansionDone(Compostate<State, Action> first, HAction<Action> second, Compostate<State, Action> child);
 
-    Pair<Compostate<State,Action>, HAction<Action>> getNextAction();
+    Pair<Compostate<State,Action>, HAction<Action>> getNextAction(boolean updateUnexploredTransaction);
 
     ArrayList<Integer> getOrder();
 

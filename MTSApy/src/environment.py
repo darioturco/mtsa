@@ -23,6 +23,9 @@ class Environment:
     def get_context(self):
         return self.context
 
+    def getJavaEnv(self):
+        return self.context.composition.javaEnv
+
     def step(self, action_idx):
         composition_graph = self.context.composition
         if self.heuristic_reward:
@@ -106,6 +109,9 @@ class FeatureEnvironment(object):
 
     def get_nfeatures(self):
         return self.env.get_nfeatures()
+
+    def getJavaEnv(self):
+        return self.env.getJavaEnv()
 
 
 

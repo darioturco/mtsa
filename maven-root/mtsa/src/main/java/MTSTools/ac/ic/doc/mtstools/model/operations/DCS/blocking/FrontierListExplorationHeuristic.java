@@ -44,7 +44,7 @@ public class FrontierListExplorationHeuristic<State, Action> implements Explorat
         lastExpandedFrom = state;
     }
 
-    public Pair<Compostate<State, Action>, HAction<Action>> getNextAction() {
+    public Pair<Compostate<State, Action>, HAction<Action>> getNextAction(boolean updateUnexploredTransaction) {
         Pair<Compostate<State, Action>, HAction<Action>> stateAction = explorationFrontier.pop();
 
         while (!stateAction.getFirst().isStatus(Status.NONE)) {
@@ -121,11 +121,11 @@ public class FrontierListExplorationHeuristic<State, Action> implements Explorat
         }
     }
 
-    public void addTransitionsToFrontier(Compostate<State, Action> state) {
+    public void addTransitionsToFrontier(Compostate<State, Action> state, Compostate<State, Action> parent) {
         updateState(state);
         for (HAction<Action> action : state.transitions){
             explorationFrontier.add(new Pair<>(state, action));
-            actionsToExplore.add(new ActionWithFeatures<>(state,  action));
+            actionsToExplore.add(new ActionWithFeatures<>(state,  action, parent));
         }
     }
 
@@ -161,7 +161,7 @@ public class FrontierListExplorationHeuristic<State, Action> implements Explorat
 
     public void newState(Compostate<State, Action> state, Compostate<State, Action> parent) {
         if(state.isStatus(Status.NONE))
-            addTransitionsToFrontier(state);
+            addTransitionsToFrontier(state, parent);
     }
 
     public boolean fullyExplored(Compostate<State, Action> state) {

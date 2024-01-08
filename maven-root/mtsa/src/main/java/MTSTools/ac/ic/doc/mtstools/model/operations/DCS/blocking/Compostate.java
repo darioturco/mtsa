@@ -101,8 +101,8 @@ public class Compostate<State, Action> implements Comparable<Compostate<State, A
      * targets[i] are the targets to reach in the i-th LTS*/
     public List<Set<State>> targets = emptyList();
 
-    private final Set<HAction<Action>> discardedActions;
-    private final HashMap<Integer,Set<HAction<Action>>> discardedActionsByColor;
+    public final Set<HAction<Action>> discardedActions;
+    public final HashMap<Integer,Set<HAction<Action>>> discardedActionsByColor;
 
     private boolean cantWinByGuarantees = false;
 
@@ -133,7 +133,8 @@ public class Compostate<State, Action> implements Comparable<Compostate<State, A
 
     public Map<HAction<Action>, List<State>> actionChildStates;
 
-    public boolean[] missionsCompletes;
+    public Map<HAction<Action>, boolean[]> missionsCompletes;
+    public boolean[] missionVector;
 
     /** Constructor for a Composed State. */
     public Compostate(DirectedControllerSynthesisBlocking<State, Action> dcs, List<State> states) {
@@ -190,8 +191,7 @@ public class Compostate<State, Action> implements Comparable<Compostate<State, A
         this.transitions = buildTransitions();
         dcs.heuristic.initialize(this);
         this.uncontrollablesCount = countUncontrollables();
-
-        this.missionsCompletes = new boolean[dcs.n];
+        this.missionsCompletes = new HashMap<>();
     }
 
     /** Returns the states that conform this composed state. */
@@ -227,74 +227,6 @@ public class Compostate<State, Action> implements Comparable<Compostate<State, A
     /** Returns this state's status. */
     public Status getStatus() {
         return status;
-    }
-
-    public int getNumber(String label, int n){
-        String[] values = label.split("\\.");
-        for(String s : values){
-            if(s.matches("\\d*")){
-                n--;
-                if(n == 0){
-                    return Integer.parseInt(s);
-                }
-            }
-        }
-        return Integer.parseInt(values[1]);
-    }
-
-    public void updateMissions(Compostate<State, Action> parent, HAction<Action> action) {
-        if(parent != null){
-            missionsCompletes = Arrays.copyOf(parent.missionsCompletes, dcs.n);
-            String label = action.toString();
-
-            if(label.matches(".*\\d.*")){
-                int entity = getNumber(label, 1);
-
-                switch(dcs.instance){
-                    case "AT":
-                        if(entity == -3){
-                            missionsCompletes[entity] = true;
-                        }
-                        break;
-
-                    case "BW":
-                        if(entity == -3){
-                            missionsCompletes[entity] = true;
-                        }
-                        break;
-
-                    case "CM":
-                        if(label.contains("mouse") && label.contains("move")){
-                            int m = getNumber(label, 2);
-                            if(dcs.k == m){
-                                missionsCompletes[entity] = true;
-                            }
-                        }
-                        break;
-
-                    case "DP":
-                        if(label.contains("release")){
-                            missionsCompletes[entity] = true;
-                        }
-                        break;
-
-                    case "TA":
-                        if(entity == -3){
-                            missionsCompletes[entity] = true;
-                        }
-                        break;
-
-                    case "TL":
-                        if(entity == -1){
-                            missionsCompletes[entity] = true;
-                        }
-                        break;
-                }
-            }
-
-
-
-        }
     }
 
     /** Sets this state's status. */

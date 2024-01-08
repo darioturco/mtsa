@@ -93,18 +93,18 @@ public class CompleteExplorationHeuristic<State, Action> implements ExplorationH
     }
 
     // this assumes updateOpen was called just before, so getNextState returns an action that was not previously explored
-    public Pair<Compostate<State,Action>, HAction<Action>> getNextAction() {
+    public Pair<Compostate<State,Action>, HAction<Action>> getNextAction(boolean updateUnexploredTransaction) {
         assert(!frontiers.get(currentTargetLTSIndex).isEmpty());
-        Compostate<State,Action> state = getNextState(currentTargetLTSIndex);
+        Compostate<State,Action> state = getNextState(currentTargetLTSIndex, updateUnexploredTransaction);
         Recommendation<Action> recommendation = state.nextRecommendation(currentTargetLTSIndex);
         HAction<Action> action = recommendation.getAction();
         return new Pair<>(state, action);
     }
 
     public int getNextActionIndex() {
-        int res = getIndexOfStateAction(getNextAction());
+        int res = getIndexOfStateAction(getNextAction(true));
         while(res == -1){
-            res = getIndexOfStateAction(getNextAction());
+            res = getIndexOfStateAction(getNextAction(true));
         }
         return res;
     }
@@ -157,10 +157,12 @@ public class CompleteExplorationHeuristic<State, Action> implements ExplorationH
         return stateAction;
     }
 
-    public Compostate<State,Action> getNextState(Integer color) {
+    public Compostate<State,Action> getNextState(Integer color, boolean updateUnexploredTransaction) {
         removeNotLive(color);
         Compostate<State,Action> state = frontiers.get(color).remove();
         state.inOpen.put(color, false);
+        if(updateUnexploredTransaction)
+            state.unexploredTransitions--;
         return state;
     }
 
@@ -222,7 +224,7 @@ public class CompleteExplorationHeuristic<State, Action> implements ExplorationH
         while(true){
             while(state == null || fullyExplored(state) || !state.isLive() || state.cantWinColor(color)){
                 if(frontier.isEmpty()) return;
-                state = getNextState(color);
+                state = getNextState(color, false);
             }
             assert(state.isEvaluated(color));
 
@@ -238,8 +240,6 @@ public class CompleteExplorationHeuristic<State, Action> implements ExplorationH
                 }
                 if (state.peekRecommendation(color) != null) {
                     addToFrontier(color, state);
-                } else {
-                    System.out.println("CHECK! State was actually fullyExplored");
                 }
             }
             state = null; //we dont want to check the same state again
@@ -350,7 +350,7 @@ public class CompleteExplorationHeuristic<State, Action> implements ExplorationH
 
         if (!allActionsToExplore.contains(state) && state.isStatus(Status.NONE)){
             allActionsToExplore.add(state);
-            addTransitionsToFrontier(state);
+            addTransitionsToFrontier(state, parent);
         }
     }
 
@@ -375,10 +375,11 @@ public class CompleteExplorationHeuristic<State, Action> implements ExplorationH
         }
     }
 
-    public void addTransitionsToFrontier(Compostate<State, Action> state) {
+    public void addTransitionsToFrontier(Compostate<State, Action> state, Compostate<State, Action> parent) {
         updateState(state);
         for (HAction<Action> action : state.transitions) {
-            actionsToExplore.add(new ActionWithFeatures<>(state, action));
+            //state.updateMissions(parent, action);
+            actionsToExplore.add(new ActionWithFeatures<>(state, action, parent));
         }
     }
 
@@ -411,9 +412,7 @@ public class CompleteExplorationHeuristic<State, Action> implements ExplorationH
     }
 
     public boolean fullyExplored(Compostate<State, Action> state) {
-        return (state.getExploredActions().size() + state.getDiscardedActions().size()) >= state.transitions.size();
-        //return (state.getExploredActions().size()) >= state.transitions.size();
-        //puede ser que este cambio rompa casos si recommendation era null antes de ver todas las transiciones
+        return (state.getExploredActions().size()) >= state.transitions.size();
     }
     
     public boolean hasUncontrollableUnexplored(Compostate<State, Action> state) {
@@ -440,11 +439,12 @@ public class CompleteExplorationHeuristic<State, Action> implements ExplorationH
     public void printFrontier(){
         System.out.println("Frontier: ");
         for(ActionWithFeatures<State, Action> stateAction : actionsToExplore){
-            System.out.println(new StringBuilder(stateAction.state.toString() + " | " + stateAction.action.toString()));
+            System.out.println(stateAction.toString());
         }
     }
 
     public void initialize(Compostate<State, Action> state) {
+        state.unexploredTransitions = state.transitions.size();
         state.close();
         state.actionChildStates = new HashMap<>();
         for (Integer color : frontiers.keySet()) {
