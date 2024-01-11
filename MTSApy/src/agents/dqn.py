@@ -266,12 +266,6 @@ class DQN(Agent):
                 loss = self.model.current_loss()
                 losses.append(loss)
 
-                #sw = 16
-                #plt.plot([np.mean([losses[i:i+sw]]) for i in range(len(losses)-sw)])
-                #plt.draw()
-                #plt.pause(0.0001)
-                #plt.clf()
-
                 all_rewards.append(acumulated_reward)
                 all_expansions.append(expansion_steps)
                 print(f"Step: {self.steps} - Epsode: {self.eps} - Expansions: {expansion_steps} - Reward: {acumulated_reward} - Acumulated: {np.mean(all_rewards[-32:])} - Epsilon: {self.epsilon}")
@@ -318,6 +312,7 @@ class DQN(Agent):
 
         return obs.copy()
 
+    # TODO: Arreglar este desorden
     def get_action(self, s, epsilon, env=None):
         """ Gets epsilon-greedy action using self.model """
         if env is None:

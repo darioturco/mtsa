@@ -181,18 +181,19 @@ def comparative_bar_plot(data=None):
 if __name__ == "__main__":
     print("Plotting...")
     #graph_individual_training_process(sliding_window=500, save_path='./results/plots', use_steps=True, problems=BENCHMARK_PROBLEMS)
-    graph_individual_training_process(sliding_window=500, save_path=None, use_steps=True, problems=["TL"])
+    #graph_individual_training_process(sliding_window=500, save_path=None, use_steps=True, problems=["TL", "BW", "DP"])
 
     #graph_training_process(sliding_window=500, repetitions=5, save_path='./results/plots', use_steps=True)
 
 
-    #comparative_bar_plot(data={"Random": {"AT": 23, "BW": 21, "DP": 42, "TA": 42, "TL": 129, "CM": 0},
-     #                          "2-2": {"AT": 50, "BW": 65, "DP": 121, "TA": 70, "TL": 196, "CM": 0},
-     #                          "3-3": {"AT": 49, "BW": 44, "DP": 126, "TA": 69, "TL": 196, "CM": 0},
-     #                          "dCL": {"AT": 43, "BW": 45, "DP": 126, "TA": 68, "TL": 196, "CM": 0},
-     #                          "kCL": {"AT": 64, "BW": 39, "DP": 112, "TA": 83, "TL": 196, "CM": 0},
-     #                          "RA": {"AT": 81, "BW": 28, "DP": 122, "TA": 42, "TL": 196, "CM": 0},
-      #                         "RA Mejora": {"AT": 57, "BW": 121, "DP": 140, "TA": 70, "TL": 196, "CM": 0}})
+    # Budget of 10000
+    comparative_bar_plot(data={"Random": {"AT": 59, "BW": 44, "DP": 62, "TA": 60, "TL": 134, "CM": 0},
+                               "2-2": {"AT": 63, "BW": 42, "DP": 108, "TA": 60, "TL": 255, "CM": 0},
+                               #"3-3": {"AT": 0, "BW": 0, "DP": 0, "TA": 0, "TL": 0, "CM": 0},
+                               "ERL": {"AT": -1, "BW": 59, "DP": -1, "TA": -1, "TL": 255, "CM": 0},
+                               "BFS": {"AT": 53, "BW": 50, "DP": 61, "TA": 60, "TL": 201, "CM": 0},
+                               "RA": {"AT": 0, "BW": 0, "DP": 0, "TA": 0, "TL": 0, "CM": 0},
+                               "RA Mejora": {"AT": 68, "BW": 136, "DP": 150, "TA": 60, "TL": 255, "CM": 0}})
 
 
 

@@ -75,7 +75,7 @@ class CompositionGraph(nx.DiGraph):
     def expand(self, idx):
         assert (not self.javaEnv.isFinished()), "Invalid expansion, composition is already solved"
         assert (idx < len(self.getFrontier()) and idx >= 0), "Invalid index"
-        self.javaEnv.expandAction(idx)  # TODO check this is the same index as in the python frontier list
+        self.javaEnv.expandAction(idx)
         new_state_action = self.getLastExpanded()
         controllability, label = self.getLastExpanded().action.isControllable(), self.getLastExpanded().action.toString()
         self.add_node(str(self.last_expansion_child_state().toString()))
@@ -131,7 +131,9 @@ class CompositionAnalyzer:
         self.nfeatures = None
         assert (self.composition._started)
 
-        self._no_indices_alphabet = list(set([self.remove_indices(str(e)) for e in composition._alphabet]))
+        # 1-1: ['agency.fail', 'agency.request', 'agency.succ', 'available.0', 'cancel.0', 'committed.0', 'purchase.0', 'purchase.fail.0', 'purchase.succ.0', 'query.0', 'query.fail.0', 'query.succ.0', 'steps.0.0', 'tau', 'unavailable.0', 'uncommitted.0']
+        # 2-2: ['agency.fail', 'agency.request', 'agency.succ', 'available.0', 'available.1', 'cancel.0', 'cancel.1', 'committed.0', 'committed.1', 'purchase.0', 'purchase.1', 'purchase.fail.0', 'purchase.fail.1', 'purchase.succ.0', 'purchase.succ.1', 'query.0', 'query.1', 'query.fail.0', 'query.fail.1', 'query.succ.0', 'query.succ.1', 'select.0', 'select.1', 'steps.0.0', 'steps.0.1', 'steps.1.0', 'steps.1.1', 'tau', 'unavailable.0', 'unavailable.1', 'uncommitted.0', 'uncommitted.1']
+        self._no_indices_alphabet = self.get_alphabet_without_indices(composition._alphabet)
         self._no_indices_alphabet.sort()
         self._fast_no_indices_alphabet_dict = dict()
         for i in range(len(self._no_indices_alphabet)): self._fast_no_indices_alphabet_dict[
@@ -141,8 +143,18 @@ class CompositionAnalyzer:
                                  self.current_phase, self.child_node_state, self.uncontrollable_neighborhood,
                                  self.explored_state_child, self.isLastExpanded, self.child_dealdlock, self.mission_feature]
 
+        #self._feature_methods = [self.event_label_feature, self.state_label_feature, self.controllable, self.marked_stateOld,
+        #                         self.current_phase, self.child_node_state, self.uncontrollable_neighborhood,
+        #                         self.explored_state_child, self.isLastExpandedOld, self.child_dealdlock]
+
         #self._feature_methods += self.features_ofinstance()
 
+    def get_alphabet_without_indices(self, alphabet):
+        res_set = set([self.remove_indices(str(e)) for e in self.composition._alphabet])
+        if self.composition.problem == "AT":
+            res_set.add('air.crash.')
+
+        return list(res_set)
 
 
     def features_ofinstance(self):
@@ -153,11 +165,11 @@ class CompositionAnalyzer:
     def mission_feature(self, transition):
         return [float(transition.missionComplete)]
 
-    def test_features_on_transition(self, transition):
-        res = []
-        for compute_feature in self._feature_methods:
-            res += compute_feature(transition)
-        return [float(e) for e in res]
+    #def test_features_on_transition(self, transition):
+    #    res = []
+    #    for compute_feature in self._feature_methods:
+    #        res += compute_feature(transition)
+    #    return [float(e) for e in res]
 
     def event_label_feature(self, transition):
         """
@@ -165,7 +177,6 @@ class CompositionAnalyzer:
         """
         feature_vec_slice = [0.0 for _ in self._no_indices_alphabet]
         self._set_transition_type_bit(feature_vec_slice, transition.action)
-        # print(no_idx_label, feature_vec_slice)
         return feature_vec_slice
 
     def _set_transition_type_bit(self, feature_vec_slice, transition):
@@ -190,6 +201,10 @@ class CompositionAnalyzer:
     def marked_state(self, transition):
         """Whether s and s ′ ∈ M E p ."""
         return [float(transition.state.isMarked()), float(transition.childMarked)]
+
+    def marked_stateOld(self, transition):
+        """Whether s and s ′ ∈ M E p ."""
+        return [float(transition.state.isMarked())]
 
     def current_phase(self, transition):
         return [float(self.composition.javaEnv.dcs.heuristic.goals_found > 0),
@@ -227,6 +242,10 @@ class CompositionAnalyzer:
         #return [float(self.composition.getLastExpanded() == transition)]
         return [float(transition.state == transition.dcs.heuristic.lastExpandedTo), float(transition.state == transition.dcs.heuristic.lastExpandedFrom)]
 
+    def isLastExpandedOld(self, transition):
+        return [float(self.composition.getLastExpanded() == transition)]
+
+
     def remove_indices(self, transition_label: str):
         res = ""
         for c in transition_label:
@@ -246,6 +265,7 @@ class CompositionAnalyzer:
 
         if self.nfeatures is None:
             self.nfeatures = len(res)
+
         return res
 
     def compute_feature_of_list(self, transactions):

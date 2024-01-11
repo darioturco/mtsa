@@ -32,8 +32,8 @@ class Experiment(object):
                     yield instance, n, k
 
     def all_instances_of(self, instance):
-        for n in range(self.min_instance_size, self.max_instance_size + 1):
-            for k in range(self.min_instance_size, self.max_instance_size + 1):
+        for n in range(self.min_instance_size-1, self.max_instance_size + 1):
+            for k in range(self.min_instance_size-1, self.max_instance_size + 1):
                 yield instance, n, k
 
     def run_instance(self, env, agent, budget=-1):
@@ -64,7 +64,7 @@ class Experiment(object):
         path = self.get_fsp_path()
 
         last_failed = False
-        last_n = self.min_instance_size
+        last_n = self.min_instance_size-1
         solved = 0
         all_fail = False
 
@@ -138,7 +138,7 @@ class Experiment(object):
                 "batch_size": 10,
 
                 ### Miscellaneous
-                'freq_save': 20, # 50 # Usar 20 con CM
+                'freq_save': 5, # 50 # Usar 5 con CM
                 'seconds': None,
                 'max_steps': 500000,    # None
                 "max_eps": 12000
@@ -270,17 +270,11 @@ class TestTrainedInAllInstances(Experiment):
     def __init__(self, name='Test'):
         super().__init__(name)
 
-    def pre_select(self, instance, budget, path):
-        #path = self.get_fsp_path()
-        #env = self.get_environment(instance, self.min_instance_size, self.min_instance_size, path)
-
-        trained_agents = 5
-        #all_models = []
-        #for i in range(1, trained_agents+1):
+    def pre_select(self, instance, budget, path, amount_of_models=1000):
         all_models = [os.path.join(r, file) for r, d, f in os.walk(path) for file in f]
-
         print(all_models)
-        models = np.random.choice(all_models, min(100, len(all_models)), replace=False)
+
+        models = np.random.choice(all_models, min(amount_of_models, len(all_models)), replace=False)
         for model in models:
             print(f"Runing: {model}")
             solved = self.run(instance, budget, model)
@@ -306,8 +300,3 @@ class TestTrainedInAllInstances(Experiment):
         dqn_agent = DQN(env, nn_model, args, verbose=False)
 
         return self.run_agent(budget, dqn_agent, instance, save)
-
-
-
-
-

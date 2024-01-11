@@ -47,7 +47,7 @@ Service(Sid=0) = (
     available[Sid] -> steps[Sid][s:Step] -> query.succ[Sid] -> Selection[s] )),
   Selection[s:Step] =
     if (s>0) then (select[Sid] -> Selection[s-1])
-    else Booking,
+    else (select[Sid] -> Booking),
   Booking  = (
     committed[Sid]   ->
       if (Sid==Amenities-1) then Reserve

@@ -65,7 +65,7 @@ public class ActionWithFeatures<State, Action> {
         String label = action.toString();
         if(label.matches(".*\\d.*") && !dcs.instance.equals("")) {
             int entity = getNumber(label, 1);
-            if (dcs.n < entity) {
+            if (entity < dcs.n) {
                 return state.missionsCompletes.get(action)[entity];
             }
         }

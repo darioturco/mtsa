@@ -222,14 +222,14 @@ public class CompleteExplorationHeuristic<State, Action> implements ExplorationH
         Compostate<State,Action> state = null;
 
         while(true){
-            while(state == null || fullyExplored(state) || !state.isLive() || state.cantWinColor(color)){
+            while(state == null || fullyExplored(state) || !state.isLive() || state.cantWinColor(color) || state.peekRecommendation(color) == null){
                 if(frontier.isEmpty()) return;
                 state = getNextState(color, false);
             }
             assert(state.isEvaluated(color));
 
             Recommendation<Action> recommendation = state.peekRecommendation(color);
-            assert(recommendation != null);
+            assert(recommendation != null); // state.toString(.equals("[8, 10, 13, 10, 0]"))
             if(!state.getExploredActions().contains(recommendation.getAction())){
                 addToFrontier(color, state);
                 return;
