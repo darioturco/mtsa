@@ -6,9 +6,9 @@ FSP_PATH = "./fsp"
 BENCHMARK_PROBLEMS = ["AT", "BW", "DP", "TA", "TL", "CM"]
 
 if __name__ == "__main__":
-    instancia = "AT"
-    #TrainSmallInstanceCheckBigInstance().train(instancia, 2, 2, use_saved_agent=False, reward_shaping=False)
-    TestTrainedInAllInstances().pre_select(instancia, 1000, f"./results/models/{instancia}/ERL")
+    instancia = "TA"
+    #TrainSmallInstance().train(instancia, 2, 2, reward_shaping=False)
+    TestTrainedInAllInstances().pre_select(instancia, 1000, f"./results/models/{instancia}/Adam-ERL")
 
     #TestTrainedInAllInstances().run("AT", 10000, pth_path="./results/models/AT/2-2\AT-2-2-1900-partial.pth")
     #TestTrainedInAllInstances().run("BW", 10000, pth_path="./results/models/BW/2-2\BW-2-2-4000-partial.pth")
@@ -37,4 +37,8 @@ if __name__ == "__main__":
 
 
 ### Notas:
-
+    # Estoy corriendo Adam, aparentemente le va mucho mejor que SGD
+    # En pycharm tengo seleccionando DP
+    # En la primera terminal tengo preseleccionando AT
+    # En la segunda terminal tengo preseleccionando BW
+    # En la tercera terminal tengo preseleccionando TA

@@ -9,6 +9,7 @@ from src.agents.replay_buffer import ReplayBuffer
 from src.agents.agent import Agent
 import onnx
 from onnxruntime import InferenceSession
+from torch.optim.lr_scheduler import LambdaLR
 
 class Model:
     def __init__(self):
@@ -39,15 +40,28 @@ class TorchModel(Model):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.model = network
         self.loss_fn = nn.MSELoss()
-        self.optimizer = torch.optim.SGD(self.model.parameters(),
-                                         lr=args["learning_rate"],
-                                         momentum=args["momentum"],
-                                         nesterov=args["nesterov"],
-                                         weight_decay=args["weight_decay"])
+        if args["Adam"]:
+            self.optimizer = torch.optim.Adam(self.model.parameters(),
+                                              lr=args["learning_rate"],
+                                              weight_decay=args["weight_decay"])
+
+        else:
+            self.optimizer = torch.optim.SGD(self.model.parameters(),
+                                             lr=args["learning_rate"],
+                                             momentum=args["momentum"],
+                                             nesterov=args["nesterov"],
+                                             weight_decay=args["weight_decay"])
+
+        if args["lambda_warm_up"] is None:
+            args["lambda_warm_up"] = self.constant_one_function
+        self.lr_scheduler = LambdaLR(self.optimizer, lr_lambda=[args["lambda_warm_up"]], verbose=False)
 
         self.has_learned_something = False
         self.losses = []
         self.path = ""
+
+    def constant_one_function(self, epoach):
+        return 1.0
 
     def eval_batch(self, ss):
         return np.array([self.eval(s) for s in ss])
@@ -78,18 +92,16 @@ class TorchModel(Model):
         pred = self.model(ss)
 
         loss = self.loss_fn(pred, values)
-        #if loss.item() < 1.0:
         loss.backward()
-        #if eps > 1000 and loss.item() > 1.0:
-        #    print("Mucho loss")
-        #    return
-        #print(loss)
         self.optimizer.step()
+        self.lr_scheduler.step()
 
         self.losses.append(loss.item())
         self.has_learned_something = True
 
-
+    def set_lr(self, new_lr):
+        for group in self.optimizer.param_groups:
+            group['lr'] = new_lr
 
     def nfeatures(self):
         return self.nfeatures
@@ -206,6 +218,7 @@ class DQN(Agent):
             self.buffer.add(action_features, reward, obs2)
 
         print("Done.")
+
     def reset_train_for(self, env):
         self.env = env
         self.epsilon = self.args["first_epsilon"]
@@ -213,7 +226,6 @@ class DQN(Agent):
         self.trained = False
 
     def train(self, seconds=None, max_steps=None, max_eps=10000, pth_path=None, transitions_path=None, freq_save=None):
-
         last_obs = None
         if freq_save is not None:
             self.freq_save = freq_save

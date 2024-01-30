@@ -136,13 +136,16 @@ class Experiment(object):
                 "target_q": True,
                 "reset_target_freq": 10000,      # 10000
                 "batch_size": 10,
+                "Adam": True,
+
+                #"lambda_warm_up": None,
+                "lambda_warm_up": lambda step: 1.0 if step > 5000 else step * 0.99,
 
                 ### Miscellaneous
                 'freq_save': 5, # 50 # Usar 5 con CM
                 'seconds': None,
                 'max_steps': 500000,    # None
                 "max_eps": 12000
-
                 }
 
     def init_instance_res(self):
@@ -204,43 +207,26 @@ class Experiment(object):
 
 
 
-
-class TrainSmallInstanceCheckBigInstance(Experiment):
+class TrainSmallInstance(Experiment):
     def __init__(self, name="Test"):
         super().__init__(name)
 
-    def train(self, instance, n_train, k_train, use_saved_agent=False, reward_shaping=False):
+    def train(self, instance, n_train, k_train, reward_shaping=False):
         path = self.get_fsp_path()
         env = self.get_environment(instance, n_train, k_train, path, reward_shaping)
 
         nfeatures = env.get_nfeatures()
         args = self.default_args()
         pth_path = f"results/models/{instance}/{instance}-{n_train}-{k_train}.pth"
-        #transitions_path = f"results/transitions/{instance}/{instance}-{n_train}-{k_train}.txt"
-        transitions_path = None
 
-        if use_saved_agent:
-            nn_model = TorchModel.load(nfeatures, pth_path, args=args)
-            dqn_agent = DQN(env, nn_model, args, verbose=False)
+        print(f"Starting training in instance: {instance}-{n_train}-{k_train}...")
+        neural_network = NeuralNetwork(nfeatures, args["nn_size"]).to("cpu")
+        nn_model = TorchModel(nfeatures, network=neural_network, args=args)
+        dqn_agent = DQN(env, nn_model, args, verbose=False)
+        dqn_agent.train(seconds=args["seconds"], max_steps=args["max_steps"], max_eps=args["max_eps"], pth_path=pth_path, transitions_path=None, freq_save=args["freq_save"])
+        print(f"Trained in instance: {instance} {n_train}-{k_train}\n")
 
-        else:
-            neural_network = NeuralNetwork(nfeatures, args["nn_size"]).to("cpu")
-            nn_model = TorchModel(nfeatures, network=neural_network, args=args)
-            dqn_agent = DQN(env, nn_model, args, verbose=False)
-            dqn_agent.train(seconds=args["seconds"], max_steps=args["max_steps"], max_eps=args["max_eps"], pth_path=pth_path, transitions_path=transitions_path, freq_save=args["freq_save"])
-            print(f"Trained in instance: {instance} {n_train}-{k_train}\n")
-            DQN.save(dqn_agent, pth_path)
 
-        #env.reset(CompositionGraph(instance, n_test, k_test, path).start_composition())
-        #random_agent = RandomAgent()
-
-        #print(f"Runing Random Agent in instance: {instance} {n_test}-{k_test}")
-        #res = self.run_instance(env, random_agent)
-        #self.print_res("Random Agent: ", res)
-
-        #print(f"Runing DQN Agent in instance: {instance} {n_test}-{k_test}")
-        #res = self.run_instance(env, dqn_agent)
-        #self.print_res("DQN Agent: ", res)
 
     def curriculum_train(self, instance, train_args):
         path = self.get_fsp_path()
@@ -260,6 +246,10 @@ class TrainSmallInstanceCheckBigInstance(Experiment):
 
             dqn_agent.train(seconds=t_args["seconds"], max_steps=t_args["max_steps"], max_eps=t_args["max_eps"],
                             pth_path=pth_path, transitions_path=None, freq_save=t_args["freq_save"])
+
+    def train_and_select(self):
+        pass
+
 
 
 

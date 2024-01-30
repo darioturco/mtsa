@@ -30,11 +30,16 @@ class Environment:
         composition_graph = self.context.composition
         if self.heuristic_reward:
             self.heuristic_recomendations = list(self.context.composition.javaEnv.getHeuristicOrder())
-        composition_graph.expand(action_idx)
-        if composition_graph.javaEnv.isFinished():
-            return None, self.reward(action_idx), True, self.get_info()
-        else:
-            return self.states(), self.reward(action_idx), False, {}
+
+        try:
+            composition_graph.expand(action_idx)
+            if composition_graph.javaEnv.isFinished():
+                return None, self.reward(action_idx), True, self.get_info()
+            else:
+                return self.states(), self.reward(action_idx), False, {}
+        except:
+            print(f" --->  Algo Fallo  <--- ")
+            return None, -1000, True, self.get_info()
 
 
     def get_info(self):
