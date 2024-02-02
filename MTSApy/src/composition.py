@@ -139,13 +139,13 @@ class CompositionAnalyzer:
         for i in range(len(self._no_indices_alphabet)): self._fast_no_indices_alphabet_dict[
             self._no_indices_alphabet[i]] = i
         self._fast_no_indices_alphabet_dict = bidict(self._fast_no_indices_alphabet_dict)
-        self._feature_methods = [self.event_label_feature, self.state_label_feature, self.controllable, self.marked_state,
-                                 self.current_phase, self.child_node_state, self.uncontrollable_neighborhood,
-                                 self.explored_state_child, self.isLastExpanded, self.child_dealdlock, self.mission_feature]
-
-        #self._feature_methods = [self.event_label_feature, self.state_label_feature, self.controllable, self.marked_stateOld,
+        #self._feature_methods = [self.event_label_feature, self.state_label_feature, self.controllable, self.marked_state,
         #                         self.current_phase, self.child_node_state, self.uncontrollable_neighborhood,
-        #                         self.explored_state_child, self.isLastExpandedOld, self.child_dealdlock]
+        #                         self.explored_state_child, self.isLastExpanded, self.child_dealdlock, self.mission_feature]
+
+        self._feature_methods = [self.event_label_feature, self.state_label_feature, self.controllable, self.marked_stateOld,
+                                 self.current_phase, self.child_node_state, self.uncontrollable_neighborhood,
+                                 self.explored_state_child, self.isLastExpanded]
 
         #self._feature_methods += self.features_ofinstance()
 
@@ -239,12 +239,7 @@ class CompositionAnalyzer:
         return [float(transition.child is not None and len(transition.child.getTransitions()) == 0)]
 
     def isLastExpanded(self, transition):
-        #return [float(self.composition.getLastExpanded() == transition)]
         return [float(transition.state == transition.dcs.heuristic.lastExpandedTo), float(transition.state == transition.dcs.heuristic.lastExpandedFrom)]
-
-    def isLastExpandedOld(self, transition):
-        return [float(self.composition.getLastExpanded() == transition)]
-
 
     def remove_indices(self, transition_label: str):
         res = ""

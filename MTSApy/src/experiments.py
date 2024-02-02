@@ -43,6 +43,7 @@ class Experiment(object):
         finish = False
         rewards = []
         trace = []
+        info = {}
 
         i = 0
 
@@ -54,7 +55,7 @@ class Experiment(object):
             i = i + 1
 
         res = env.get_info()
-        res["failed"] = not finish
+        res["failed"] = (not finish) or (info["error"])
         res["trace"] = trace
 
         env.close()
@@ -136,7 +137,7 @@ class Experiment(object):
                 "target_q": True,
                 "reset_target_freq": 10000,      # 10000
                 "batch_size": 10,
-                "Adam": True,
+                "Adam": False,
 
                 #"lambda_warm_up": None,
                 "lambda_warm_up": lambda step: 1.0 if step > 5000 else step * 0.99,
@@ -260,10 +261,12 @@ class TestTrainedInAllInstances(Experiment):
     def __init__(self, name='Test'):
         super().__init__(name)
 
-    def pre_select(self, instance, budget, path, amount_of_models=1000):
+    def pre_select(self, instance, budget, path, amount_of_models=1000, csv_path=None):
         all_models = [os.path.join(r, file) for r, d, f in os.walk(path) for file in f]
         print(all_models)
 
+        if csv_path is None:
+            csv_path = f"./results/selection/{instance}.csv"
         models = np.random.choice(all_models, min(amount_of_models, len(all_models)), replace=False)
         for model in models:
             print(f"Runing: {model}")
@@ -274,7 +277,7 @@ class TestTrainedInAllInstances(Experiment):
                     "Model": model,
                     "Solved": solved}
 
-            csv_path = f"./results/selection/{instance}.csv"
+
             self.save_to_csv(csv_path, info)
 
     def run(self, instance, budget, pth_path=None, save=True):

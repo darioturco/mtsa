@@ -6,15 +6,15 @@ FSP_PATH = "./fsp"
 BENCHMARK_PROBLEMS = ["AT", "BW", "DP", "TA", "TL", "CM"]
 
 if __name__ == "__main__":
-    instancia = "TA"
+    instancia = "AT"
     #TrainSmallInstance().train(instancia, 2, 2, reward_shaping=False)
-    TestTrainedInAllInstances().pre_select(instancia, 1000, f"./results/models/{instancia}/Adam-ERL")
+    TestTrainedInAllInstances().pre_select(instancia, 1000, f"./results/models/{instancia}/2-2", 99999, f"./results/selection/2-2-{instancia}.csv")
 
-    #TestTrainedInAllInstances().run("AT", 10000, pth_path="./results/models/AT/2-2\AT-2-2-1900-partial.pth")
-    #TestTrainedInAllInstances().run("BW", 10000, pth_path="./results/models/BW/2-2\BW-2-2-4000-partial.pth")
-    #TestTrainedInAllInstances().run("DP", 10000, pth_path="./results/models/DP/2-2\DP-2-2-6000-partial.pth")
+    #TestTrainedInAllInstances().run("AT", 10000, pth_path="./results/models/AT/Adam-ERL/AT-2-2-35-partial.pth")
+    #TestTrainedInAllInstances().run("BW", 10000, pth_path="./results/models/BW/Adam-ERL/BW-2-2-7800-partial.pth")
+    #TestTrainedInAllInstances().run("DP", 10000, pth_path="./results/models/DP/Adam-ERL/DP-2-2-4480-partial.pth")
     #TestTrainedInAllInstances().run("TL", 10000, pth_path="./results/models/curriculum/TL/TL-4-4-4260-partial.pth")
-    #TestTrainedInAllInstances().run("TA", 10000, pth_path="./results/models/TA/2-2\TA-2-2-6300-partial.pth")
+    #TestTrainedInAllInstances().run("TA", 10000, pth_path="./results/models/TA/Adam-ERL/TA-2-2-1315-partial.pth")
     #TestTrainedInAllInstances().run("CM", 10000, pth_path="./results/models/CM/1/CM-2-2-270-partial.pth")
 
 
@@ -38,7 +38,13 @@ if __name__ == "__main__":
 
 ### Notas:
     # Estoy corriendo Adam, aparentemente le va mucho mejor que SGD
-    # En pycharm tengo seleccionando DP
-    # En la primera terminal tengo preseleccionando AT
-    # En la segunda terminal tengo preseleccionando BW
-    # En la tercera terminal tengo preseleccionando TA
+    # En pycharm tengo selecionando Adam DP
+    # En la primera terminal tengo seleccionando Adam AT
+    # En la segunda terminal tengo seleccionando Adam BW
+    # En la tercera terminal tengo seleccionando Adam TA
+
+    # En la cuarta terminal tengo preseleccionando 2-2 DP
+    # En la quinta terminal tengo entrenando 2-2 AT
+    # En la sexta terminal tengo entrenando 2-2 BW
+    # En la septima terminal tengo entrenando 2-2 TA
+

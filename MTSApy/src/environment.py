@@ -39,15 +39,17 @@ class Environment:
                 return self.states(), self.reward(action_idx), False, {}
         except:
             print(f" --->  Algo Fallo  <--- ")
-            return None, -1000, True, self.get_info()
-
+            info = self.get_info()
+            info["error"] = True
+            return None, -10000, True, info
 
     def get_info(self):
         composition_dg = self.context.composition
         return {
             "synthesis time(ms)": float(composition_dg.javaEnv.getSynthesisTime()),
             "expanded transitions": int(composition_dg.javaEnv.getExpandedTransitions()),
-            "expanded states": int(composition_dg.javaEnv.getExpandedStates())
+            "expanded states": int(composition_dg.javaEnv.getExpandedStates()),
+            "error": False
         }
 
     def reward(self, action_idx):
