@@ -2,6 +2,7 @@ import networkx as nx
 import jpype.imports
 from bidict import bidict
 import sys
+import re
 
 if not jpype.isJVMStarted():
     if "linux" in sys.platform:
@@ -122,33 +123,6 @@ class CompositionGraph(nx.DiGraph):
 
 
 class CompositionAnalyzer:
-    """class used to get Composition information, usable as hand-crafted features
-        TODO this class will be replaced by object-oriented Feature class
-    """
-
-    def __init__(self, composition):
-        self.composition = composition
-        self.nfeatures = None
-        assert (self.composition._started)
-
-        # 1-1: ['agency.fail', 'agency.request', 'agency.succ', 'available.0', 'cancel.0', 'committed.0', 'purchase.0', 'purchase.fail.0', 'purchase.succ.0', 'query.0', 'query.fail.0', 'query.succ.0', 'steps.0.0', 'tau', 'unavailable.0', 'uncommitted.0']
-        # 2-2: ['agency.fail', 'agency.request', 'agency.succ', 'available.0', 'available.1', 'cancel.0', 'cancel.1', 'committed.0', 'committed.1', 'purchase.0', 'purchase.1', 'purchase.fail.0', 'purchase.fail.1', 'purchase.succ.0', 'purchase.succ.1', 'query.0', 'query.1', 'query.fail.0', 'query.fail.1', 'query.succ.0', 'query.succ.1', 'select.0', 'select.1', 'steps.0.0', 'steps.0.1', 'steps.1.0', 'steps.1.1', 'tau', 'unavailable.0', 'unavailable.1', 'uncommitted.0', 'uncommitted.1']
-        self._no_indices_alphabet = self.get_alphabet_without_indices(composition._alphabet)
-        self._no_indices_alphabet.sort()
-        self._fast_no_indices_alphabet_dict = dict()
-        for i in range(len(self._no_indices_alphabet)): self._fast_no_indices_alphabet_dict[
-            self._no_indices_alphabet[i]] = i
-        self._fast_no_indices_alphabet_dict = bidict(self._fast_no_indices_alphabet_dict)
-        #self._feature_methods = [self.event_label_feature, self.state_label_feature, self.controllable, self.marked_state,
-        #                         self.current_phase, self.child_node_state, self.uncontrollable_neighborhood,
-        #                         self.explored_state_child, self.isLastExpanded, self.child_dealdlock, self.mission_feature]
-
-        self._feature_methods = [self.event_label_feature, self.state_label_feature, self.controllable, self.marked_stateOld,
-                                 self.current_phase, self.child_node_state, self.uncontrollable_neighborhood,
-                                 self.explored_state_child, self.isLastExpanded]
-
-        #self._feature_methods += self.features_ofinstance()
-
     def get_alphabet_without_indices(self, alphabet):
         res_set = set([self.remove_indices(str(e)) for e in self.composition._alphabet])
         if self.composition.problem == "AT":
@@ -156,20 +130,46 @@ class CompositionAnalyzer:
 
         return list(res_set)
 
+    def __init__(self, composition):
+        assert (composition._started)
 
-    def features_ofinstance(self):
-        if self.composition.problem == "DP":
-            return [1.0]
-        return []
+        self.composition = composition
+        self.nfeatures = None
+        self._no_indices_alphabet = self.get_alphabet_without_indices(composition._alphabet)
+        self._no_indices_alphabet.sort()
+        self._fast_no_indices_alphabet_dict = dict()
+        for i in range(len(self._no_indices_alphabet)): self._fast_no_indices_alphabet_dict[
+            self._no_indices_alphabet[i]] = i
+        self._fast_no_indices_alphabet_dict = bidict(self._fast_no_indices_alphabet_dict)
+
+        # Nuevos features mejorados
+        self._feature_methods = [self.event_label_feature, self.state_label_feature, self.controllable, self.marked_state,
+                                 self.current_phase, self.child_node_state, self.uncontrollable_neighborhood,
+                                 self.explored_state_child, self.isLastExpanded, self.child_dealdlock, self.mission_feature,
+                                 self.has_index, self.entity_state_move]
+
+
+
+
+        # Nuevos features
+        #self._feature_methods = [self.event_label_feature, self.state_label_feature, self.controllable, self.marked_state,
+        #                         self.current_phase, self.child_node_state, self.uncontrollable_neighborhood,
+        #                         self.explored_state_child, self.isLastExpanded, self.child_dealdlock, self.mission_feature]
+
+        # Viejos features
+        #self._feature_methods = [self.event_label_feature, self.state_label_feature, self.controllable, self.marked_stateOld,
+        #                         self.current_phase, self.child_node_state, self.uncontrollable_neighborhood,
+        #                         self.explored_state_child, self.isLastExpanded]
+
+    def has_index(self, transition):
+        label = str(transition.action.toString())
+        return [float(any(char.isdigit() for char in label))]
+
+    def entity_state_move(self, transition):
+        return [transition.upIndex, transition.downIndex]
 
     def mission_feature(self, transition):
         return [float(transition.missionComplete)]
-
-    #def test_features_on_transition(self, transition):
-    #    res = []
-    #    for compute_feature in self._feature_methods:
-    #        res += compute_feature(transition)
-    #    return [float(e) for e in res]
 
     def event_label_feature(self, transition):
         """
@@ -199,11 +199,11 @@ class CompositionAnalyzer:
         return [float(transition.action.isControllable())]
 
     def marked_state(self, transition):
-        """Whether s and s ′ ∈ M E p ."""
+        """Whether s and s′ ∈ M E p ."""
         return [float(transition.state.isMarked()), float(transition.childMarked)]
 
     def marked_stateOld(self, transition):
-        """Whether s and s ′ ∈ M E p ."""
+        """Whether s ∈ M E p ."""
         return [float(transition.state.isMarked())]
 
     def current_phase(self, transition):

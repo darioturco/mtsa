@@ -8,10 +8,16 @@ import MTSTools.ac.ic.doc.mtstools.model.MarkedLTS;
 public class MarkedLTSImpl<State, Action> extends LTSImpl<State, Action> implements MarkedLTS<State, Action> {
 
 	private Set<State> markedStates;
-	
-	public MarkedLTSImpl(State initialState) {
+	public String name;
+
+	public MarkedLTSImpl(State initialState, String name) {
 		super(initialState);
-		markedStates = new HashSet<>();
+		this.markedStates = new HashSet<>();
+		this.name = name;
+	}
+
+	public MarkedLTSImpl(State initialState) {
+		this(initialState, "");
 	}
 	
 	public Set<State> getMarkedStates() {

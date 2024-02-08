@@ -130,12 +130,12 @@ public class GamePrunningExperiment extends Experiment {
 		safetyComposite.compose(new StandardOutput());
 		MTS<Long, String> envMTS	= AutomataToMTSConverter.getInstance().convert(safetyComposite.composition);
 		env = new LTSAdapter<Long, String>(ControllerUtils.embedFluents(envMTS, controllerGoal, new StandardOutput()),
-				TransitionType.POSSIBLE);
+				TransitionType.POSSIBLE, "Environment");
 		
 		MTS<Long, String> envForCtrlMTS	= AutomataToMTSConverter.getInstance().convert(safetyComposite.composition);
 		
 		LTS<Long, String> envForController = new LTSAdapter<Long, String>(ControllerUtils.embedFluents(envForCtrlMTS, controllerGoal, new StandardOutput()),
-				TransitionType.POSSIBLE);
+				TransitionType.POSSIBLE, "Environment For Controller");
 
 		Long trapState = -1L;
 		

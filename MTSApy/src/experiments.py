@@ -3,6 +3,7 @@ import os
 import random
 import datetime
 import numpy as np
+import pandas as pd
 from src.composition import CompositionGraph, CompositionAnalyzer
 from src.environment import Environment, FeatureEnvironment, FeatureCompleteEnvironment
 from src.agents.dqn import DQN, NeuralNetwork, TorchModel
@@ -32,7 +33,8 @@ class Experiment(object):
                     yield instance, n, k
 
     def all_instances_of(self, instance):
-        for n in range(self.min_instance_size-1, self.max_instance_size + 1):
+        for n in range(5, self.max_instance_size + 1):
+        #for n in range(self.min_instance_size-1, self.max_instance_size + 1):
             for k in range(self.min_instance_size-1, self.max_instance_size + 1):
                 yield instance, n, k
 
@@ -139,8 +141,8 @@ class Experiment(object):
                 "batch_size": 10,
                 "Adam": False,
 
-                #"lambda_warm_up": None,
-                "lambda_warm_up": lambda step: 1.0 if step > 5000 else step * 0.99,
+                "lambda_warm_up": None,
+                #"lambda_warm_up": lambda step: 1.0 if step > 5000 else step * 0.99,
 
                 ### Miscellaneous
                 'freq_save': 5, # 50 # Usar 5 con CM
@@ -261,12 +263,22 @@ class TestTrainedInAllInstances(Experiment):
     def __init__(self, name='Test'):
         super().__init__(name)
 
-    def pre_select(self, instance, budget, path, amount_of_models=1000, csv_path=None):
-        all_models = [os.path.join(r, file) for r, d, f in os.walk(path) for file in f]
-        print(all_models)
+    def get_previous_models(self, path):
+        try:
+            df = pd.read_csv(path)
+            return set(df["Model"])
+        except:
+            return set()
 
+    def pre_select(self, instance, budget, path, amount_of_models=1000, csv_path=None):
+        all_models = set([os.path.join(r, file) for r, d, f in os.walk(path) for file in f])
         if csv_path is None:
             csv_path = f"./results/selection/{instance}.csv"
+
+        previous_models = self.get_previous_models(csv_path)
+        all_models = list(all_models - previous_models)
+        print(all_models)
+
         models = np.random.choice(all_models, min(amount_of_models, len(all_models)), replace=False)
         for model in models:
             print(f"Runing: {model}")

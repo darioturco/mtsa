@@ -623,7 +623,9 @@ public class TransitionSystemDispatcher {
         // plant
         // get machines has the plant already composed, not the separate components
         LTS<Long, String> lts = new LTSAdapter<>(
-                AutomataToMTSConverter.getInstance().convert(compositeState.getMachines().get(0)), TransitionType.REQUIRED);
+                AutomataToMTSConverter.getInstance().convert(compositeState.getMachines().get(0)),
+                TransitionType.REQUIRED,
+                compositeState.getMachines().get(0).name);
         MarkedWithIllegalLTSImpl<Long, String> plant = new MarkedWithIllegalLTSImpl<>(lts.getInitialState());
         plant.addActions(lts.getActions());
         plant.addStates(lts.getStates());
@@ -715,7 +717,7 @@ public class TransitionSystemDispatcher {
         Set<String> actions = new HashSet<>();
         for (CompactState automata : compositeState.getMachines()) {
             LTS<Long, String> lts = new LTSAdapter<>(
-                    AutomataToMTSConverter.getInstance().convert(automata), TransitionType.REQUIRED);
+                    AutomataToMTSConverter.getInstance().convert(automata), TransitionType.REQUIRED, automata.name);
             actions.addAll(lts.getActions());
             ltss.add(lts);
         }

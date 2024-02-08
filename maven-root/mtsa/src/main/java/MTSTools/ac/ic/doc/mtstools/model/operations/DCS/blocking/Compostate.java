@@ -133,8 +133,10 @@ public class Compostate<State, Action> implements Comparable<Compostate<State, A
 
     public Map<HAction<Action>, List<State>> actionChildStates;
 
+    public HAction<Action> lastExpandedAction;
     public Map<HAction<Action>, boolean[]> missionsCompletes;
-    public boolean[] missionVector;
+    public Map<HAction<Action>, int[]> entityIndexes;
+
 
     /** Constructor for a Composed State. */
     public Compostate(DirectedControllerSynthesisBlocking<State, Action> dcs, List<State> states) {
@@ -192,6 +194,8 @@ public class Compostate<State, Action> implements Comparable<Compostate<State, A
         dcs.heuristic.initialize(this);
         this.uncontrollablesCount = countUncontrollables();
         this.missionsCompletes = new HashMap<>();
+        this.entityIndexes = new HashMap<>();
+        this.lastExpandedAction = null;
     }
 
     /** Returns the states that conform this composed state. */
@@ -580,6 +584,18 @@ public class Compostate<State, Action> implements Comparable<Compostate<State, A
         recommendit.put(color, recommendations.get(color).iterator());
         updateRecommendation(color);
     }
+
+    /* TODO: Comment */
+
+    public boolean[] getLastMissions(){
+        return missionsCompletes.get(lastExpandedAction);
+    }
+
+    /* TODO: Comment */
+    public int[] getLastentityIndex(){
+        return entityIndexes.get(lastExpandedAction);
+    }
+
 
     /** Initializes the recommendation iterator and current estimate for the state. */
     public void updateRecommendation(Integer color) {

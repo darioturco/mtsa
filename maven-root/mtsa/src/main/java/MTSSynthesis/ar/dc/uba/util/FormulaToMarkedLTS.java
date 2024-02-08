@@ -65,9 +65,9 @@ public class FormulaToMarkedLTS {
 			OrFormula orFormula = (OrFormula) formula;
 			result = binary(BinaryOperation.OR, orFormula.getLeftFormula(), orFormula.getRightFormula());
 		} else if (formula == Formula.FALSE_FORMULA) {
-			result = new MarkedLTSImpl<>(0L);
+			result = new MarkedLTSImpl<>(0L, "False Formula");
 		} else if (formula == Formula.TRUE_FORMULA) {
-			result = new MarkedLTSImpl<>(0L);
+			result = new MarkedLTSImpl<>(0L, "True Formula");
 			result.mark(0L);
 		} else {
 			throw new RuntimeException("Invalid formula " + formula);

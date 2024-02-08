@@ -194,11 +194,11 @@ public class DCSForPython {
 
     // This main is for testing purposes only
     public static void main(String[] args)  {
-        DCSForPython.testRA(15000, "CM", "CMHeuristic");
+        //DCSForPython.testRA(15000, "CM", "CMHeuristic");
 
 
-        /*
-        String instance = "CM";
+
+        String instance = "BW";
 
         //String FSP_path = "/home/dario/Documents/Tesis/mtsa/maven-root/mtsa/target/test-classes/Blocking/ControllableFSPs/GR1test1.lts"; // Falla porque tiene guiones
         //String FSP_path = "F:\\UBA\\Tesis\\mtsa\\maven-root\\mtsa\\target\\test-classes\\Blocking\\ControllableFSPs\\GR1Test43.lts";
@@ -243,7 +243,7 @@ public class DCSForPython {
         }
         System.out.println("End Run :)");
 
-         */
+
 
     }
 }

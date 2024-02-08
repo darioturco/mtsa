@@ -13,10 +13,16 @@ public class LTSAdapter<State, Action> implements LTS<State, Action> {
 
 	private MTS<State, Action> mts;
 	private TransitionType exposedBehaviour;
+	public String name;
 
-	public LTSAdapter(MTS<State, Action> mts, TransitionType exposedBehaviour) {
+	public LTSAdapter(MTS<State, Action> mts, TransitionType exposedBehaviour, String name) {
+		this.name = name;
 		this.mts = mts;
 		this.exposedBehaviour = exposedBehaviour;
+	}
+
+	public LTSAdapter(MTS<State, Action> mts, TransitionType exposedBehaviour) {
+		this(mts, exposedBehaviour, "");
 	}
 	
 	public Set<State> getStates() {

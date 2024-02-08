@@ -371,7 +371,7 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
     /** Expands a state following a given recommendation from a parent compostate.
      *  Internally this populates the transitions and expanded lists. */
     Compostate<State, Action> expand(Compostate<State, Action> compostate, HAction<Action> action) {
-        compostate.missionVector = compostate.missionsCompletes.get(action);
+        compostate.lastExpandedAction = action;
         Compostate<State, Action> childCompostate = buildCompostate(getChildStates(compostate, action), compostate);
         //childCompostate.updateMissions(compostate, action);
         statistics.incExpandedTransitions();
