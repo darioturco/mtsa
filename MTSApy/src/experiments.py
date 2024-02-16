@@ -33,8 +33,8 @@ class Experiment(object):
                     yield instance, n, k
 
     def all_instances_of(self, instance):
-        for n in range(5, self.max_instance_size + 1):
-        #for n in range(self.min_instance_size-1, self.max_instance_size + 1):
+        #for n in range(5, self.max_instance_size + 1):
+        for n in range(self.min_instance_size-1, self.max_instance_size + 1):
             for k in range(self.min_instance_size-1, self.max_instance_size + 1):
                 yield instance, n, k
 
@@ -139,7 +139,7 @@ class Experiment(object):
                 "target_q": True,
                 "reset_target_freq": 10000,      # 10000
                 "batch_size": 10,
-                "Adam": False,
+                "Adam": True,
 
                 "lambda_warm_up": None,
                 #"lambda_warm_up": lambda step: 1.0 if step > 5000 else step * 0.99,
@@ -282,13 +282,12 @@ class TestTrainedInAllInstances(Experiment):
         models = np.random.choice(all_models, min(amount_of_models, len(all_models)), replace=False)
         for model in models:
             print(f"Runing: {model}")
-            solved = self.run(instance, budget, model)
+            solved = self.run(instance, budget, model, False)
 
             # Save the info
             info = {"Instance": instance,
                     "Model": model,
                     "Solved": solved}
-
 
             self.save_to_csv(csv_path, info)
 

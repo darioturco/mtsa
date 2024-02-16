@@ -62,54 +62,7 @@ def get_info_of_instance(rl_path, sliding_window, limit):
     losses = [np.mean(data_instance["Loss"][eps: eps + sliding_window]) for eps in range(len(episodes))]
     return rewards[:limit], episodes[:limit], steps[:limit], rewards_win[:limit], losses[:limit]
 
-def graph_training_process(sliding_window=5, repetitions=5, save_path=None, use_steps=False):
-    random_data = pd.read_csv("./results/csv/random.csv")
-    ra_data = pd.read_csv("./results/csv/Ready Abstraction.csv")
-    limit = 10000
 
-    for instance in BENCHMARK_PROBLEMS:
-        plt.clf()
-        rewards_all, episodes_all, steps_all, rewards_win_all = [], [], [], []
-        for r in range(repetitions):
-            rl_path = f"./results/training/{instance}-2-2-partial{r+1}.csv"
-            rewards, episodes, steps, rewards_win, _ = get_info_of_instance(rl_path, sliding_window, limit)
-            rewards_all.append(rewards)
-            episodes_all.append(episodes)
-            steps_all.append(steps)
-            rewards_win_all.append(rewards_win)
-
-            plt.plot(steps if use_steps else episodes, rewards_win, label=None, alpha=0.2, color='#1f77b4')
-
-        random_mean = -int(
-            random_data[(random_data["Instance"] == instance) & (random_data["N"] == 2) & (random_data["K"] == 2)][
-                "Transitions (mean)"])
-        random_max = -int(
-            random_data[(random_data["Instance"] == instance) & (random_data["N"] == 2) & (random_data["K"] == 2)][
-                "Transitions (min)"])
-        ra_value = -int(
-            ra_data[(ra_data["Instance"] == instance) & (ra_data["N"] == 2) & (ra_data["K"] == 2)]["Transitions"])
-
-        # Grafico el promedio de las 5 lineas
-        arg_min_size = np.argmin([len(steps) for steps in steps_all])
-        min_size = len(steps_all[arg_min_size])
-
-        y = []
-        for i in range(min_size):
-            y.append(np.mean([rewards_win_all[r][i] for r in range(repetitions)]))
-
-
-
-        plt.plot(steps_all[arg_min_size] if use_steps else episodes_all[0], y, label="RL", color='#1f77b4')
-        plt.axhline(y=int(random_mean), color='g', linestyle='--', label="Random Mean")
-        plt.axhline(y=int(random_max), color='g', linestyle='-', label="Random Max")
-        plt.axhline(y=int(ra_value), color='red', linestyle='-', label="RA")
-        plt.xlabel('Steps' if use_steps else 'Episodes')
-        plt.ylabel('Reward')
-        plt.title(instance)
-        plt.legend()
-        if save_path is not None:
-            plt.savefig(f"{save_path}/{instance}_all.png")
-        plt.show()
 
 def check_method_in_instance(instance, method):
     data = pd.read_csv(f"./results/csv/{instance}.csv")
@@ -185,14 +138,11 @@ if __name__ == "__main__":
 
     #graph_training_process(sliding_window=100, repetitions=5, save_path='./results/plots', use_steps=True)
 
-
     # Budget of 10000
     comparative_bar_plot(data={"Random": {"AT": 59, "BW": 44, "DP": 62, "TA": 60, "TL": 134, "CM": 0},
                                "2-2": {"AT": 85, "BW": 53, "DP": 101, "TA": 60, "TL": 255, "CM": 0},
-                               #"3-3": {"AT": 0, "BW": 0, "DP": 0, "TA": 0, "TL": 0, "CM": 0},
-                               "ERL": {"AT": 87, "BW": 57, "DP": 150, "TA": 61, "TL": 255, "CM": 0},
+                               "ERL": {"AT": 87, "BW": 57, "DP": 150, "TA": 60, "TL": 255, "CM": 0},
                                "BFS": {"AT": 53, "BW": 50, "DP": 61, "TA": 60, "TL": 201, "CM": 0},
-                               #"RA": {"AT": 0, "BW": 0, "DP": 0, "TA": 0, "TL": 0, "CM": 0},
                                "RA Mejora": {"AT": 68, "BW": 136, "DP": 150, "TA": 60, "TL": 255, "CM": 0}})
 
 

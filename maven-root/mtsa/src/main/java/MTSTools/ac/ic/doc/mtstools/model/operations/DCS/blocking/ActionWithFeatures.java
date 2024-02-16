@@ -182,7 +182,7 @@ public class ActionWithFeatures<State, Action> {
                         break;
 
                     case "TL":
-                        if(entity != -1){
+                        if(entity == -1){ // Should not enter
                             state.missionsCompletes.get(action)[entity] = true;
                         }
                         break;

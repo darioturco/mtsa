@@ -29,11 +29,15 @@ public class DCSForPython {
     public DirectedControllerSynthesisBlocking<Long, String> dcs;
     public ExplorationHeuristic<Long, String> heuristic;
     public HeuristicMode heuristicMode;
+    public boolean realizable;
+    public boolean finished;
 
     public boolean started_synthesis;
     // TODO: Rehacer el init, tiene muchos argunmentos que no se usan mas
     public DCSForPython(String heuristicMode){
         this.started_synthesis = false;
+        this.realizable = false;
+        this.finished = false;
         this.heuristicMode = HeuristicMode.valueOf(heuristicMode);
     }
 
@@ -138,7 +142,11 @@ public class DCSForPython {
 
         this.heuristic.setLastExpandedStateAction(stateAction);
         this.heuristic.expansionDone(state, action, child);
-        if(!isFinished()) {
+        if(isFinished()) {
+            finished = true;
+            if(dcs.isGoal(dcs.initial))
+                realizable = true;
+        }else{
             this.heuristic.somethingLeftToExplore();
         }
     }
@@ -175,17 +183,20 @@ public class DCSForPython {
         return i;
     }
 
-    public static int testRA(int budget, String instance, String heuristic){
+    public static int testHeuristic(int budget, String instance, String heuristic, int repetitions){
         int solvedInstances = 0;
         for(int n=1;n<=15;n++){
             int res = 0;
             for(int k=1;k<=15 && res<budget;k++){
                 //System.out.println("Result of " + instance + "-" + n + "-" + k);
-                res = DCSForPython.syntetizeWithHeuristic("F:\\UBA\\Tesis\\mtsa\\MTSApy\\fsp\\" + instance + "\\" + instance + "-" + n + "-" + k + ".fsp", heuristic, budget, false);
+                //String fsp_path = "F:\\UBA\\Tesis\\mtsa\\MTSApy\\fsp\\" + instance + "\\" + instance + "-" + n + "-" + k + ".fsp";
+                String fsp_path = "/home/dario/Documents/Tesis/mtsa/MTSApy/fsp/" + instance + "/" + instance + "-" + n + "-" + k + ".fsp";
+                res = DCSForPython.syntetizeWithHeuristic(fsp_path, heuristic, budget, false);
                 if(res < 10000){
                     solvedInstances += 1;
                 }
-                System.out.println("Result of " + instance + "-" + n + "-" + k +": " + res);
+                //System.out.println("Result of " + instance + "-" + n + "-" + k +": " + res);
+                System.out.println(res);
             }
         }
         System.out.println("Solved instances:  " + solvedInstances);
@@ -193,19 +204,18 @@ public class DCSForPython {
     }
 
     // This main is for testing purposes only
-    public static void main(String[] args)  {
-        //DCSForPython.testRA(15000, "CM", "CMHeuristic");
+    public static void main(String[] args) {
+        DCSForPython.testHeuristic(10000, "AT", "Complete", 1);
 
-
-
-        String instance = "BW";
+        /*
+        //String instance = "BW";
 
         //String FSP_path = "/home/dario/Documents/Tesis/mtsa/maven-root/mtsa/target/test-classes/Blocking/ControllableFSPs/GR1test1.lts"; // Falla porque tiene guiones
         //String FSP_path = "F:\\UBA\\Tesis\\mtsa\\maven-root\\mtsa\\target\\test-classes\\Blocking\\ControllableFSPs\\GR1Test43.lts";
         //String FSP_path = "F:\\UBA\\Tesis\\mtsa\\maven-root\\mtsa\\target\\test-classes\\Blocking\\NoControllableFSPs\\GR1Test11.lts";
-        String FSP_path = "F:\\UBA\\Tesis\\mtsa\\MTSApy\\fsp\\" + instance + "\\" + instance + "-2-2.fsp";
+        //String FSP_path = "F:\\UBA\\Tesis\\mtsa\\MTSApy\\fsp\\" + instance + "\\" + instance + "-2-2.fsp";
         //String FSP_path = "/home/dario/Documents/Tesis/Learning-Synthesis/fsp/Blocking/ControllableFSPs/GR1Test10.lts";
-        //String FSP_path = "/home/dario/Documents/Tesis/mtsa/MTSApy/fsp/CM/CM-4-4.fsp";
+        String FSP_path = "/home/dario/Documents/Tesis/mtsa/MTSApy/fsp/BW/BW-5-15.fsp";
 
         //String heuristicMode = "Ready";
         String heuristicMode = "Complete";
@@ -241,7 +251,11 @@ public class DCSForPython {
             env.expandAction(idx);
             i = i + 1;
         }
+        System.out.println("Realizable: " + env.realizable);
+
         System.out.println("End Run :)");
+
+         */
 
 
 

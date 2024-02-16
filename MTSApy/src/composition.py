@@ -143,11 +143,10 @@ class CompositionAnalyzer:
         self._fast_no_indices_alphabet_dict = bidict(self._fast_no_indices_alphabet_dict)
 
         # Nuevos features mejorados
-        self._feature_methods = [self.event_label_feature, self.state_label_feature, self.controllable, self.marked_state,
-                                 self.current_phase, self.child_node_state, self.uncontrollable_neighborhood,
-                                 self.explored_state_child, self.isLastExpanded, self.child_dealdlock, self.mission_feature,
-                                 self.has_index, self.entity_state_move]
-
+        #self._feature_methods = [self.event_label_feature, self.state_label_feature, self.controllable, self.marked_state,
+        #                         self.current_phase, self.child_node_state, self.uncontrollable_neighborhood,
+        #                         self.explored_state_child, self.isLastExpanded, self.child_dealdlock, self.mission_feature,
+        #                         self.has_index, self.entity_state_move]
 
 
 
@@ -157,9 +156,9 @@ class CompositionAnalyzer:
         #                         self.explored_state_child, self.isLastExpanded, self.child_dealdlock, self.mission_feature]
 
         # Viejos features
-        #self._feature_methods = [self.event_label_feature, self.state_label_feature, self.controllable, self.marked_stateOld,
-        #                         self.current_phase, self.child_node_state, self.uncontrollable_neighborhood,
-        #                         self.explored_state_child, self.isLastExpanded]
+        self._feature_methods = [self.event_label_feature, self.state_label_feature, self.controllable, self.marked_stateOld,
+                                 self.current_phase, self.child_node_state, self.uncontrollable_neighborhood,
+                                 self.explored_state_child, self.isLastExpanded]
 
     def has_index(self, transition):
         label = str(transition.action.toString())
