@@ -142,6 +142,7 @@ if __name__ == "__main__":
     comparative_bar_plot(data={"Random": {"AT": 59, "BW": 44, "DP": 62, "TA": 60, "TL": 134, "CM": 0},
                                "2-2": {"AT": 85, "BW": 53, "DP": 101, "TA": 60, "TL": 255, "CM": 0},
                                "ERL": {"AT": 87, "BW": 57, "DP": 150, "TA": 60, "TL": 255, "CM": 0},
+                               "IERL": {"AT": 90, "BW": 56, "DP": 150, "TA": 60, "TL": 255, "CM": 0},
                                "BFS": {"AT": 53, "BW": 50, "DP": 61, "TA": 60, "TL": 201, "CM": 0},
                                "RA Mejora": {"AT": 68, "BW": 136, "DP": 150, "TA": 60, "TL": 255, "CM": 0}})
 
