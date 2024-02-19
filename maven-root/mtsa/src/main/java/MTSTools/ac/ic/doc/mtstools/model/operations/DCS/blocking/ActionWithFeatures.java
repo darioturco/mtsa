@@ -20,11 +20,7 @@ public class ActionWithFeatures<State, Action> {
     public int index;
     public boolean upIndex;
     public boolean downIndex;
-
-
-
-    public boolean inEntityMarkedState;
-
+    public int amountMissionComplete;
 
     ActionWithFeatures(Compostate<State, Action> state, HAction<Action> action, Compostate<State, Action> parent) {
         this.state = state;
@@ -53,6 +49,17 @@ public class ActionWithFeatures<State, Action> {
             childMarked = this.dcs.defaultTargets.get(lts).contains(childStates.get(lts));
 
         missionComplete = getMissionValue();
+        amountMissionComplete = countMissionComplete();
+    }
+
+    public int countMissionComplete(){
+        int res = 0;
+        for(boolean missionComplete : state.missionsCompletes.get(action)){
+            if(missionComplete){
+                res += 1;
+            }
+        }
+        return res;
     }
 
     public Pair<Compostate<State, Action>, HAction<Action>> toPair(){
@@ -70,7 +77,7 @@ public class ActionWithFeatures<State, Action> {
     }
 
     public String toString(){
-        return state.toString() + " | " + action.toString() + " | " + arrayBoolToString(state.missionsCompletes.get(action)) + " | " + upIndex + " | " + downIndex;
+        return state.toString() + " | " + action.toString() + " | " + arrayBoolToString(state.missionsCompletes.get(action)) + " | " + upIndex + " | " + downIndex + " | " + amountMissionComplete;
         //return arrayBoolToString(state.missionsCompletes);
     }
 

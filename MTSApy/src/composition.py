@@ -51,6 +51,14 @@ class CompositionGraph(nx.DiGraph):
     def reset_from_copy(self):
         return self.__class__(self.problem, self.n, self.k, self._fsp_path).start_composition()
 
+    def set_composition_parameters(self):
+        # self.auxiliar_heuristic = "BFS"
+        # self.auxiliar_heuristic = "Debugging"
+        # self.auxiliar_heuristic = "Ready"
+        self.auxiliar_heuristic = "Complete"
+
+        self.feature_group = "GRL"
+
     def start_composition(self):
         assert (self._initial_state is None)
         self._started = True
@@ -59,10 +67,7 @@ class CompositionGraph(nx.DiGraph):
         else:
             problem_path = f"{self._fsp_path}/{self.problem}/{self.problem}-{self.n}-{self.k}.fsp"
 
-        # self.auxiliar_heuristic = "BFS"
-        # self.auxiliar_heuristic = "Debugging"
-        # self.auxiliar_heuristic = "Ready"
-        self.auxiliar_heuristic = "Complete"
+        self.set_composition_parameters()
         self.javaEnv = DCSForPython(self.auxiliar_heuristic)
         assert (self.javaEnv is not None)
         self.javaEnv.startSynthesis(problem_path)
@@ -131,7 +136,7 @@ class CompositionAnalyzer:
         return list(res_set)
 
     def __init__(self, composition):
-        assert (composition._started)
+        assert composition._started
 
         self.composition = composition
         self.nfeatures = None
@@ -142,33 +147,49 @@ class CompositionAnalyzer:
             self._no_indices_alphabet[i]] = i
         self._fast_no_indices_alphabet_dict = bidict(self._fast_no_indices_alphabet_dict)
 
-        # Nuevos features mejorados
-        #self._feature_methods = [self.event_label_feature, self.state_label_feature, self.controllable, self.marked_state,
-        #                         self.current_phase, self.child_node_state, self.uncontrollable_neighborhood,
-        #                         self.explored_state_child, self.isLastExpanded, self.child_dealdlock, self.mission_feature,
-        #                         self.has_index, self.entity_state_move]
+        self._feature_methods = self.select_feature_group(self.composition.feature_group)
 
+    def select_feature_group(self, feature_group_name):
+        if feature_group_name == "GRL":
+            # Nuevos features globales (GRL)
+            return [self.event_label_feature, self.state_label_feature, self.controllable, self.marked_state,
+                    self.current_phase, self.child_node_state, self.uncontrollable_neighborhood,
+                    self.explored_state_child, self.isLastExpanded, self.child_dealdlock, self.missions_end]
 
+        elif feature_group_name == "IERL":
+            # Nuevos features locales mejorados (IERL)
+            return [self.event_label_feature, self.state_label_feature, self.controllable, self.marked_state,
+                    self.current_phase, self.child_node_state, self.uncontrollable_neighborhood,
+                    self.explored_state_child, self.isLastExpanded, self.child_dealdlock, self.mission_feature,
+                    self.has_index, self.entity_state_move]
 
-        # Nuevos features
-        #self._feature_methods = [self.event_label_feature, self.state_label_feature, self.controllable, self.marked_state,
-        #                         self.current_phase, self.child_node_state, self.uncontrollable_neighborhood,
-        #                         self.explored_state_child, self.isLastExpanded, self.child_dealdlock, self.mission_feature]
+        elif feature_group_name == "ERL":
+            # Nuevos features locales (ERL)
+            return [self.event_label_feature, self.state_label_feature, self.controllable, self.marked_state,
+                    self.current_phase, self.child_node_state, self.uncontrollable_neighborhood,
+                    self.explored_state_child, self.isLastExpanded, self.child_dealdlock, self.mission_feature]
 
-        # Viejos features
-        self._feature_methods = [self.event_label_feature, self.state_label_feature, self.controllable, self.marked_stateOld,
-                                 self.current_phase, self.child_node_state, self.uncontrollable_neighborhood,
-                                 self.explored_state_child, self.isLastExpanded]
+        elif feature_group_name == "2-2":
+            # Viejos features (2-2)
+            return [self.event_label_feature, self.state_label_feature, self.controllable, self.marked_stateOld,
+                    self.current_phase, self.child_node_state, self.uncontrollable_neighborhood,
+                    self.explored_state_child, self.isLastExpanded]
+
+        else:
+            assert False, "Incorrect feature group name"
 
     def has_index(self, transition):
         label = str(transition.action.toString())
         return [float(any(char.isdigit() for char in label))]
 
     def entity_state_move(self, transition):
-        return [transition.upIndex, transition.downIndex]
+        return [float(transition.upIndex), float(transition.downIndex)]
 
     def mission_feature(self, transition):
         return [float(transition.missionComplete)]
+
+    def missions_end(self, transition):
+        return [float(transition.amountMissionComplete > 0), float(transition.amountMissionComplete > 1)]
 
     def event_label_feature(self, transition):
         """
@@ -230,9 +251,9 @@ class CompositionAnalyzer:
                 ]
 
     def explored_state_child(self, transition):
-        f1 = float(len(self.composition.out_edges(str(transition.state.toString()))) != transition.state.unexploredTransitions)
-        f2 = float(transition.child is not None and len(self.composition.out_edges(str(transition.child.toString()))) != transition.state.unexploredTransitions)
-        return [f1, f2]
+        f1 = len(self.composition.out_edges(str(transition.state.toString()))) != transition.state.unexploredTransitions
+        f2 = transition.child is not None and len(self.composition.out_edges(str(transition.child.toString()))) != transition.state.unexploredTransitions
+        return [float(f1), float(f2)]
 
     def child_dealdlock(self, transition):
         return [float(transition.child is not None and len(transition.child.getTransitions()) == 0)]

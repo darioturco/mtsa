@@ -586,7 +586,6 @@ public class Compostate<State, Action> implements Comparable<Compostate<State, A
     }
 
     /* TODO: Comment */
-
     public boolean[] getLastMissions(){
         return missionsCompletes.get(lastExpandedAction);
     }
