@@ -57,6 +57,7 @@ class CompositionGraph(nx.DiGraph):
         # self.auxiliar_heuristic = "Ready"
         self.auxiliar_heuristic = "Complete"
 
+        #self.feature_group = "LRL"
         self.feature_group = "GRL"
 
     def start_composition(self):
@@ -156,8 +157,8 @@ class CompositionAnalyzer:
                     self.current_phase, self.child_node_state, self.uncontrollable_neighborhood,
                     self.explored_state_child, self.isLastExpanded, self.child_dealdlock, self.missions_end]
 
-        elif feature_group_name == "IERL":
-            # Nuevos features locales mejorados (IERL)
+        elif feature_group_name == "LRL":
+            # Nuevos features locales mejorados (LRL)
             return [self.event_label_feature, self.state_label_feature, self.controllable, self.marked_state,
                     self.current_phase, self.child_node_state, self.uncontrollable_neighborhood,
                     self.explored_state_child, self.isLastExpanded, self.child_dealdlock, self.mission_feature,
