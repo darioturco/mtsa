@@ -205,7 +205,7 @@ public class DCSForPython {
 
     // This main is for testing purposes only
     public static void main(String[] args) {
-        //DCSForPython.testHeuristic(10000, "AT", "Complete", 1);
+        DCSForPython.testHeuristic(10000, "AT", "Complete", 1);
 
 
         //String instance = "BW";
@@ -215,7 +215,7 @@ public class DCSForPython {
         //String FSP_path = "F:\\UBA\\Tesis\\mtsa\\maven-root\\mtsa\\target\\test-classes\\Blocking\\NoControllableFSPs\\GR1Test11.lts";
         //String FSP_path = "F:\\UBA\\Tesis\\mtsa\\MTSApy\\fsp\\" + instance + "\\" + instance + "-2-2.fsp";
         //String FSP_path = "/home/dario/Documents/Tesis/Learning-Synthesis/fsp/Blocking/ControllableFSPs/GR1Test10.lts";
-        String FSP_path = "/home/dario/Documents/Tesis/mtsa/MTSApy/fsp/BW/BW-2-2.fsp";
+        String FSP_path = "/home/dario/Documents/Tesis/mtsa/MTSApy/fsp/DP/DP-10-15.fsp";
 
         //String heuristicMode = "Ready";
         String heuristicMode = "Complete";
@@ -238,13 +238,13 @@ public class DCSForPython {
 
         while (!env.isFinished()) {
             System.out.println("----------------------------------: " + (i+1));
-            env.heuristic.printFrontier();
+            //env.heuristic.printFrontier();
 
             if(i < list.size()){
                 idx = list.get(i);
             }else{
-                idx = rand.nextInt(env.frontierSize());
-                //idx = env.getActionFronAuxiliarHeuristic();
+                //idx = rand.nextInt(env.frontierSize());
+                idx = env.getActionFronAuxiliarHeuristic();
             }
 
             System.out.println("Expanded: " + env.heuristic.getFrontier().get(idx));

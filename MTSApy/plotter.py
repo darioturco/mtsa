@@ -62,20 +62,29 @@ def get_info_of_instance(rl_path, sliding_window, limit):
     losses = [np.mean(data_instance["Loss"][eps: eps + sliding_window]) for eps in range(len(episodes))]
     return rewards[:limit], episodes[:limit], steps[:limit], rewards_win[:limit], losses[:limit]
 
-
+def data_csv(instance, method):
+    if method == "RA":
+        return pd.read_csv(f"./results/csv/Ready Abstraction.csv")
+    else:
+        return pd.read_csv(f"./results/csv/{method}-{instance}.csv")
 
 def check_method_in_instance(instance, method):
-    data = pd.read_csv(f"./results/csv/{instance}.csv")
+    data = data_csv(instance, method)
 
     instance_matrix = []
-    for n in range(15, 1, -1):
+    for n in range(15, 0, -1):
         row = []
-        for k in range(2, 16):
-            print(data[data["N"] == n][data["K"] == k][data["Method"] == method]["Transitions"])
-            value = int(data[data["N"] == n][data["K"] == k][data["Method"] == method]["Transitions"])
-            print(f"N = {n} - K = {k} -> {method}: {value}")
+        for k in range(1, 16):
+            if method == "RA":
+                value = int(data[(data["N"] == n) & (data["K"] == k) & (data["Instance"] == instance)]["Transitions"])
+            else:
+                #print(data[data["N"] == n][data["K"] == k][data["Method"] == method]["Transitions"])
+                value = int(data[(data["N"] == n) & (data["K"] == k) & (data["Method"] == method)]["Transitions"])
 
+
+            #print(f"N = {n} - K = {k} -> {method}: {value}")
             row.append(value)
+
         instance_matrix.append(row)
 
     instance_matrix = np.array(instance_matrix, dtype=int)
@@ -84,10 +93,11 @@ def check_method_in_instance(instance, method):
     plt.title(f"{instance} - {method}")
     plt.xlabel("K")
     plt.ylabel("N")
-    plt.xticks(np.arange(0.5, 14.5, 1), range(2, 16))
-    plt.yticks(np.arange(13.5, -0.5, -1), range(2, 16))
+    plt.xticks(np.arange(0.5, 15.5, 1), range(1, 16))
+    plt.yticks(np.arange(14.5, -0.5, -1), range(1, 16))
 
     plt.show()
+    return instance_matrix
 
 def comparative_bar_plot(data=None):
     instances = ["AT", "BW", "DP", "TA", "TL", "CM"][::-1]
@@ -139,23 +149,23 @@ if __name__ == "__main__":
     #graph_training_process(sliding_window=100, repetitions=5, save_path='./results/plots', use_steps=True)
 
     # Budget of 10000
-    comparative_bar_plot(data={"Random": {"AT": 59, "BW": 44, "DP": 62, "TA": 60, "TL": 134, "CM": 0},
-                               "2-2": {"AT": 85, "BW": 53, "DP": 101, "TA": 60, "TL": 255, "CM": 0},
-                               "ERL": {"AT": 87, "BW": 57, "DP": 150, "TA": 60, "TL": 255, "CM": 0},
-                               "IERL": {"AT": 90, "BW": 56, "DP": 150, "TA": 60, "TL": 255, "CM": 0},
-                               "BFS": {"AT": 53, "BW": 50, "DP": 61, "TA": 60, "TL": 201, "CM": 0},
-                               "RA Mejora": {"AT": 68, "BW": 136, "DP": 150, "TA": 60, "TL": 255, "CM": 0}})
+    #comparative_bar_plot(data={"Random": {"AT": 59, "BW": 44, "DP": 62, "TA": 60, "TL": 134, "CM": 0},
+    #                           "2-2": {"AT": 85, "BW": 53, "DP": 101, "TA": 60, "TL": 255, "CM": 0},
+    #                           "ERL": {"AT": 87, "BW": 57, "DP": 150, "TA": 60, "TL": 255, "CM": 0},
+    #                           "IERL": {"AT": 90, "BW": 56, "DP": 150, "TA": 60, "TL": 255, "CM": 0},
+    #                           "GRL": {"AT": 0, "BW": 0, "DP": 0, "TA": 0, "TL": 0, "CM": 0},
+    #                           "BFS": {"AT": 53, "BW": 50, "DP": 61, "TA": 60, "TL": 201, "CM": 0},
+    #                           "RA Mejora": {"AT": 68, "BW": 136, "DP": 150, "TA": 60, "TL": 255, "CM": 0}})
 
 
 
+    method_name = "LRL"
+    #method_name = "RA"
+    check_method_in_instance("BW", method_name)
+    check_method_in_instance("DP", method_name)
+    check_method_in_instance("AT", method_name)
+    check_method_in_instance("TA", method_name)
 
-
-    #check_method_in_instance("BW", "2-2")
-    #check_method_in_instance("DP", "2-2")
-    #check_method_in_instance("AT", "2-2")
-    #check_method_in_instance("BW", "kCL")
-    #check_method_in_instance("DP", "kCL")
-    #check_method_in_instance("AT", "kCL")
 
 
 

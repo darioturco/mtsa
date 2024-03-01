@@ -77,8 +77,7 @@ public class ActionWithFeatures<State, Action> {
     }
 
     public String toString(){
-        return state.toString() + " | " + action.toString() + " | " + arrayBoolToString(state.missionsCompletes.get(action)) + " | " + upIndex + " | " + downIndex + " | " + amountMissionComplete;
-        //return arrayBoolToString(state.missionsCompletes);
+        return state.toString() + " | " + action.toString() + " | " + arrayBoolToString(state.missionsCompletes.get(action));
     }
 
     public boolean getMissionValue(){
