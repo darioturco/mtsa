@@ -11,16 +11,16 @@ Analysis is supported by model animation (LTS walkthroughs and graphical animati
 Synthesis is supported by implementation of various discrete event controller synthesis algorithms.
 MTSA also supports modelling, analysis and synthesis partial behaviour models in the form of Modal Transition Systems (MTS). 
 
-MTSA is an evolution of the LTSA tool developed at Imperial College and is a currently a joint research effort of the Distributed Software Engineering (DSE) group at Imperial College London and the Laboratory on Foundations and Tools for Software Engineering (LaFHIS) at University of Buenos Aires.
+MTSA is an evolution of the LTSA tool developed at Imperial College and is a currently a joint research effort of the Distributed Software Engineering (DSE) group at Imperial College London and the Laboratory on Foundations and Tools for Software Engineering (LaFHIS) at University of Buenos Aires. 
+
+This version of MTSA is developer to be used for GR(1) problems. In this proyect Blockin is equibalent of GR(1) but is not a standar notation. The Non-Blocking code is not yet ready to be fully used.
 
 ## How to install ##
-You can run MTSA using JAVA. Just download the [JAR](http://mtsa.dc.uba.ar/download/MTSA_latest.zip) and run it.
+You can run MTSA using JAVA. Just download the [JAR]() and run it. Also you can find the java source code ready for compile in the folder mtsa of this repo.
 
-## Getting started ##
-To learn how to use MTSA or get involved in contributing to its code, refer to our [wiki](https://bitbucket.org/lnahabedian/mtsa/wiki/).
+## MTSAPy ##
 
-### LTS Examples ###
-Once you clone the repository, refer to **examples** folder in: mtsa/maven-root/mtsa/src/test/java/ltsa/dist/
+This project extend the original MTSA proyect adding a python module that can use the DCSForPython interfaze. That allow the python script to use the DCS-OTF Blocking implementation of MTSA. This allow us to train, select, and test the RL agents.
 
 ## Projects ##
 
