@@ -229,13 +229,13 @@ public class DCSForPython {
         String FSP_path = "/home/dario/Documents/Tesis/mtsa/MTSApy/fsp/BW/BW-2-2.fsp";
 
         //String heuristicMode = "Ready";
-        //String heuristicMode = "Complete";
+        String heuristicMode = "Complete";
         //String heuristicMode = "Random";
         //String heuristicMode = "Interactive";
         //String heuristicMode = "BFS";
         //String heuristicMode = "Debugging";
         //String heuristicMode = "CMHeuristic";
-        String heuristicMode = "BWHeuristic";
+        //String heuristicMode = "BWHeuristic";
         DCSForPython env = new DCSForPython(heuristicMode);
         env.startSynthesis(FSP_path);
 

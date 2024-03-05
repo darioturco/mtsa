@@ -21,6 +21,7 @@ public class ActionWithFeatures<State, Action> {
     public boolean upIndex;
     public boolean downIndex;
     public int amountMissionComplete;
+    public boolean enable;
 
     ActionWithFeatures(Compostate<State, Action> state, HAction<Action> action, Compostate<State, Action> parent) {
         this.state = state;
@@ -33,6 +34,7 @@ public class ActionWithFeatures<State, Action> {
         this.index = getNumber(action.toString(), 2);
         this.upIndex = false;
         this.downIndex = false;
+        this.enable = true;
 
         if(parent == null){
             state.missionsCompletes.put(action, new boolean[dcs.n]);

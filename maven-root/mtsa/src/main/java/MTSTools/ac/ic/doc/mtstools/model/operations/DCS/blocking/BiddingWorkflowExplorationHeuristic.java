@@ -22,12 +22,15 @@ public class BiddingWorkflowExplorationHeuristic<State, Action> implements Explo
     int n;
     int k;
 
+    int crew;
+
     public BiddingWorkflowExplorationHeuristic(DirectedControllerSynthesisBlocking<State,Action> dcs) {
         this.explorationFrontier = new LinkedList<>();
         this.actionsToExplore = new ArrayList<>();
         this.dcs = dcs;
         this.n = dcs.n;
         this.k = dcs.k;
+        this.crew = 0;
     }
 
     public void setLastExpandedStateAction(ActionWithFeatures<State, Action> stateAction) {
@@ -69,11 +72,19 @@ public class BiddingWorkflowExplorationHeuristic<State, Action> implements Explo
 
     public int getNextActionIndex() {
         int idx = 0;
-        int peso = 0;
-        int position = -1;
 
-        for(int i=actionsToExplore.size()-1;i>=0;i--){
 
+        for(int i=0;i<actionsToExplore.size();i++){
+            ActionWithFeatures actionWithFeature = actionsToExplore.get(i);
+            if(!actionWithFeature.enable)
+                continue;
+
+            String action = actionWithFeature.action.toString();
+
+
+            if(action.contains("accept.")){
+                return i;
+            }
 
         }
 
