@@ -438,9 +438,12 @@ public class CompleteExplorationHeuristic<State, Action> implements ExplorationH
 
     public void printFrontier(){
         System.out.println("Frontier: ");
-        for(ActionWithFeatures<State, Action> stateAction : actionsToExplore){
-            System.out.println(stateAction.toString());
+        for(int i=0 ; i<actionsToExplore.size() ; i++){
+            System.out.println(i + ": " + actionsToExplore.get(i).toString());
         }
+        //for(ActionWithFeatures<State, Action> stateAction : actionsToExplore){
+        //    System.out.println(stateAction.toString());
+        //}
     }
 
     public void initialize(Compostate<State, Action> state) {

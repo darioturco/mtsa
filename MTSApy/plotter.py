@@ -149,18 +149,24 @@ if __name__ == "__main__":
     #graph_training_process(sliding_window=100, repetitions=5, save_path='./results/plots', use_steps=True)
 
     # Budget of 10000
-    #comparative_bar_plot(data={"Random": {"AT": 59, "BW": 44, "DP": 62, "TA": 60, "TL": 134, "CM": 0},
-    #                           "2-2": {"AT": 85, "BW": 53, "DP": 101, "TA": 60, "TL": 255, "CM": 0},
-    #                           "ERL": {"AT": 87, "BW": 57, "DP": 150, "TA": 60, "TL": 255, "CM": 0},
-    #                           "IERL": {"AT": 90, "BW": 56, "DP": 150, "TA": 60, "TL": 255, "CM": 0},
-    #                           "GRL": {"AT": 0, "BW": 0, "DP": 0, "TA": 0, "TL": 0, "CM": 0},
-    #                           "BFS": {"AT": 53, "BW": 50, "DP": 61, "TA": 60, "TL": 201, "CM": 0},
-    #                           "RA Mejora": {"AT": 68, "BW": 136, "DP": 150, "TA": 60, "TL": 255, "CM": 0}})
+    comparative_bar_plot(data={"Random": {"AT": 59, "BW": 44, "DP": 62, "TA": 60, "TL": 134, "CM": 0},
+                               "2-2": {"AT": 85, "BW": 53, "DP": 101, "TA": 60, "TL": 255, "CM": 0},
+                               #"ERL": {"AT": 87, "BW": 57, "DP": 150, "TA": 60, "TL": 255, "CM": 0},
+                               #"IERL": {"AT": 90, "BW": 56, "DP": 150, "TA": 60, "TL": 255, "CM": 0},
+                               "LRL": {"AT": 90, "BW": 56, "DP": 150, "TA": 60, "TL": 255, "CM": 0},
+                               "GRL": {"AT": 80, "BW": 54, "DP": 108, "TA": 60, "TL": 255, "CM": 0},
+                               "BFS": {"AT": 53, "BW": 50, "DP": 61, "TA": 60, "TL": 201, "CM": 0},
+                               "RA Mejora": {"AT": 68, "BW": 136, "DP": 150, "TA": 60, "TL": 255, "CM": 0}})
 
 
 
     method_name = "LRL"
-    #method_name = "RA"
+    check_method_in_instance("BW", method_name)
+    check_method_in_instance("DP", method_name)
+    check_method_in_instance("AT", method_name)
+    check_method_in_instance("TA", method_name)
+
+    method_name = "RA"
     check_method_in_instance("BW", method_name)
     check_method_in_instance("DP", method_name)
     check_method_in_instance("AT", method_name)
