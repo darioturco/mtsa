@@ -22,6 +22,7 @@ public class ActionWithFeatures<State, Action> {
     public boolean downIndex;
     public int amountMissionComplete;
     public boolean enable;
+    public int expansion_step;
 
     ActionWithFeatures(Compostate<State, Action> state, HAction<Action> action, Compostate<State, Action> parent) {
         this.state = state;
@@ -35,6 +36,7 @@ public class ActionWithFeatures<State, Action> {
         this.upIndex = false;
         this.downIndex = false;
         this.enable = true;
+        this.expansion_step = dcs.expansion_step;
 
         if(parent == null){
             state.missionsCompletes.put(action, new boolean[dcs.n]);
@@ -131,7 +133,7 @@ public class ActionWithFeatures<State, Action> {
 
                     case "BW":
                         // The Document is acepted by a team or is rejected k times
-                        if(label.contains("accept") || (label.contains("reject") && index == dcs.k)){
+                        if(label.contains("accept")){
                             state.missionsCompletes.get(action)[entity] = true;
                         }
                         if(label.contains("refuse") || label.contains("approve")){

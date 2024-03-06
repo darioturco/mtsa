@@ -131,13 +131,13 @@ class Experiment(object):
                 "nesterov": True,
                 "weight_decay": 0.0001,
                 "first_epsilon": 1.0,
-                "buffer_size": 10000,
+                "buffer_size": 10,   # 10000
                 "n_step": 1,
                 "last_epsilon": 0.01,
                 "epsilon_decay_steps": 250000,   # 250000
                 "exp_replay": True,
                 "target_q": True,
-                "reset_target_freq": 10000,      # 10000
+                "reset_target_freq": 10,      # 10000
                 "batch_size": 10,
                 "Adam": True,
 

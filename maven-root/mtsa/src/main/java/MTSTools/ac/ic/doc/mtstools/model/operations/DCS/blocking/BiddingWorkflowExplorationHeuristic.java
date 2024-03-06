@@ -19,10 +19,18 @@ public class BiddingWorkflowExplorationHeuristic<State, Action> implements Explo
 
     public DirectedControllerSynthesisBlocking<State,Action> dcs;
 
-    int n;
-    int k;
+    public int n;
+    public int k;
 
-    int crew;
+    public int crew;
+    public int times_rejected;
+    public boolean assigned;
+    public int actual_step;
+    public String search_for;
+    public boolean approved;
+    public List<Integer> assign_queue;
+
+
 
     public BiddingWorkflowExplorationHeuristic(DirectedControllerSynthesisBlocking<State,Action> dcs) {
         this.explorationFrontier = new LinkedList<>();
@@ -30,7 +38,15 @@ public class BiddingWorkflowExplorationHeuristic<State, Action> implements Explo
         this.dcs = dcs;
         this.n = dcs.n;
         this.k = dcs.k;
+
         this.crew = 0;
+        this.times_rejected = 0;
+        this.assigned = false;
+        this.actual_step = 1;
+        this.search_for = "assign";
+        this.approved = false;
+        this.assign_queue = new ArrayList<>();
+
     }
 
     public void setLastExpandedStateAction(ActionWithFeatures<State, Action> stateAction) {
@@ -55,6 +71,7 @@ public class BiddingWorkflowExplorationHeuristic<State, Action> implements Explo
     public void expansionDone(Compostate<State, Action> state, HAction<Action> action, Compostate<State, Action> child) {
         lastExpandedTo = child;
         lastExpandedFrom = state;
+        actual_step += 1;
     }
 
     public Pair<Compostate<State, Action>, HAction<Action>> getNextAction(boolean updateUnexploredTransaction) {
@@ -71,56 +88,58 @@ public class BiddingWorkflowExplorationHeuristic<State, Action> implements Explo
     }
 
     public int getNextActionIndex() {
-        int idx = 0;
-
-
+        List<Integer> candidates = new ArrayList<>();
         for(int i=0;i<actionsToExplore.size();i++){
             ActionWithFeatures actionWithFeature = actionsToExplore.get(i);
             if(!actionWithFeature.enable)
                 continue;
 
             String action = actionWithFeature.action.toString();
-
-
-            if(action.contains("accept.")){
-                return i;
+            if(action.contains(search_for) && (actionWithFeature.entity == crew || actionWithFeature.entity == -1)){
+                candidates.add(i);
             }
-
         }
 
-
-
-        /*for(int i=actionsToExplore.size()-1;i>=0;i--){
-
-            String action = actionsToExplore.get(i).action.toString();
-            if(action.contains("safe")){
-                return i; // There is no better option
-            } else if (action.contains("cat.turn")) {
-                peso = 4;
-                idx = i;
-            } else if (isCatMove(action) && peso < 3) {
-                //catState = actionsToExplore.get(i).state.toString();
-                // TODO: eliminar lo del catState (no tiene ningun impacto)
-                peso = 3;
-                idx = i;
-            } else if (action.contains("mouse.turn") && peso < 2) {
-                peso = 2;
-                idx = i;
-            } else if (action.contains("mouse.") && peso < 1) {
-                int new_position = Integer.parseInt(action.substring(7).replaceAll("[^0-9]", ""));
-
-                if(Math.abs(new_position - k) < Math.abs(position - k)){
-                    idx = i;
-                    position = new_position;
+        switch (search_for){
+            case "assign":
+                search_for = "accept";
+                break;
+            case "accept":
+                search_for = "reject";
+                if(!approved && crew == n){
+                    search_for = "approve";
                 }
+                break;
 
-                if(position == k){
-                    peso = 1;
+            case "reject":
+                times_rejected += 1;
+                search_for = "assign";
+                if(times_rejected == k){
+                    search_for = "refuse";
                 }
+                break;
+
+            case "refuse":
+                times_rejected = 0;
+                crew += 1;
+                search_for = "assign";
+                break;
+
+            case "approve":
+                approved = true;
+                search_for = "reject";
+        }
+
+        if(candidates.size() == 0)
+            return 0;
+
+        int idx = 0;
+        for(int i=0 ; i<candidates.size() ; i++){
+            if(actionsToExplore.get(candidates.get(i)).expansion_step > actionsToExplore.get(candidates.get(idx)).expansion_step){
+                idx = i;
             }
-        }*/
-
-        return idx;
+        }
+        return candidates.get(idx);
     }
 
     public ArrayList<Integer> getOrder(){
@@ -238,7 +257,8 @@ public class BiddingWorkflowExplorationHeuristic<State, Action> implements Explo
         System.out.println("Frontier: ");
         for(int i = 0 ; i<actionsToExplore.size() ; i++){
             ActionWithFeatures<State, Action> stateAction = actionsToExplore.get(i);
-            System.out.println(i + ": " + stateAction.state.toString() + " | " + stateAction.action.toString());
+            //System.out.println(i + ": " + stateAction.state.toString() + " | " + stateAction.action.toString());
+            System.out.println(i + ": " + stateAction.toString());
         }
     }
 
