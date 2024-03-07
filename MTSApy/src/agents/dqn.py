@@ -56,6 +56,7 @@ class TorchModel(Model):
             args["lambda_warm_up"] = self.constant_one_function
         self.lr_scheduler = LambdaLR(self.optimizer, lr_lambda=[args["lambda_warm_up"]], verbose=False)
 
+        self.args = args
         self.has_learned_something = False
         self.losses = []
         self.path = ""
@@ -116,14 +117,14 @@ class TorchModel(Model):
     def to_onnx(self):
 
         x = torch.randn(1, self.nfeatures, device=self.device)
-        """
+
         torch.onnx.export(self.model,  # model being run
                           x,  # model input (or a tuple for multiple inputs)
                           "tmp.onnx",  # where to save the model (can be a file or file-like object)
                           export_params=True,  # store the trained parameter weights inside the model file
                           opset_version=10,  # the ONNX version to export the model to
                           do_constant_folding=True,  # whether to execute constant folding for optimization
-                          verbose=True, 
+                          verbose=False,
                           input_names=['X'],  # the model's input names
                           output_names=['output'],  # the model's output names
                           dynamic_axes={'X': {0: 'batch_size'},  # variable length axes
@@ -139,8 +140,20 @@ class TorchModel(Model):
                           do_constant_folding=True,  # whether to execute constant folding for optimization
                           verbose=True,
                           input_names=['X'],  # the model's input names
-                          output_names=['output'])  # the model's output names
+                          output_names=['output'])  # the model's output names"""
         return onnx.load("tmp.onnx"), InferenceSession("tmp.onnx")
+
+    def copy_network(self):
+        net = NeuralNetwork(self.nfeatures, self.model.nnsize)
+        weights = self.model.state_dict()
+        net.load_state_dict(weights)
+        return net
+
+    def copy(self):
+        network_copy = self.copy_network()
+        res = TorchModel(self.nfeatures, network_copy, self.args)
+        res.has_learned_something = self.has_learned_something
+        return res
 
     def save(self, path):
         torch.save(self.model, path)
@@ -156,13 +169,14 @@ class TorchModel(Model):
 class NeuralNetwork(nn.Module):
     def __init__(self, nfeatures, nnsize):
         super(NeuralNetwork, self).__init__()
-        """nnsize = list(nnsize) + [1]
-        layers = [nn.Linear(nfeatures, nnsize[0])]
-        for i in range(len(nnsize)-1):
-            layers.append(nn.ReLU())
-            layers.append(nn.Linear(nnsize[i], nnsize[i+1]))
-        self.layers = nn.ModuleList(layers)"""
+        self.nnsize = nnsize
 
+        #nnsize = list(nnsize) + [1]
+        #layers = [nn.Linear(nfeatures, nnsize[0])]
+        #for i in range(len(nnsize)-1):
+        #    layers.append(nn.ReLU())
+        #    layers.append(nn.Linear(nnsize[i], nnsize[i+1]))
+        #self.layers = nn.ModuleList(layers)
         self.layers = nn.ModuleList([nn.LSTM(nfeatures, nnsize[0]), nn.Linear(nnsize[0], 1)])
 
     def forward(self, x):
@@ -332,7 +346,8 @@ class DQN(Agent):
 
             if self.args["target_q"] and self.steps % self.args["reset_target_freq"] == 0:
                 print("Resetting target.")
-                self.target = OnnxModel(self.model)
+                #self.target = OnnxModel(self.model)
+                self.target = self.model.copy()
 
             self.steps += 1
             if self.epsilon > self.args["last_epsilon"] + 1e-10:

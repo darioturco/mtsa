@@ -57,9 +57,9 @@ class CompositionGraph(nx.DiGraph):
         # self.auxiliar_heuristic = "Ready"
         self.auxiliar_heuristic = "Complete"
 
-        #self.feature_group = "LRL"
+        self.feature_group = "LRL"
         #self.feature_group = "GRL"
-        self.feature_group = "LastEntityRL"
+        #self.feature_group = "LastEntityRL"
 
 
     def start_composition(self):

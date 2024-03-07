@@ -125,19 +125,19 @@ class Experiment(object):
     # ltr=False, boolean=True, cbs=False, overwrite=False, max_instance_size=15, nn_size=(20,))
 
     def default_args(self):
-        return {"nn_size": [20],
+        return {"nn_size": [20],            # [20]
                 "learning_rate": 1e-5,
                 "momentum": 0.9,
                 "nesterov": True,
                 "weight_decay": 0.0001,
                 "first_epsilon": 1.0,
-                "buffer_size": 10,   # 10000
+                "buffer_size": 10000,   # 10000
                 "n_step": 1,
-                "last_epsilon": 0.01,
-                "epsilon_decay_steps": 250000,   # 250000
+                "last_epsilon": 0.001,          # 0.01
+                "epsilon_decay_steps": 100000,   # 250000
                 "exp_replay": True,
                 "target_q": True,
-                "reset_target_freq": 10,      # 10000
+                "reset_target_freq": 10000,      # 10000
                 "batch_size": 10,
                 "Adam": True,
 
@@ -147,8 +147,8 @@ class Experiment(object):
                 ### Miscellaneous
                 'freq_save': 5, # 50 # Usar 5 con CM
                 'seconds': None,
-                'max_steps': 500000,    # None
-                "max_eps": 12000
+                'max_steps': 50000000,    # None
+                "max_eps": 1000000
                 }
 
     def init_instance_res(self):

@@ -4,7 +4,7 @@ from src.instance_maker import *
 
 if __name__ == "__main__":
     method = "LastEntityRL"
-    instancia = "TL"
+    instancia = "BW"
     TrainSmallInstance().train(instancia, 2, 2, reward_shaping=False)
     #TestTrainedInAllInstances().pre_select(instancia, 1000, f"./results/models/{instancia}/{method}", 99999, f"./results/selection/{method}-{instancia}.csv")
 
