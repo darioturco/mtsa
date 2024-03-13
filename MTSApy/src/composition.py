@@ -59,7 +59,6 @@ class CompositionGraph(nx.DiGraph):
 
         self.feature_group = "LRL"
         #self.feature_group = "GRL"
-        #self.feature_group = "LastEntityRL"
 
 
     def start_composition(self):
@@ -185,8 +184,18 @@ class CompositionAnalyzer:
                     self.explored_state_child, self.isLastExpanded, self.child_dealdlock, self.mission_feature,
                     self.has_index, self.entity_state_move, self.last_entity]
 
+        #elif feature_group_name == "BWFeatures":
+            # Es igual a LRL pero con el feature de last expanded (la idea es que BW mejore con esto)
+        #    return [self.event_label_feature, self.state_label_feature, self.controllable, self.marked_state,
+        #            self.current_phase, self.child_node_state, self.uncontrollable_neighborhood,
+        #            self.explored_state_child, self.isLastExpanded, self.child_dealdlock, self.mission_feature,
+        #            self.has_index, self.bw_feature]
+
         else:
             assert False, "Incorrect feature group name"
+
+    def bw_feature(self, transition):
+        return []
 
     def last_entity(self, transition):
         return [transition.entity == self.composition.javaEnv.lastEntityExpanded, transition.entity == self.composition.javaEnv.lastEntityExpandedWithoutReset]

@@ -133,17 +133,30 @@ public class ActionWithFeatures<State, Action> {
 
                     case "BW":
                         // The Document is acepted by a team or is rejected k times
-                        if(label.contains("accept")){
+                        if(label.contains("assign")){
                             state.missionsCompletes.get(action)[entity] = true;
                         }
-                        if(label.contains("refuse") || label.contains("approve")){
+
+                        if(label.contains("assign")){
+                            if(state.missionsCompletes.get(action)[entity]) {
+                                state.missionsCompletes.get(action)[entity] = false;
+                            }
+                        }
+                        // Ver de mejorar y usar 3 features distintos:
+                        //      uno para ver si a esa entidad ya le asignaron el documento
+                        //      otro para ver si ya lo acepto
+                        //      otro para ver si ya lo rechazo k veces
+
+
+
+                        /*if(label.contains("refuse") || label.contains("approve")){
                             state.entityIndexes.get(action)[entity] = 0;
                             downIndex = true;
                         }
                         if(label.contains("reject")){
                             state.entityIndexes.get(action)[entity] = index;
                             upIndex = true;
-                        }
+                        }*/
                         break;
 
                     case "CM":

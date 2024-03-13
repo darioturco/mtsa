@@ -12,7 +12,7 @@ def graph_individual_training_process(sliding_window=5, save_path=None, use_step
     #random_data = pd.read_csv("./results/csv/random budget=5000 repetitions=100.csv")
     random_data = pd.read_csv("./results/csv/random.csv")
     ra_data = pd.read_csv("./results/csv/Ready Abstraction.csv")
-    limit = 1200000
+    limit = 1000000 // 25
 
     if problems is None:
         problems = BENCHMARK_PROBLEMS

@@ -165,19 +165,30 @@ class TorchModel(Model):
         new_model.path = path
         return new_model
 
+class LSTMNeuralNetwork(nn.Module):
+    def __init__(self, nfeatures, nnsize):
+        super(LSTMNeuralNetwork, self).__init__()
+        self.nnsize = nnsize
+        self.layers = nn.ModuleList([nn.LSTM(nfeatures, nnsize[0]), nn.Linear(nnsize[0], 1)])
+
+    def forward(self, x):
+        for layer in self.layers:
+            if isinstance(x, tuple):
+                x = x[0]
+            x = layer(x.to(torch.float))
+        return x
 
 class NeuralNetwork(nn.Module):
     def __init__(self, nfeatures, nnsize):
         super(NeuralNetwork, self).__init__()
         self.nnsize = nnsize
 
-        #nnsize = list(nnsize) + [1]
-        #layers = [nn.Linear(nfeatures, nnsize[0])]
-        #for i in range(len(nnsize)-1):
-        #    layers.append(nn.ReLU())
-        #    layers.append(nn.Linear(nnsize[i], nnsize[i+1]))
-        #self.layers = nn.ModuleList(layers)
-        self.layers = nn.ModuleList([nn.LSTM(nfeatures, nnsize[0]), nn.Linear(nnsize[0], 1)])
+        nnsize = list(nnsize) + [1]
+        layers = [nn.Linear(nfeatures, nnsize[0])]
+        for i in range(len(nnsize)-1):
+            layers.append(nn.ReLU())
+            layers.append(nn.Linear(nnsize[i], nnsize[i+1]))
+        self.layers = nn.ModuleList(layers)
 
     def forward(self, x):
         for layer in self.layers:

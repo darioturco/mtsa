@@ -133,13 +133,14 @@ class Experiment(object):
                 "first_epsilon": 1.0,
                 "buffer_size": 10000,   # 10000
                 "n_step": 1,
-                "last_epsilon": 0.001,          # 0.01
-                "epsilon_decay_steps": 100000,   # 250000
+                "last_epsilon": 0.01,          # 0.01
+                "epsilon_decay_steps": 250000,   # 250000
                 "exp_replay": True,
                 "target_q": True,
                 "reset_target_freq": 10000,      # 10000
                 "batch_size": 10,
                 "Adam": True,
+                "reward_shaping": False,
 
                 "lambda_warm_up": None,
                 #"lambda_warm_up": lambda step: 1.0 if step > 5000 else step * 0.99,
@@ -147,7 +148,7 @@ class Experiment(object):
                 ### Miscellaneous
                 'freq_save': 5, # 50 # Usar 5 con CM
                 'seconds': None,
-                'max_steps': 50000000,    # None
+                'max_steps': 500000,    # None
                 "max_eps": 1000000
                 }
 
@@ -215,11 +216,11 @@ class TrainSmallInstance(Experiment):
         super().__init__(name)
 
     def train(self, instance, n_train, k_train, reward_shaping=False):
+        args = self.default_args()
         path = self.get_fsp_path()
-        env = self.get_environment(instance, n_train, k_train, path, reward_shaping)
+        env = self.get_environment(instance, n_train, k_train, path, args["reward_shaping"])
 
         nfeatures = env.get_nfeatures()
-        args = self.default_args()
         pth_path = f"results/models/{instance}/{instance}-{n_train}-{k_train}.pth"
 
         print(f"Starting training in instance: {instance}-{n_train}-{k_train}...")
