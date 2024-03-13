@@ -215,13 +215,13 @@ class TrainSmallInstance(Experiment):
     def __init__(self, name="Test"):
         super().__init__(name)
 
-    def train(self, instance, n_train, k_train):
+    def train(self, instance, n_train, k_train, method):
         args = self.default_args()
         path = self.get_fsp_path()
         env = self.get_environment(instance, n_train, k_train, path, args["reward_shaping"])
 
         nfeatures = env.get_nfeatures()
-        pth_path = f"results/models/{instance}/{instance}-{n_train}-{k_train}.pth"
+        pth_path = f"results/models/{instance}/{method}/{instance}-{n_train}-{k_train}.pth"
 
         print(f"Starting training in instance: {instance}-{n_train}-{k_train}...")
         neural_network = NeuralNetwork(nfeatures, args["nn_size"]).to("cpu")

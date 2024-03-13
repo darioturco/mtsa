@@ -146,17 +146,7 @@ public class ActionWithFeatures<State, Action> {
                         //      uno para ver si a esa entidad ya le asignaron el documento
                         //      otro para ver si ya lo acepto
                         //      otro para ver si ya lo rechazo k veces
-
-
-
-                        /*if(label.contains("refuse") || label.contains("approve")){
-                            state.entityIndexes.get(action)[entity] = 0;
-                            downIndex = true;
-                        }
-                        if(label.contains("reject")){
-                            state.entityIndexes.get(action)[entity] = index;
-                            upIndex = true;
-                        }*/
+                        
                         break;
 
                     case "CM":
