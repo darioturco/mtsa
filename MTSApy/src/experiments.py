@@ -215,7 +215,7 @@ class TrainSmallInstance(Experiment):
     def __init__(self, name="Test"):
         super().__init__(name)
 
-    def train(self, instance, n_train, k_train, reward_shaping=False):
+    def train(self, instance, n_train, k_train):
         args = self.default_args()
         path = self.get_fsp_path()
         env = self.get_environment(instance, n_train, k_train, path, args["reward_shaping"])
