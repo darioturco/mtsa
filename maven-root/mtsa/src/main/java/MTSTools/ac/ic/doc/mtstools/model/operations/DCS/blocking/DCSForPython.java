@@ -196,8 +196,6 @@ public class DCSForPython {
         return i;
     }
 
-
-
     public static float mean(List<Integer> ls) {
         int total = 0;
         for (int i = 0; i < ls.size(); i++)
@@ -262,7 +260,7 @@ public class DCSForPython {
         //String FSP_path = "F:\\UBA\\Tesis\\mtsa\\maven-root\\mtsa\\target\\test-classes\\Blocking\\NoControllableFSPs\\GR1Test11.lts";
         //String FSP_path = "F:\\UBA\\Tesis\\mtsa\\MTSApy\\fsp\\" + instance + "\\" + instance + "-2-2.fsp";
         //String FSP_path = "/home/dario/Documents/Tesis/Learning-Synthesis/fsp/Blocking/ControllableFSPs/GR1Test10.lts";
-        String FSP_path = "/home/dario/Documents/Tesis/mtsa/MTSApy/fsp/TL/TL-2-2.fsp";
+        String FSP_path = "/home/dario/Documents/Tesis/mtsa/MTSApy/fsp/BW/BW-2-2.fsp";
 
         //String heuristicMode = "Ready";
         //String heuristicMode = "Complete";

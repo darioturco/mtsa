@@ -41,10 +41,11 @@ public class ActionWithFeatures<State, Action> {
         this.expansionStep = dcs.expansionStep;
 
         if(parent == null){
-            state.missionsCompletes.put(action, new boolean[dcs.n]);
+            state.missionsCompletes.put(action, dcs.instanceDomain.newFeatureMatrix());
             state.entityIndexes.put(action, new int[dcs.n]);
         }else{
-            state.missionsCompletes.put(action, Arrays.copyOf(parent.getLastMissions(), dcs.n));
+
+            state.missionsCompletes.put(action, dcs.instanceDomain.copyMatrix(parent));
             state.entityIndexes.put(action, Arrays.copyOf(parent.getLastentityIndex(), dcs.n));
             updateMissions();
         }
@@ -59,7 +60,7 @@ public class ActionWithFeatures<State, Action> {
 
     public int countMissionComplete(){
         int res = 0;
-        for(boolean missionComplete : state.missionsCompletes.get(action)){
+        for(boolean missionComplete : state.missionsCompletes.get(action).get(0)){
             if(missionComplete){
                 res += 1;
             }
@@ -82,15 +83,16 @@ public class ActionWithFeatures<State, Action> {
     }
 
     public String toString(){
-        return state.toString() + " | " + action.toString() + " | " + arrayBoolToString(state.missionsCompletes.get(action));
+        return state.toString() + " | " + action.toString();
+        //return state.toString() + " | " + action.toString() + " | " + arrayBoolToString(state.missionsCompletes.get(action));
     }
 
     public boolean getMissionValue(){
-        // Tengo n entidades, como se sobre cual de las n entidades estoy hablando
+        // There are n entities, this actionWithFeature refers about the entity number ´this.entity´
         String label = action.toString();
         if(label.matches(".*\\d.*") && !dcs.instance.equals("")) {
             if (entity < dcs.n) {
-                return state.missionsCompletes.get(action)[entity];
+                return state.missionsCompletes.get(action).get(0)[entity];
             }
         }
         return false;
@@ -119,9 +121,18 @@ public class ActionWithFeatures<State, Action> {
 // Despues hacer esta clase publica
 class InstanceDomain<State, Action> {
     public DirectedControllerSynthesisBlocking dcs;
+    public int f;
     
     InstanceDomain(DirectedControllerSynthesisBlocking dcs){
         this.dcs = dcs;
+    }
+
+    public List<boolean[]> copyMatrix(Compostate parent){
+        List<boolean[]> res = new ArrayList();
+        for(int i=0 ; i<f ; i++){
+            res.add(Arrays.copyOf(parent.getLastMissions(i), dcs.n));
+        }
+        return res;
     }
 
     public static InstanceDomain createInstanceDomain(DirectedControllerSynthesisBlocking dcs){
@@ -142,12 +153,23 @@ class InstanceDomain<State, Action> {
         return null;
     }
 
+    public List<boolean[]> newFeatureMatrix() {
+        List<boolean[]> res = new ArrayList();
+        for(int i=0 ; i<f ; i++){
+            res.add(new boolean[dcs.n]);
+        }
+        return res;
+    }
+
+
+
     public void computeCustomFeature(ActionWithFeatures transition){}
 }
 
 class InstanceDomainBW<State, Action> extends InstanceDomain{
     InstanceDomainBW(DirectedControllerSynthesisBlocking dcs){
         super(dcs);
+        this.f = 2;
     }
     
     public void computeCustomFeature(ActionWithFeatures transition){
@@ -158,13 +180,11 @@ class InstanceDomainBW<State, Action> extends InstanceDomain{
         
         // The Document is acepted by a team or is rejected k times
         if(label.contains("assign")){
-            state.missionsCompletes.get(action)[entity] = true;
+            state.missionsCompletes.get(action).get(0)[entity] = true;
         }
 
-        if(label.contains("assign")){
-            if(state.missionsCompletes.get(action)[entity]) {
-                state.missionsCompletes.get(action)[entity] = false;
-            }
+        if(label.contains("accept") && state.missionsCompletes.get(action).get(0)[entity]){
+            state.missionsCompletes.get(action).get(0)[entity] = false;
         }
         // Ver de mejorar y usar 3 features distintos:
         //      uno para ver si a esa entidad ya le asignaron el documento
@@ -176,6 +196,7 @@ class InstanceDomainBW<State, Action> extends InstanceDomain{
 class InstanceDomainTA<State, Action> extends InstanceDomain{
     InstanceDomainTA(DirectedControllerSynthesisBlocking dcs){
         super(dcs);
+        this.f = 1;
     }
 
     public void computeCustomFeature(ActionWithFeatures transition){
@@ -187,7 +208,7 @@ class InstanceDomainTA<State, Action> extends InstanceDomain{
         int index = transition.index;
 
         if(label.contains("purchase.succ")){
-            state.missionsCompletes.get(action)[entity] = true;
+            state.missionsCompletes.get(action).get(0)[entity] = true;
         }
         if(label.contains("steps")){
             int oldIndex = parent.getLastentityIndex()[entity];
@@ -205,6 +226,7 @@ class InstanceDomainTA<State, Action> extends InstanceDomain{
 class InstanceDomainAT<State, Action> extends InstanceDomain{
     InstanceDomainAT(DirectedControllerSynthesisBlocking dcs){
         super(dcs);
+        this.f = 1;
     }
     
     public void computeCustomFeature(ActionWithFeatures transition){
@@ -216,7 +238,7 @@ class InstanceDomainAT<State, Action> extends InstanceDomain{
         int index = transition.index;
 
         if(label.contains("land")){
-            state.missionsCompletes.get(action)[entity] = true;
+            state.missionsCompletes.get(action).get(0)[entity] = true;
         }
         if(label.contains("descend")){
             int oldIndex = parent.getLastentityIndex()[entity];
@@ -234,6 +256,7 @@ class InstanceDomainAT<State, Action> extends InstanceDomain{
 class InstanceDomainDP<State, Action> extends InstanceDomain{
     InstanceDomainDP(DirectedControllerSynthesisBlocking dcs){
         super(dcs);
+        this.f = 1;
     }
 
     public void computeCustomFeature(ActionWithFeatures transition){
@@ -243,7 +266,7 @@ class InstanceDomainDP<State, Action> extends InstanceDomain{
         int entity = transition.entity;
 
         if(label.contains("release")){
-            state.missionsCompletes.get(action)[entity] = true;
+            state.missionsCompletes.get(action).get(0)[entity] = true;
             state.entityIndexes.get(action)[entity] = 0;
             transition.downIndex = true;
         }
@@ -257,6 +280,7 @@ class InstanceDomainDP<State, Action> extends InstanceDomain{
 class InstanceDomainCM<State, Action> extends InstanceDomain{
     InstanceDomainCM(DirectedControllerSynthesisBlocking dcs){
         super(dcs);
+        this.f = 1;
     }
     
     public void computeCustomFeature(ActionWithFeatures transition){
@@ -268,7 +292,7 @@ class InstanceDomainCM<State, Action> extends InstanceDomain{
         int index = transition.index;
 
         if(label.contains("mouse") && label.contains("move") && index == dcs.k){
-            state.missionsCompletes.get(action)[entity] = true;
+            state.missionsCompletes.get(action).get(0)[entity] = true;
         }
         if(label.contains("mouse") && label.contains("move")) {
             int newIndex = 2 * dcs.k - index;
@@ -287,6 +311,7 @@ class InstanceDomainCM<State, Action> extends InstanceDomain{
 class InstanceDomainTL<State, Action> extends InstanceDomain{
     InstanceDomainTL(DirectedControllerSynthesisBlocking dcs){
         super(dcs);
+        this.f = 1;
     }
     
     public void computeCustomFeature(ActionWithFeatures transition){

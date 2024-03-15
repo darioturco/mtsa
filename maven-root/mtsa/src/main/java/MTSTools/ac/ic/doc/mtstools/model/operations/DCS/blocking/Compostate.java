@@ -134,9 +134,8 @@ public class Compostate<State, Action> implements Comparable<Compostate<State, A
     public Map<HAction<Action>, List<State>> actionChildStates;
 
     public HAction<Action> lastExpandedAction;
-    public Map<HAction<Action>, boolean[]> missionsCompletes;
+    public Map<HAction<Action>, List<boolean[]>> missionsCompletes;
     public Map<HAction<Action>, int[]> entityIndexes;
-
 
     /** Constructor for a Composed State. */
     public Compostate(DirectedControllerSynthesisBlocking<State, Action> dcs, List<State> states) {
@@ -586,8 +585,8 @@ public class Compostate<State, Action> implements Comparable<Compostate<State, A
     }
 
     /** Returns the array with the completes missions of an action */
-    public boolean[] getLastMissions(){
-        return missionsCompletes.get(lastExpandedAction);
+    public boolean[] getLastMissions(int feature){
+        return missionsCompletes.get(lastExpandedAction).get(feature);
     }
 
     public int[] getLastentityIndex(){
