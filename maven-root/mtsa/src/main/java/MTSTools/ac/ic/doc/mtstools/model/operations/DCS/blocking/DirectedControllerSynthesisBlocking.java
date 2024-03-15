@@ -6,8 +6,6 @@ import MTSTools.ac.ic.doc.mtstools.model.LTS;
 import MTSTools.ac.ic.doc.mtstools.model.impl.LTSImpl;
 import MTSTools.ac.ic.doc.mtstools.model.impl.MarkedLTSImpl;
 import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.DirectedControllerSynthesis;
-import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.abstraction.*;
-import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.ExplorationHeuristic;
 import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.abstraction.HeuristicMode;
 
 import java.util.*;
@@ -18,7 +16,6 @@ import static org.junit.Assert.*;
 import java.util.logging.ConsoleHandler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
 
 /** This class contains the logic to synthesize a controller for
  *  a deterministic environment using an informed search procedure. */
@@ -110,11 +107,13 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
     /** When syntetize, save all the pair State, Action  that were expand */
     public List<Pair<Compostate<State, Action>, HAction<Action>>> synthesizeTrace;
 
+    public InstanceDomain instanceDomain;
+
     public int n=0;
     public int k=0;
     public String instance="";
 
-    public int expansion_step;
+    public int expansionStep;
 
     public void setupSynthesis(List<LTS<State, Action>> ltss,
                                Set<Action> controllable,
@@ -149,6 +148,7 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
         dag = new BidirectionalMap<>();
         auxiliarListStates = new ArrayList<>();
         synthesizeTrace = new ArrayList<>();
+
         /** List of descendants of an state (used to close unnecessary descendants). */
         Deque<Compostate<State, Action>> descendants = new ArrayDeque<>();
 
@@ -172,7 +172,7 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
         loopID = 1;
         stratY = new HashMap<>();
         stratX = new HashMap<>();
-        expansion_step=1;
+        expansionStep = 1;
     }
 
     public ExplorationHeuristic<State, Action> getHeuristic(HeuristicMode heuristicMode){
@@ -331,16 +331,6 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
         return result;
     }
 
-    public boolean canReachMarkedFrom(List<State> childStates){
-        /*if(canReachMarkedInLts == null) return true;
-        for(int i = 0; i < childStates.size(); i++){
-            if (!canReachMarkedInLts.get(i).contains(childStates.get(i))) {
-                return false;
-            }
-        }*/
-        return true;
-    }
-
     public void load_data(String path){
         try{
             String subPath = path.split("-")[0];
@@ -350,6 +340,8 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
             Scanner s = new Scanner(path).useDelimiter("[^\\d]+");
             n = s.nextInt();
             k = s.nextInt();
+
+            instanceDomain = InstanceDomain.createInstanceDomain(this);
         }catch(Exception e){
             instance = "";
             n = 0;
@@ -372,7 +364,6 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
         return initialComp;
     }
 
-
     /** Expands a state following a given recommendation from a parent compostate.
      *  Internally this populates the transitions and expanded lists. */
     Compostate<State, Action> expand(Compostate<State, Action> compostate, HAction<Action> action) {
@@ -386,7 +377,7 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
         heuristic.notifyExpandingState(compostate, action, childCompostate);
         explore(compostate, action, childCompostate);
         childCompostate.setExpanded();
-        expansion_step += 1;
+        expansionStep += 1;
         
         if (isError(childCompostate)){
             logger.finer("Expanding child compostate " + childCompostate.toString() + " is an error");
@@ -954,11 +945,6 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
     private boolean forcedToError(Compostate<State, Action> state) {
         boolean existsActionLeadingToNoneOrGoal = false;
         boolean fullyExplored = heuristic.fullyExplored(state);
-
-        // TODO: Is not necesary to continue if fully Explored is false
-        //if(!heuristic.fullyExplored(state)){
-        //    return false;
-        //}
 
         for (Compostate<State, Action> child : state.getChildrenExploredThroughUncontrollable()){
             if(isError(child)){

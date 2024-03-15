@@ -4,6 +4,7 @@ import MTSTools.ac.ic.doc.commons.relations.Pair;
 
 import java.util.*;
 
+// Heuristica incompleta, al parecer no es tan facil como crei el hacer una heuristica a mano para BW
 public class BiddingWorkflowExplorationHeuristic<State, Action> implements ExplorationHeuristic<State, Action> {
     public LinkedList<Pair<Compostate<State, Action>, HAction<Action>>> explorationFrontier;
     public ArrayList<ActionWithFeatures<State, Action>> actionsToExplore;
@@ -135,7 +136,7 @@ public class BiddingWorkflowExplorationHeuristic<State, Action> implements Explo
 
         int idx = 0;
         for(int i=0 ; i<candidates.size() ; i++){
-            if(actionsToExplore.get(candidates.get(i)).expansion_step > actionsToExplore.get(candidates.get(idx)).expansion_step){
+            if(actionsToExplore.get(candidates.get(i)).expansionStep > actionsToExplore.get(candidates.get(idx)).expansionStep){
                 idx = i;
             }
         }
@@ -187,17 +188,11 @@ public class BiddingWorkflowExplorationHeuristic<State, Action> implements Explo
         //state.actionsWithFeatures = new HashMap<>();
         for(HAction<Action> action : state.getTransitions()){
             List<State> childStates = state.dcs.getChildStates(state, action);
-            // assertTrue(!dcs.dcs.canReachMarkedFrom(childStates) == state.getEstimate(action).isConflict());
-            if(state.dcs.canReachMarkedFrom(childStates)) {
-                state.actionChildStates.put(action, childStates);
-                state.unexploredTransitions ++;
-                if(!action.isControllable()){
-                    state.uncontrollableUnexploredTransitions++;
-                }
-            } else {
-                // action is uncontrollable since we have removed controllable conflicts
-                state.heuristicStronglySuggestsIsError = true;
-                return;
+
+            state.actionChildStates.put(action, childStates);
+            state.unexploredTransitions ++;
+            if(!action.isControllable()){
+                state.uncontrollableUnexploredTransitions++;
             }
         }
     }

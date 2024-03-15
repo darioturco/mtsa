@@ -127,18 +127,13 @@ public class InteractiveExplorationHeuristic<State, Action> implements Explorati
         //state.actionsWithFeatures = new HashMap<>();
         for(HAction<Action> action : state.getTransitions()){
             List<State> childStates = state.dcs.getChildStates(state, action);
-            // assertTrue(!dcs.dcs.canReachMarkedFrom(childStates) == state.getEstimate(action).isConflict());
-            if(state.dcs.canReachMarkedFrom(childStates)) {
-                state.actionChildStates.put(action, childStates);
-                state.unexploredTransitions ++;
-                if(!action.isControllable()){
-                    state.uncontrollableUnexploredTransitions++;
-                }
-            } else {
-                // action is uncontrollable since we have removed controllable conflicts
-                state.heuristicStronglySuggestsIsError = true;
-                return;
+
+            state.actionChildStates.put(action, childStates);
+            state.unexploredTransitions ++;
+            if(!action.isControllable()){
+                state.uncontrollableUnexploredTransitions++;
             }
+
         }
     }
 

@@ -585,12 +585,11 @@ public class Compostate<State, Action> implements Comparable<Compostate<State, A
         updateRecommendation(color);
     }
 
-    /* TODO: Comment */
+    /** Returns the array with the completes missions of an action */
     public boolean[] getLastMissions(){
         return missionsCompletes.get(lastExpandedAction);
     }
 
-    /* TODO: Comment */
     public int[] getLastentityIndex(){
         return entityIndexes.get(lastExpandedAction);
     }

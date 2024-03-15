@@ -360,25 +360,19 @@ public class CompleteExplorationHeuristic<State, Action> implements ExplorationH
         //state.actionsWithFeatures = new HashMap<>();
         for(HAction<Action> action : state.getTransitions()){
             List<State> childStates = state.dcs.getChildStates(state, action);
-            // assertTrue(!dcs.dcs.canReachMarkedFrom(childStates) == state.getEstimate(action).isConflict());
-            if(state.dcs.canReachMarkedFrom(childStates)) {
-                state.actionChildStates.put(action, childStates);
-                state.unexploredTransitions ++;
-                if(!action.isControllable()){
-                    state.uncontrollableUnexploredTransitions++;
-                }
-            } else {
-                // action is uncontrollable since we have removed controllable conflicts
-                state.heuristicStronglySuggestsIsError = true;
-                return;
+
+            state.actionChildStates.put(action, childStates);
+            state.unexploredTransitions++;
+            if(!action.isControllable()){
+                state.uncontrollableUnexploredTransitions++;
             }
+
         }
     }
 
     public void addTransitionsToFrontier(Compostate<State, Action> state, Compostate<State, Action> parent) {
         updateState(state);
         for (HAction<Action> action : state.transitions) {
-            //state.updateMissions(parent, action);
             actionsToExplore.add(new ActionWithFeatures<>(state, action, parent));
         }
     }
@@ -392,7 +386,7 @@ public class CompleteExplorationHeuristic<State, Action> implements ExplorationH
     }
 
     public void notifyExpandingState(Compostate<State, Action> parent, HAction<Action> action, Compostate<State, Action> state) {
-        if(state.wasExpanded()){ // todo: understand this, i am copying the behavior of the code pre refactor
+        if(state.wasExpanded()){
             state.setTargets(parent.getTargets());
             state.addTargets(state); //we always call addTargets, if the state is not marked, it will not be added to any list
         }

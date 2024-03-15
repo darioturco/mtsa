@@ -144,19 +144,19 @@ def comparative_bar_plot(data=None):
 if __name__ == "__main__":
     print("Plotting...")
     #graph_individual_training_process(sliding_window=500, save_path='./results/plots', use_steps=True, problems=BENCHMARK_PROBLEMS)
-    graph_individual_training_process(sliding_window=1000, save_path=None, use_steps=True, problems=["BW"])
+    #graph_individual_training_process(sliding_window=1000, save_path=None, use_steps=True, problems=["BW"])
 
     #graph_training_process(sliding_window=100, repetitions=5, save_path='./results/plots', use_steps=True)
 
     # Budget of 10000
-    #comparative_bar_plot(data={"Random": {"AT": 59, "BW": 44, "DP": 62, "TA": 60, "TL": 134, "CM": 0},
-    #                           "2-2": {"AT": 85, "BW": 53, "DP": 101, "TA": 60, "TL": 255, "CM": 0},
-    #                           #"ERL": {"AT": 87, "BW": 57, "DP": 150, "TA": 60, "TL": 255, "CM": 0},
-    #                           #"IERL": {"AT": 90, "BW": 56, "DP": 150, "TA": 60, "TL": 255, "CM": 0},
-    #                           "LRL": {"AT": 90, "BW": 56, "DP": 150, "TA": 60, "TL": 255, "CM": 0},
-    #                           "GRL": {"AT": 80, "BW": 54, "DP": 108, "TA": 60, "TL": 255, "CM": 0},
-    #                           "BFS": {"AT": 53, "BW": 50, "DP": 61, "TA": 60, "TL": 201, "CM": 0},
-    #                           "RA Mejora": {"AT": 68, "BW": 136, "DP": 150, "TA": 60, "TL": 255, "CM": 0}})
+    comparative_bar_plot(data={"Random": {"AT": 59, "BW": 44, "DP": 62, "TA": 60, "TL": 134, "CM": 18},
+                               "2-2": {"AT": 85, "BW": 53, "DP": 101, "TA": 60, "TL": 255, "CM": 18},
+                               #"ERL": {"AT": 87, "BW": 57, "DP": 150, "TA": 60, "TL": 255, "CM": 0},
+                               #"IERL": {"AT": 90, "BW": 56, "DP": 150, "TA": 60, "TL": 255, "CM": 0},
+                               "LRL": {"AT": 90, "BW": 104, "DP": 150, "TA": 60, "TL": 255, "CM": 24},
+                               "GRL": {"AT": 80, "BW": 54, "DP": 108, "TA": 60, "TL": 255, "CM": 24},
+                               "BFS": {"AT": 53, "BW": 50, "DP": 61, "TA": 60, "TL": 201, "CM": 17},
+                               "RA Mejora": {"AT": 68, "BW": 136, "DP": 150, "TA": 60, "TL": 255, "CM": 22}})
 
 
 

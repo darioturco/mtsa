@@ -85,8 +85,6 @@ public class CatAndMouseExplorationHeuristic<State, Action> implements Explorati
                 peso = 4;
                 idx = i;
             } else if (isCatMove(action) && peso < 3) {
-                //catState = actionsToExplore.get(i).state.toString();
-                // TODO: eliminar lo del catState (no tiene ningun impacto)
                 peso = 3;
                 idx = i;
             } else if (action.contains("mouse.turn") && peso < 2) {
@@ -154,17 +152,11 @@ public class CatAndMouseExplorationHeuristic<State, Action> implements Explorati
         //state.actionsWithFeatures = new HashMap<>();
         for(HAction<Action> action : state.getTransitions()){
             List<State> childStates = state.dcs.getChildStates(state, action);
-            // assertTrue(!dcs.dcs.canReachMarkedFrom(childStates) == state.getEstimate(action).isConflict());
-            if(state.dcs.canReachMarkedFrom(childStates)) {
-                state.actionChildStates.put(action, childStates);
-                state.unexploredTransitions ++;
-                if(!action.isControllable()){
-                    state.uncontrollableUnexploredTransitions++;
-                }
-            } else {
-                // action is uncontrollable since we have removed controllable conflicts
-                state.heuristicStronglySuggestsIsError = true;
-                return;
+
+            state.actionChildStates.put(action, childStates);
+            state.unexploredTransitions ++;
+            if(!action.isControllable()){
+                state.uncontrollableUnexploredTransitions++;
             }
         }
     }
