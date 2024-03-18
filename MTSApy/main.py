@@ -3,8 +3,8 @@ from src.fixed_experiment import *
 from src.instance_maker import *
 
 if __name__ == "__main__":
-    experiment_name = "ERL"
-    instancia = "BW"
+    experiment_name = "CRL"
+    instancia = "AT"
     TrainSmallInstance().train(instancia, 2, 2, experiment_name)
     #TestTrainedInAllInstances().pre_select(instancia, 1000, f"./results/models/{instancia}/{experiment_name}", 99999, f"./results/selection/{experiment_name}-{instancia}.csv")
 

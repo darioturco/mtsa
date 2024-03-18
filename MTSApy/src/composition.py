@@ -2,7 +2,7 @@ import networkx as nx
 import jpype.imports
 from bidict import bidict
 import sys
-import re
+import random
 
 if not jpype.isJVMStarted():
     if "linux" in sys.platform:
@@ -29,7 +29,7 @@ class CompositionGraph(nx.DiGraph):
     #  - TL (Transfer Line)
     #  - TA (Travel Agency)
     #  - CM (Cat and Mouse)
-    #  - Custom (n and k are ingnored and you can pass a custom path in the start_composition function)
+    #  - Custom (n and k are ignored and you can pass a custom path in the start_composition function)
 
     @staticmethod
     def getDCSForPython():
@@ -57,8 +57,11 @@ class CompositionGraph(nx.DiGraph):
         # self.auxiliar_heuristic = "Ready"
         self.auxiliar_heuristic = "Complete"
 
-        self.feature_group = "LRL"
+        #self.feature_group = "LRL"
         #self.feature_group = "GRL"
+        self.feature_group = "CRL"
+
+        self.r_feature = 1
 
 
     def start_composition(self):
@@ -165,7 +168,7 @@ class CompositionAnalyzer:
                     self.explored_state_child, self.isLastExpanded, self.child_dealdlock, self.mission_feature,
                     self.has_index, self.entity_state_move]
 
-        elif feature_group_name == "ERL":
+        elif feature_group_name == "ERL": # No importa (No da buenos resultados)
             # Nuevos features locales (ERL)
             return [self.event_label_feature, self.state_label_feature, self.controllable, self.marked_state,
                     self.current_phase, self.child_node_state, self.uncontrollable_neighborhood,
@@ -177,12 +180,18 @@ class CompositionAnalyzer:
                     self.current_phase, self.child_node_state, self.uncontrollable_neighborhood,
                     self.explored_state_child, self.isLastExpanded]
 
-        elif feature_group_name == "LastEntityRL":
-            # Es igual a LRL pero con el feature de last expanded (la idea es que BW mejore con esto)
+        elif feature_group_name == "CRL":   # CRL: Custom RL (Es LRL pero agregando feature custom de para cada dominio)
             return [self.event_label_feature, self.state_label_feature, self.controllable, self.marked_state,
                     self.current_phase, self.child_node_state, self.uncontrollable_neighborhood,
                     self.explored_state_child, self.isLastExpanded, self.child_dealdlock, self.mission_feature,
-                    self.has_index, self.entity_state_move, self.last_entity]
+                    self.has_index, self.entity_state_move, self.custom_feature]
+
+
+        elif feature_group_name == "RRL":   # RRL: Random RL (Es lo mismo que LRL pero con un feature random)
+            return [self.event_label_feature, self.state_label_feature, self.controllable, self.marked_state,
+                    self.current_phase, self.child_node_state, self.uncontrollable_neighborhood,
+                    self.explored_state_child, self.isLastExpanded, self.child_dealdlock, self.mission_feature,
+                    self.has_index, self.entity_state_move, self.random_feature]
 
         #elif feature_group_name == "BWFeatures":
             # Es igual a LRL pero con el feature de last expanded (la idea es que BW mejore con esto)
@@ -194,8 +203,8 @@ class CompositionAnalyzer:
         else:
             assert False, "Incorrect feature group name"
 
-    def bw_feature(self, transition):
-        return []
+    def random_feature(self, transiton):
+        return [random.choice([True, False]) for _ in range(self.r_feature)]
 
     def last_entity(self, transition):
         return [transition.entity == self.composition.javaEnv.lastEntityExpanded, transition.entity == self.composition.javaEnv.lastEntityExpandedWithoutReset]
@@ -208,7 +217,14 @@ class CompositionAnalyzer:
         return [float(transition.upIndex), float(transition.downIndex)]
 
     def mission_feature(self, transition):
+        # Es lo mismo que transiton.getMissionValue(0) TODO: mejorar y Unir
         return [float(transition.missionComplete)]
+
+    def custom_feature(self, transition):
+
+        # return [float(transition.state.missionsCompletes.get(i)) for i in range(1, int(transition.dcs.instanceDomain.f))]
+
+        return [float(transition.getMissionValue(i)) for i in range(1, int(transition.dcs.instanceDomain.f))]
 
     def missions_end(self, transition):
         return [float(transition.amountMissionComplete > 0), float(transition.amountMissionComplete > 1)]

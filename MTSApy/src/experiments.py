@@ -223,7 +223,7 @@ class TrainSmallInstance(Experiment):
         nfeatures = env.get_nfeatures()
         pth_path = f"results/models/{instance}/{experiment_name}/{instance}-{n_train}-{k_train}.pth"
 
-        print(f"Starting training in instance: {instance}-{n_train}-{k_train}...")
+        print(f"Starting training in instance {experiment_name}: {instance}-{n_train}-{k_train}...")
         neural_network = NeuralNetwork(nfeatures, args["nn_size"]).to("cpu")
         nn_model = TorchModel(nfeatures, network=neural_network, args=args)
         dqn_agent = DQN(env, nn_model, args, verbose=False)

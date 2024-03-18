@@ -81,7 +81,6 @@ def check_method_in_instance(instance, method):
                 #print(data[data["N"] == n][data["K"] == k][data["Method"] == method]["Transitions"])
                 value = int(data[(data["N"] == n) & (data["K"] == k) & (data["Method"] == method)]["Transitions"])
 
-
             #print(f"N = {n} - K = {k} -> {method}: {value}")
             row.append(value)
 

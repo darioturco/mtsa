@@ -24,6 +24,7 @@ public class ActionWithFeatures<State, Action> {
     public int amountMissionComplete;
     public boolean enable;
     public int expansionStep;
+    public int f;
 
 
     ActionWithFeatures(Compostate<State, Action> state, HAction<Action> action, Compostate<State, Action> parent) {
@@ -54,7 +55,7 @@ public class ActionWithFeatures<State, Action> {
         for (int lts = 0; childMarked && lts < this.dcs.ltssSize; ++lts)
             childMarked = this.dcs.defaultTargets.get(lts).contains(childStates.get(lts));
 
-        missionComplete = getMissionValue();
+        missionComplete = getMissionValue(0);
         amountMissionComplete = countMissionComplete();
     }
 
@@ -87,12 +88,12 @@ public class ActionWithFeatures<State, Action> {
         //return state.toString() + " | " + action.toString() + " | " + arrayBoolToString(state.missionsCompletes.get(action));
     }
 
-    public boolean getMissionValue(){
+    public boolean getMissionValue(int mission){
         // There are n entities, this actionWithFeature refers about the entity number ´this.entity´
         String label = action.toString();
         if(label.matches(".*\\d.*") && !dcs.instance.equals("")) {
             if (entity < dcs.n) {
-                return state.missionsCompletes.get(action).get(0)[entity];
+                return state.missionsCompletes.get(action).get(mission)[entity];
             }
         }
         return false;
@@ -169,7 +170,7 @@ class InstanceDomain<State, Action> {
 class InstanceDomainBW<State, Action> extends InstanceDomain{
     InstanceDomainBW(DirectedControllerSynthesisBlocking dcs){
         super(dcs);
-        this.f = 2;
+        this.f = 3;
     }
     
     public void computeCustomFeature(ActionWithFeatures transition){
@@ -177,15 +178,24 @@ class InstanceDomainBW<State, Action> extends InstanceDomain{
         String label = action.toString();
         Compostate<State, Action> state = transition.state;
         int entity = transition.entity;
-        
-        // The Document is acepted by a team or is rejected k times
-        if(label.contains("assign")){
+        int index = transition.index;
+
+        if(label.contains("accept") || (label.contains("reject") && index == dcs.k)){
             state.missionsCompletes.get(action).get(0)[entity] = true;
         }
 
-        if(label.contains("accept") && state.missionsCompletes.get(action).get(0)[entity]){
-            state.missionsCompletes.get(action).get(0)[entity] = false;
+        if(label.contains("assign")){
+            state.missionsCompletes.get(action).get(1)[entity] = true;
         }
+
+        if(label.contains("accept") && state.missionsCompletes.get(action).get(0)[entity]){
+            state.missionsCompletes.get(action).get(1)[entity] = false;
+        }
+
+        if(label.contains("reject")){
+            state.missionsCompletes.get(action).get(2)[entity] = true;
+        }
+
         // Ver de mejorar y usar 3 features distintos:
         //      uno para ver si a esa entidad ya le asignaron el documento
         //      otro para ver si ya lo acepto
@@ -226,7 +236,7 @@ class InstanceDomainTA<State, Action> extends InstanceDomain{
 class InstanceDomainAT<State, Action> extends InstanceDomain{
     InstanceDomainAT(DirectedControllerSynthesisBlocking dcs){
         super(dcs);
-        this.f = 1;
+        this.f = 3;
     }
     
     public void computeCustomFeature(ActionWithFeatures transition){
@@ -240,6 +250,18 @@ class InstanceDomainAT<State, Action> extends InstanceDomain{
         if(label.contains("land")){
             state.missionsCompletes.get(action).get(0)[entity] = true;
         }
+
+        if(label.contains("requestLand")){
+            state.missionsCompletes.get(action).get(1)[entity] = true;
+        }
+
+        if(label.contains("extendFlight")){
+            state.missionsCompletes.get(action).get(2)[entity] = true;
+        }
+
+
+
+        // Index entity and up/down index
         if(label.contains("descend")){
             int oldIndex = parent.getLastentityIndex()[entity];
             state.entityIndexes.get(action)[entity] = index+1;
