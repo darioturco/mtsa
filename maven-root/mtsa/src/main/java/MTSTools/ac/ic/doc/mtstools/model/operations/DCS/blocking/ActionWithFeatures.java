@@ -88,6 +88,7 @@ public class ActionWithFeatures<State, Action> {
         //return state.toString() + " | " + action.toString() + " | " + arrayBoolToString(state.missionsCompletes.get(action));
     }
 
+    // 157.92.27.254
     public boolean getMissionValue(int mission){
         // There are n entities, this actionWithFeature refers about the entity number ´this.entity´
         String label = action.toString();

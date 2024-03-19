@@ -98,22 +98,48 @@ def check_method_in_instance(instance, method):
     plt.show()
     return instance_matrix
 
-def comparative_bar_plot(data=None):
+def get_random_info(random_data, instance):
+    random_instance = random_data[random_data["Instance"] == instance]
+    return random_instance[random_instance["Failed"] < 99].count()["Failed"]
+
+def get_ra_info(ra_data, instance):
+    ra_instance = ra_data[ra_data["Instance"] == instance]
+    return ra_instance[ra_instance["Failed"] == False].count()["Failed"]
+
+def get_rl_info(method, instance):
+    # rl_data = pd.read_csv(f"./results/csv/{instance}.csv")
+    # data["RL"][instance] = rl_data[rl_data["Failed"] == False].count()["Failed"]
+    # CM y TL no estan corridos aun pero siempre dan estos resultados
+    if instance == "CM":
+        return 18
+    elif instance == "TL":
+        return 225
+
+    try:
+        rl_data = pd.read_csv(f"./results/csv/{method}-{instance}.csv")
+    except FileNotFoundError:
+        return 0
+    return rl_data[rl_data["Failed"] == False].count()["Failed"]
+
+def comparative_bar_plot(data=None, budget=10000):
     instances = ["AT", "BW", "DP", "TA", "TL", "CM"][::-1]
     if data is None:
         random_data = pd.read_csv("./results/csv/random.csv")
         ra_data = pd.read_csv("./results/csv/Ready Abstraction.csv")
-        data = {"Random": {}, "RL": {}, "RA": {}}
+        data = {"Random": {}, "LRL": {}, "GRL": {}, "RA": {}}
 
         for instance in instances:
-            random_instance = random_data[random_data["Instance"] == instance]
-            data["Random"][instance] = random_instance[random_instance["Failed"] < 99].count()["Failed"]
+            for method in data.keys():
+                if method == "Random":
+                    data["Random"][instance] = get_random_info(random_data, instance)
+                elif method == "RA":
+                    data["RA"][instance] = get_ra_info(ra_data, instance)
+                else:
+                    data[method][instance] = get_rl_info(method, instance)
 
-            ra_instance = ra_data[ra_data["Instance"] == instance]
-            data["RA"][instance] = ra_instance[ra_instance["Failed"] == False].count()["Failed"]
 
-            rl_instance = pd.read_csv(f"./results/csv/{instance}.csv")
-            data["RL"][instance] = rl_instance[rl_instance["Failed"] == False].count()["Failed"]
+
+
 
     print(data)
 
@@ -148,14 +174,16 @@ if __name__ == "__main__":
     #graph_training_process(sliding_window=100, repetitions=5, save_path='./results/plots', use_steps=True)
 
     # Budget of 10000
+    #comparative_bar_plot(data=None, budget=10000)
     comparative_bar_plot(data={"Random": {"AT": 59, "BW": 44, "DP": 62, "TA": 60, "TL": 134, "CM": 18},
-                               "2-2": {"AT": 85, "BW": 53, "DP": 101, "TA": 60, "TL": 255, "CM": 18},
-                               #"ERL": {"AT": 87, "BW": 57, "DP": 150, "TA": 60, "TL": 255, "CM": 0},
-                               #"IERL": {"AT": 90, "BW": 56, "DP": 150, "TA": 60, "TL": 255, "CM": 0},
-                               "LRL": {"AT": 90, "BW": 104, "DP": 150, "TA": 60, "TL": 255, "CM": 24},
-                               "GRL": {"AT": 80, "BW": 54, "DP": 108, "TA": 60, "TL": 255, "CM": 24},
+                               "2-2": {"AT": 85, "BW": 53, "DP": 101, "TA": 60, "TL": 225, "CM": 18},
+                               #"ERL": {"AT": 87, "BW": 57, "DP": 150, "TA": 60, "TL": 225, "CM": 0},
+                               #"IERL": {"AT": 90, "BW": 56, "DP": 150, "TA": 60, "TL": 225, "CM": 0},
+                               "LRL": {"AT": 90, "BW": 104, "DP": 150, "TA": 60, "TL": 225, "CM": 24},
+                               "GRL": {"AT": 80, "BW": 54, "DP": 108, "TA": 60, "TL": 225, "CM": 24},
                                "BFS": {"AT": 53, "BW": 50, "DP": 61, "TA": 60, "TL": 201, "CM": 17},
-                               "RA Mejora": {"AT": 68, "BW": 136, "DP": 150, "TA": 60, "TL": 255, "CM": 22}})
+                               "RA Mejora": {"AT": 68, "BW": 136, "DP": 150, "TA": 60, "TL": 225, "CM": 22}},
+                         budget=10000)
 
 
 

@@ -146,7 +146,7 @@ class Experiment(object):
                 #"lambda_warm_up": lambda step: 1.0 if step > 5000 else step * 0.99,
 
                 ### Miscellaneous
-                'freq_save': 5, # 50 # Usar 5 con CM
+                'freq_save': 10, # 50 # Usar 5 con CM
                 'seconds': None,
                 'max_steps': 500000,    # None
                 "max_eps": 1000000
