@@ -12,7 +12,7 @@ import java.util.logging.Logger;
 
 import static java.util.Collections.emptyList;
 
-public class CompleteExplorationHeuristic<State, Action> implements ExplorationHeuristic<State, Action> {
+public class ReadyExplorationHeuristic<State, Action> implements ExplorationHeuristic<State, Action> {
 
     /** Queue of states, the most promising state should be expanded first.
      *  Key:index of LTS with marked states -> Value: Queue for that color */
@@ -45,7 +45,7 @@ public class CompleteExplorationHeuristic<State, Action> implements ExplorationH
     /** Initially dcs.guarantees. Updated to dcs.assumptions when it is clear there is no way to win by guarantees*/
     public HashMap<Integer, Integer> currentObjectives;
 
-    private final Logger logger = Logger.getLogger(CompleteExplorationHeuristic.class.getName());
+    private final Logger logger = Logger.getLogger(ReadyExplorationHeuristic.class.getName());
 
     public ArrayList<ActionWithFeatures<State, Action>> actionsToExplore;
     public ArrayList<Compostate<State, Action>> allActionsToExplore;
@@ -58,7 +58,7 @@ public class CompleteExplorationHeuristic<State, Action> implements ExplorationH
     public Compostate<State, Action> lastExpandedFrom = null;
     public ActionWithFeatures<State, Action> lastExpandedStateAction = null;
 
-    public CompleteExplorationHeuristic(
+    public ReadyExplorationHeuristic(
             DirectedControllerSynthesisBlocking<State,Action> dcs) {
 
         //LOGGER

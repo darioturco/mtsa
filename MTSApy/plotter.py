@@ -107,8 +107,6 @@ def get_ra_info(ra_data, instance):
     return ra_instance[ra_instance["Failed"] == False].count()["Failed"]
 
 def get_rl_info(method, instance):
-    # rl_data = pd.read_csv(f"./results/csv/{instance}.csv")
-    # data["RL"][instance] = rl_data[rl_data["Failed"] == False].count()["Failed"]
     # CM y TL no estan corridos aun pero siempre dan estos resultados
     if instance == "CM":
         return 18
@@ -136,10 +134,6 @@ def comparative_bar_plot(data=None, budget=10000):
                     data["RA"][instance] = get_ra_info(ra_data, instance)
                 else:
                     data[method][instance] = get_rl_info(method, instance)
-
-
-
-
 
     print(data)
 

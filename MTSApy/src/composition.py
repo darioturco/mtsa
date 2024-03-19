@@ -54,16 +54,14 @@ class CompositionGraph(nx.DiGraph):
     def set_composition_parameters(self):
         # self.auxiliar_heuristic = "BFS"
         # self.auxiliar_heuristic = "Debugging"
-        # self.auxiliar_heuristic = "Ready"
-        self.auxiliar_heuristic = "Complete"
+        self.auxiliar_heuristic = "Ready"
 
         #self.feature_group = "LRL"
         #self.feature_group = "GRL"
         #self.feature_group = "CRL"
         self.feature_group = "RRL"
 
-        self.r_feature = 10
-
+        self.r_feature = 100
 
     def start_composition(self):
         assert (self._initial_state is None)

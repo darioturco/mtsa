@@ -184,8 +184,8 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
             return new RandomExplorationHeuristic<>();
         } else if(heuristicMode == HeuristicMode.Debugging) {
             return new LexicographicExplorationHeuristic<>();
-        } else if(heuristicMode == HeuristicMode.Complete) {
-            return new CompleteExplorationHeuristic<>(this);
+        } else if(heuristicMode == HeuristicMode.Ready) {
+            return new ReadyExplorationHeuristic<>(this);
         } else if(heuristicMode == HeuristicMode.CMHeuristic) {
             return new CatAndMouseExplorationHeuristic<>(this);
         } else if(heuristicMode == HeuristicMode.BWHeuristic) {

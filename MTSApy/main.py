@@ -3,10 +3,10 @@ from src.fixed_experiment import *
 from src.instance_maker import *
 
 if __name__ == "__main__":
-    experiment_name = "RRL" # (10)
-    instancia = "TL"
+    experiment_name = "RRL" # (100)
+    instancia = "TA"
     TrainSmallInstance().train(instancia, 2, 2, experiment_name)
-    TestTrainedInAllInstances().pre_select(instancia, 1000, f"./results/models/{instancia}/{experiment_name}", 99999, f"./results/selection/{experiment_name}-{instancia}.csv")
+    #TestTrainedInAllInstances().pre_select(instancia, 1000, f"./results/models/{instancia}/{experiment_name}", 99999, f"./results/selection/{experiment_name}-{instancia}.csv")
 
     #TestTrainedInAllInstances().run("AT", 10000, pth_path="./results/models/AT/GRL/AT-2-2-10-partial.pth")
     #TestTrainedInAllInstances().run("BW", 10000, pth_path="./results/models/BW/GRL/BW-2-2-4460-partial.pth")
