@@ -15,9 +15,7 @@ class Experiment(object):
         self.name = name
         self.platform = sys.platform
         self.BENCHMARK_PROBLEMS = ["AT", "BW", "DP", "TA", "TL", "CM"]
-        #self.BENCHMARK_PROBLEMS = ["TL", "CM"]
-        self.min_instance_size = 2
-        self.max_instance_size = 15
+        self.set_ranges(1, 15)
         self.seed = 12
         random.seed(self.seed)
         np.random.seed(self.seed)
@@ -25,6 +23,10 @@ class Experiment(object):
 
     #def run(self):
     #    raise NotImplementedError
+
+    def set_ranges(self, min_instance_size, max_instance_size):
+        self.min_instance_size = min_instance_size+1
+        self.max_instance_size = max_instance_size
 
     def all_instances_iterator(self):
         for instance in self.BENCHMARK_PROBLEMS:
@@ -276,6 +278,7 @@ class TestTrainedInAllInstances(Experiment):
         all_models = list(all_models - previous_models)
         print(all_models)
 
+        self.set_ranges(2, 10)
         models = np.random.choice(all_models, min(amount_of_models, len(all_models)), replace=False)
         for model in models:
             print(f"Runing: {model}")

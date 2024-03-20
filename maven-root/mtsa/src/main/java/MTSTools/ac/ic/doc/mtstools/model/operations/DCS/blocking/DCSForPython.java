@@ -253,7 +253,7 @@ public class DCSForPython {
         //DCSForPython.testHeuristic(10000, "CM", "BFS", 1, 1);     // Ejemplo de como correr todas las de CM con la heuristica BFS y un budget de 10000 expanciones
 
         // Acontinuacion un ejemplo de como se deberia usar DCSForPython
-        String instance = "BW";
+        String instance = "TL";
 
         //String FSP_path = "/home/dario/Documents/Tesis/mtsa/maven-root/mtsa/target/test-classes/Blocking/ControllableFSPs/GR1test1.lts"; // Falla porque tiene guiones
         //String FSP_path = "F:\\UBA\\Tesis\\mtsa\\maven-root\\mtsa\\target\\test-classes\\Blocking\\ControllableFSPs\\GR1Test43.lts";

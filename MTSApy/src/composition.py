@@ -203,10 +203,10 @@ class CompositionAnalyzer:
             assert False, "Incorrect feature group name"
 
     def random_feature(self, transiton):
-        return [random.choice([True, False]) for _ in range(self.composition.r_feature)]
+        return [random.choice([1.0, 0.0]) for _ in range(self.composition.r_feature)]
 
     def last_entity(self, transition):
-        return [transition.entity == self.composition.javaEnv.lastEntityExpanded, transition.entity == self.composition.javaEnv.lastEntityExpandedWithoutReset]
+        return [float(transition.entity == self.composition.javaEnv.lastEntityExpanded), float(transition.entity == self.composition.javaEnv.lastEntityExpandedWithoutReset)]
 
     def has_index(self, transition):
         label = str(transition.action.toString())
