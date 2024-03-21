@@ -108,11 +108,9 @@ def get_ra_info(ra_data, instance, budget):
     return ra_instance[ra_instance["Transitions"] < budget].count()["Instance"]
 
 def get_rl_info(method, instance, budget):
-    # CM y TL no estan corridos aun pero siempre dan estos resultados
+    # CM no esta corrido aun
     if instance == "CM":
         return 18
-    elif instance == "TL":
-        return 225
 
     try:
         rl_data = pd.read_csv(f"./results/csv/{method}-{instance}.csv")
