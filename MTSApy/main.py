@@ -6,7 +6,7 @@ if __name__ == "__main__":
     experiment_name = "RRL" # (100)
     instancia = "TL"
     #TrainSmallInstance().train(instancia, 2, 2, experiment_name)
-    #TestTrainedInAllInstances().pre_select(instancia, 1000, f"./results/models/{instancia}/{experiment_name}", 99999, f"./results/selection/{experiment_name}-{instancia}.csv")
+    TestTrainedInAllInstances().pre_select(instancia, 1000, f"./results/models/{instancia}/{experiment_name}", 99999, f"./results/selection/{experiment_name}-{instancia}.csv", True)
 
     TestTrainedInAllInstances().run("AT", 10000, pth_path="./results/models/AT/RRL\AT-2-2-6290-partial.pth")
     #TestTrainedInAllInstances().run("BW", 10000, pth_path="./results/models/BW/RRL\BW-2-2-710-partial.pth")

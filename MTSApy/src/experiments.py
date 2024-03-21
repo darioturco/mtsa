@@ -269,7 +269,7 @@ class TestTrainedInAllInstances(Experiment):
         except:
             return set()
 
-    def pre_select(self, instance, budget, path, amount_of_models=1000, csv_path=None):
+    def pre_select(self, instance, budget, path, amount_of_models=1000, csv_path=None, full_range=False):
         all_models = set([os.path.join(r, file) for r, d, f in os.walk(path) for file in f])
         if csv_path is None:
             csv_path = f"./results/selection/{instance}.csv"
@@ -278,7 +278,8 @@ class TestTrainedInAllInstances(Experiment):
         all_models = list(all_models - previous_models)
         print(all_models)
 
-        self.set_ranges(2, 10)
+        if not full_range:
+            self.set_ranges(2, 10)
         models = np.random.choice(all_models, min(amount_of_models, len(all_models)), replace=False)
         for model in models:
             print(f"Runing: {model}")
