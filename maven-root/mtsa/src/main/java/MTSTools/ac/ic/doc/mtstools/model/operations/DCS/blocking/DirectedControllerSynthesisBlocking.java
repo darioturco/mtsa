@@ -107,6 +107,8 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
     /** When syntetize, save all the pair State, Action  that were expand */
     public List<Pair<Compostate<State, Action>, HAction<Action>>> synthesizeTrace;
 
+    public HAction<Action> lastExpandedAction = null;
+
     public InstanceDomain instanceDomain;
 
     public int n=0;
@@ -368,6 +370,8 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
      *  Internally this populates the transitions and expanded lists. */
     Compostate<State, Action> expand(Compostate<State, Action> compostate, HAction<Action> action) {
         compostate.lastExpandedAction = action;
+        lastExpandedAction = action;
+
         Compostate<State, Action> childCompostate = buildCompostate(getChildStates(compostate, action), compostate);
         //childCompostate.updateMissions(compostate, action);
         statistics.incExpandedTransitions();

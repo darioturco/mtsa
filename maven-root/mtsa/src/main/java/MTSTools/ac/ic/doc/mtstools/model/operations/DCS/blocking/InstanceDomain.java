@@ -172,6 +172,15 @@ class InstanceDomainDP<State, Action> extends InstanceDomain{
         Compostate<State, Action> state = transition.state;
         int entity = transition.entity;
 
+        if(dcs.lastExpandedAction != null){
+            if(label.contains("step") && dcs.lastExpandedAction.getAction().toString().contains("take")){
+                state.customFeatures.get(action).get(1)[entity] = true;
+            }
+            if(label.contains("take") && dcs.lastExpandedAction.getAction().toString().contains("step")){
+                state.customFeatures.get(action).get(1)[entity] = true;
+            }
+        }
+
         if(label.contains("release")){
             state.customFeatures.get(action).get(0)[entity] = true;
             state.entityIndexes.get(action)[entity] = 0;

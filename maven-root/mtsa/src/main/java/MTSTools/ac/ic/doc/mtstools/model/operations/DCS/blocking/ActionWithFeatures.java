@@ -23,7 +23,6 @@ public class ActionWithFeatures<State, Action> {
     public int expansionStep;
     public int f;
 
-
     ActionWithFeatures(Compostate<State, Action> state, HAction<Action> action, Compostate<State, Action> parent) {
         this.state = state;
         this.action = action;
@@ -84,7 +83,6 @@ public class ActionWithFeatures<State, Action> {
         //return state.toString() + " | " + action.toString() + " | " + arrayBoolToString(state.missionsCompletes.get(action));
     }
 
-    // 157.92.27.254
     public boolean getMissionValue(int mission){
         // There are n entities, this actionWithFeature refers about the entity number ´this.entity´
         String label = action.toString();
