@@ -59,7 +59,7 @@ class CompositionGraph(nx.DiGraph):
         #self.feature_group = "LRL"
         #self.feature_group = "GRL"
         #self.feature_group = "CRL"
-        self.feature_group = "RRL"
+        self.feature_group = "CRL"
 
         self.r_feature = 100
 
@@ -220,9 +220,6 @@ class CompositionAnalyzer:
         return [float(transition.missionComplete)]
 
     def custom_feature(self, transition):
-
-        # return [float(transition.state.missionsCompletes.get(i)) for i in range(1, int(transition.dcs.instanceDomain.f))]
-
         return [float(transition.getMissionValue(i)) for i in range(1, int(transition.dcs.instanceDomain.f))]
 
     def missions_end(self, transition):

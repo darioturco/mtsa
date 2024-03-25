@@ -1105,7 +1105,7 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
      *  form of an LTS by starting in the initial state and following all the
      *  non-closed descendants. If there is no controller for the given
      *  environment this method returns null. */
-    private LTS<Long, Action> buildController() {
+    public LTS<Long, Action> buildController() {
         class ContComp{
             //Controller Compostates
             Compostate<State, Action> c; //the compostate

@@ -6,8 +6,9 @@ import seaborn as sn
 
 OUTPUT_FOLDER = "./results/plots/"
 #BENCHMARK_PROBLEMS = ["AT", "BW", "DP", "TA", "TL", "CM"]
-#BENCHMARK_PROBLEMS = ["AT", "BW", "TA", "TL", "CM"]
-BENCHMARK_PROBLEMS = ["DP"]
+BENCHMARK_PROBLEMS = ["AT", "BW", "DP", "TA", "TL"]
+#SCALE = 1
+SCALE = 1000
 
 def graph_individual_training_process(sliding_window=5, save_path=None, use_steps=False, problems=None, graph_loss=False):
     #random_data = pd.read_csv("./results/csv/random budget=5000 repetitions=100.csv")
@@ -79,8 +80,7 @@ def check_method_in_instance(instance, method):
             if method == "RA":
                 value = int(data[(data["N"] == n) & (data["K"] == k) & (data["Instance"] == instance)]["Transitions"])
             else:
-                #print(data[data["N"] == n][data["K"] == k][data["Method"] == method]["Transitions"])
-                value = int(data[(data["N"] == n) & (data["K"] == k) & (data["Method"] == method)]["Transitions"])
+                value = int(data[(data["N"] == n) & (data["K"] == k)]["Transitions"])
 
             #print(f"N = {n} - K = {k} -> {method}: {value}")
             row.append(value)
@@ -99,15 +99,28 @@ def check_method_in_instance(instance, method):
     plt.show()
     return instance_matrix
 
-def get_random_info(random_data, instance, budget):
+def get_random_info(random_data, instance, budget, instances_solved):
     random_instance = random_data[random_data["Instance"] == instance]
-    return random_instance[(random_instance["Transitions (mean)"] < budget) & (random_instance["Transitions (mean)"] > 0)].count()["Failed"]
+    aux = random_instance[(random_instance["Transitions (mean)"] < budget) & (random_instance["Transitions (mean)"] > 0)]
+    solved = aux.count()["Failed"]
+    if instances_solved:
+        return solved
+    else:
+        res = (225 - solved) * budget + int(aux["Transitions (mean)"].sum())
+        return int(res / SCALE)
 
-def get_ra_info(ra_data, instance, budget):
+
+def get_ra_info(ra_data, instance, budget, instances_solved):
     ra_instance = ra_data[ra_data["Instance"] == instance]
-    return ra_instance[ra_instance["Transitions"] < budget].count()["Instance"]
+    aux = ra_instance[ra_instance["Transitions"] < budget]
+    solved = aux.count()["Instance"]
+    if instances_solved:
+        return solved
+    else:
+        res = (225 - solved) * budget + aux["Transitions"].sum()
+        return int(res / SCALE)
 
-def get_rl_info(method, instance, budget):
+def get_rl_info(method, instance, budget, instances_solved):
     # CM no esta corrido aun
     if instance == "CM":
         return 18
@@ -116,31 +129,38 @@ def get_rl_info(method, instance, budget):
         rl_data = pd.read_csv(f"./results/csv/{method}-{instance}.csv")
     except FileNotFoundError:
         return 0
-    return rl_data[rl_data["Transitions"] < budget].count()["Instance"]
 
-def get_data_for(budget, instances, data):
+    aux = rl_data[rl_data["Transitions"] < budget]
+    solved = aux.count()["Instance"]
+    if instances_solved:
+        return solved
+    else:
+        res = (225 - solved) * budget + int(aux["Transitions"].sum())
+        return int(res / SCALE)
+
+def get_data_for(budget, instances, data, instances_solved):
     random_data = pd.read_csv("./results/csv/random.csv")
     ra_data = pd.read_csv("./results/csv/Ready Abstraction.csv")
 
     for instance in instances:
         for method in data.keys():
             if method == "Random":
-                data["Random"][instance] = get_random_info(random_data, instance, budget)
+                data["Random"][instance] = get_random_info(random_data, instance, budget, instances_solved)
             elif method == "RA":
-                data["RA"][instance] = get_ra_info(ra_data, instance, budget)
+                data["RA"][instance] = get_ra_info(ra_data, instance, budget, instances_solved)
             else:
-                data[method][instance] = get_rl_info(method, instance, budget)
+                data[method][instance] = get_rl_info(method, instance, budget, instances_solved)
 
     return data
 
-def comparative_bar_plot(data=None):
-    instances = ["AT", "BW", "DP", "TA", "TL", "CM"][::-1]
+def comparative_bar_plot(data=None, instances_solved=True):
+    instances = BENCHMARK_PROBLEMS[::-1]
     budgets = [1000, 2500, 5000, 10000]
     if data is None:
         data = []
         for b in budgets:
-            data_schema = {"Random": {}, "LRL": {}, "RRL": {}, "RA": {}}
-            data.append((b, get_data_for(b, instances, data_schema)))
+            data_schema = {"Random": {}, "LRL": {}, "CRL": {}, "RRL": {}, "RA": {}}
+            data.append((b, get_data_for(b, instances, data_schema, instances_solved)))
     else:
         for _ in budgets:
             data.append(data)
@@ -182,7 +202,7 @@ if __name__ == "__main__":
     #graph_training_process(sliding_window=100, repetitions=5, save_path='./results/plots', use_steps=True)
 
     # Budget of 10000
-    comparative_bar_plot(data=None)
+    comparative_bar_plot(data=None, instances_solved=False)
     #comparative_bar_plot(data={"Random": {"AT": 59, "BW": 44, "DP": 62, "TA": 60, "TL": 134, "CM": 18},
     #                           "2-2": {"AT": 85, "BW": 53, "DP": 101, "TA": 60, "TL": 225, "CM": 18},
     #                           #"ERL": {"AT": 87, "BW": 57, "DP": 150, "TA": 60, "TL": 225, "CM": 0},
@@ -194,7 +214,7 @@ if __name__ == "__main__":
 
 
 
-    #method_name = "LRL"
+    #method_name = "CRL"
     #check_method_in_instance("BW", method_name)
     #check_method_in_instance("DP", method_name)
     #check_method_in_instance("AT", method_name)

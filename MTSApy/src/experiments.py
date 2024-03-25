@@ -20,10 +20,6 @@ class Experiment(object):
         random.seed(self.seed)
         np.random.seed(self.seed)
 
-
-    #def run(self):
-    #    raise NotImplementedError
-
     def set_ranges(self, min_instance_size, max_instance_size):
         self.min_instance_size = min_instance_size+1
         self.max_instance_size = max_instance_size
@@ -65,7 +61,7 @@ class Experiment(object):
         env.close()
         return res
 
-    def run_agent(self, budget, agent, instance, save=True):
+    def run_agent(self, budget, agent, instance, save=True, instance_list=None):
         path = self.get_fsp_path()
 
         last_failed = False
@@ -73,7 +69,10 @@ class Experiment(object):
         solved = 0
         all_fail = False
 
-        for instance, n, k in self.all_instances_of(instance):
+        if instance_list is None:
+            instance_list = [(i, j) for i in range(self.min_instance_size, self.max_instance_size) for j in range(self.min_instance_size, self.max_instance_size)]
+
+        for n, k in instance_list:
             if n != last_n:
                 last_failed = False
 
@@ -216,6 +215,7 @@ class Experiment(object):
 class TrainSmallInstance(Experiment):
     def __init__(self, name="Test"):
         super().__init__(name)
+        self.instance_list = None
 
     def train(self, instance, n_train, k_train, experiment_name):
         args = self.default_args()
@@ -269,7 +269,9 @@ class TestTrainedInAllInstances(Experiment):
         except:
             return set()
 
-    def pre_select(self, instance, budget, path, amount_of_models=1000, csv_path=None, full_range=False):
+    #def pre_select_with_only_instance(self, instance, budget, path, amount_of_models=1000, csv_path=None, n, k):
+
+    def pre_select(self, instance, budget, path, amount_of_models=1000, csv_path=None, instance_list=None):
         all_models = set([os.path.join(r, file) for r, d, f in os.walk(path) for file in f])
         if csv_path is None:
             csv_path = f"./results/selection/{instance}.csv"
@@ -278,12 +280,10 @@ class TestTrainedInAllInstances(Experiment):
         all_models = list(all_models - previous_models)
         print(all_models)
 
-        if not full_range:
-            self.set_ranges(2, 10)
         models = np.random.choice(all_models, min(amount_of_models, len(all_models)), replace=False)
         for model in models:
             print(f"Runing: {model}")
-            solved = self.run(instance, budget, model, False)
+            solved = self.run(instance, budget, model, False, instance_list)
 
             # Save the info
             info = {"Instance": instance,
@@ -292,7 +292,7 @@ class TestTrainedInAllInstances(Experiment):
 
             self.save_to_csv(csv_path, info)
 
-    def run(self, instance, budget, pth_path=None, save=True):
+    def run(self, instance, budget, pth_path=None, save=True, instance_list=None):
         path = self.get_fsp_path()
         env = self.get_environment(instance, self.min_instance_size, self.min_instance_size, path)
 
@@ -304,4 +304,4 @@ class TestTrainedInAllInstances(Experiment):
         nn_model = TorchModel.load(nfeatures, pth_path, args=args)
         dqn_agent = DQN(env, nn_model, args, verbose=False)
 
-        return self.run_agent(budget, dqn_agent, instance, save)
+        return self.run_agent(budget, dqn_agent, instance, save, instance_list)

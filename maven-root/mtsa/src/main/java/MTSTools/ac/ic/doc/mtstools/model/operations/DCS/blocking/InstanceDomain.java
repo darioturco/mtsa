@@ -89,9 +89,20 @@ class InstanceDomainBW<State, Action> extends InstanceDomain{
 }
 
 class InstanceDomainTA<State, Action> extends InstanceDomain{
+    public int service;
+
     InstanceDomainTA(DirectedControllerSynthesisBlocking dcs){
         super(dcs);
-        this.f = 1;
+        this.f = 8;
+        this.service = -1;
+    }
+
+    public boolean next_entity_query(Compostate<State, Action> state, HAction<Action> action, int entity){
+        if(entity+1 < dcs.n){
+            return state.customFeatures.get(action).get(1)[entity+1];
+        }else{
+            return false;
+        }
     }
 
     public void computeCustomFeature(ActionWithFeatures transition){
@@ -102,9 +113,29 @@ class InstanceDomainTA<State, Action> extends InstanceDomain{
         int entity = transition.entity;
         int index = transition.index;
 
-        if(label.contains("purchase.succ")){
+        if(label.contains("purchase.succ") || label.contains("purchase.fail")){
             state.customFeatures.get(action).get(0)[entity] = true;
         }
+
+        if(!state.customFeatures.get(action).get(1)[entity] && label.contains("query")){
+            state.customFeatures.get(action).get(1)[entity] = true;
+            service += 1;
+        }
+
+        state.customFeatures.get(action).get(2)[entity] = next_entity_query(state, action, entity);
+
+        state.customFeatures.get(action).get(3)[entity] = (service == entity);
+        state.customFeatures.get(action).get(4)[entity] = (service+1 == entity);
+        state.customFeatures.get(action).get(5)[entity] = (service+1 < entity);
+
+        if(label.contains("committed") && !label.contains("un")){
+            state.customFeatures.get(action).get(6)[entity] = true;
+        }
+
+        if(label.contains("uncommitted")){
+            state.customFeatures.get(action).get(7)[entity] = true;
+        }
+
         if(label.contains("steps")){
             int oldIndex = parent.getLastentityIndex()[entity];
             state.entityIndexes.get(action)[entity] = index+1;
@@ -163,7 +194,7 @@ class InstanceDomainAT<State, Action> extends InstanceDomain{
 class InstanceDomainDP<State, Action> extends InstanceDomain{
     InstanceDomainDP(DirectedControllerSynthesisBlocking dcs){
         super(dcs);
-        this.f = 1;
+        this.f = 2;
     }
 
     public void computeCustomFeature(ActionWithFeatures transition){

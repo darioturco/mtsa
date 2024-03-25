@@ -11,6 +11,7 @@ import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
 import java.util.*;
 
+import MTSTools.ac.ic.doc.mtstools.model.LTS;
 import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.DirectedControllerSynthesisBlocking;
 import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.abstraction.HEstimate;
 import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.abstraction.HeuristicMode;
@@ -175,6 +176,14 @@ public class DCSForPython {
         return heuristic.getOrder();
     }
 
+    public LTS<Long, String> buildControler(){
+        if(realizable){
+            return dcs.buildController();
+        }else{
+            return null;
+        }
+    }
+
     public static int syntetizeWithHeuristic(String FSP_path, String heuristic, int budget, boolean verbose){
         DCSForPython env = new DCSForPython(heuristic);
         env.setFlags(true, true);
@@ -253,14 +262,14 @@ public class DCSForPython {
         //DCSForPython.testHeuristic(10000, "CM", "BFS", 1, 1);     // Ejemplo de como correr todas las de CM con la heuristica BFS y un budget de 10000 expanciones
 
         // Acontinuacion un ejemplo de como se deberia usar DCSForPython
-        String instance = "DP";
+        String instance = "TA";
 
         //String FSP_path = "/home/dario/Documents/Tesis/mtsa/maven-root/mtsa/target/test-classes/Blocking/ControllableFSPs/GR1test1.lts"; // Falla porque tiene guiones
         //String FSP_path = "F:\\UBA\\Tesis\\mtsa\\maven-root\\mtsa\\target\\test-classes\\Blocking\\ControllableFSPs\\GR1Test43.lts";
         //String FSP_path = "F:\\UBA\\Tesis\\mtsa\\maven-root\\mtsa\\target\\test-classes\\Blocking\\NoControllableFSPs\\GR1Test11.lts";
-        //String FSP_path = "F:\\UBA\\Tesis\\mtsa\\MTSApy\\fsp\\" + instance + "\\" + instance + "-2-2.fsp";
+        String FSP_path = "F:\\UBA\\Tesis\\mtsa\\MTSApy\\fsp\\" + instance + "\\" + instance + "-3-1.fsp";
         //String FSP_path = "/home/dario/Documents/Tesis/Learning-Synthesis/fsp/Blocking/ControllableFSPs/GR1Test10.lts";
-        String FSP_path = "/home/dario/Documents/Tesis/mtsa/MTSApy/fsp/" + instance + "/" + instance + "-2-2.fsp";
+        //String FSP_path = "/home/dario/Documents/Tesis/mtsa/MTSApy/fsp/" + instance + "/" + instance + "-2-2.fsp";
 
         String heuristicMode = "Ready";
         //String heuristicMode = "Random";
@@ -292,6 +301,10 @@ public class DCSForPython {
         }
 
         System.out.println("Realizable: " + env.realizable);
+        if(env.realizable){
+            LTS<Long, String> director = env.buildControler();
+            System.out.println("Director's Transitions: " + director.getTransitions().size());
+        }
         System.out.println("End Run :)");
     }
 }
