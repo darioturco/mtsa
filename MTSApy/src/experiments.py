@@ -2,6 +2,8 @@ import sys
 import os
 import random
 import datetime
+import time
+
 import numpy as np
 import pandas as pd
 from src.composition import CompositionGraph, CompositionAnalyzer
@@ -72,6 +74,7 @@ class Experiment(object):
         if instance_list is None:
             instance_list = [(i, j) for i in range(self.min_instance_size, self.max_instance_size) for j in range(self.min_instance_size, self.max_instance_size)]
 
+        agent_info = {"synthesis_times": [], "expanded_states": [], "expanded_transitions": []}
         for n, k in instance_list:
             if n != last_n:
                 last_failed = False
@@ -110,7 +113,17 @@ class Experiment(object):
             last_failed = res["failed"]
             last_n = n
 
-        return solved
+            agent_info["synthesis_times"].append(res["synthesis time(ms)"].replace('ms', ''))
+            agent_info["expanded_states"].append(res["expanded states"])
+            agent_info["expanded_transitions"].append(res["expanded transitions"])
+
+        info = {"median synthesis time(ms)": np.median(agent_info["synthesis_times"]),
+                "median expanded states": np.median(agent_info["expanded_states"]),
+                "median expanded transitions": np.median(agent_info["expanded_transitions"])
+                }
+        return solved, info
+
+        # return solved
 
     def print_res(self, title, res):
         print(title)
@@ -215,6 +228,8 @@ class TrainSmallInstance(Experiment):
         self.instance_list = None
 
     def train(self, instance, n_train, k_train, experiment_name):
+        start = time.time()
+
         args = self.default_args()
         path = self.get_fsp_path()
         env = self.get_environment(instance, n_train, k_train, path, args["reward_shaping"])
@@ -229,6 +244,9 @@ class TrainSmallInstance(Experiment):
         dqn_agent = DQN(env, nn_model, args, verbose=False)
         dqn_agent.train(seconds=args["seconds"], max_steps=args["max_steps"], max_eps=args["max_eps"], pth_path=pth_path, transitions_path=None, freq_save=args["freq_save"])
         print(f"Trained in instance: {instance} {n_train}-{k_train}\n")
+
+        end = time.time()
+        print(f"Training time: {end - start}")
 
 
 
@@ -270,6 +288,7 @@ class TestTrainedInAllInstances(Experiment):
     #def pre_select_with_only_instance(self, instance, budget, path, amount_of_models=1000, csv_path=None, n, k):
 
     def pre_select(self, instance, budget, path, amount_of_models=1000, csv_path=None, instance_list=None):
+        start = time.time()
         all_models = set([os.path.join(r, file) for r, d, f in os.walk(path) for file in f])
         if csv_path is None:
             csv_path = f"./results/selection/{instance}.csv"
@@ -279,16 +298,20 @@ class TestTrainedInAllInstances(Experiment):
         print(all_models)
 
         models = np.random.choice(all_models, min(amount_of_models, len(all_models)), replace=False)
-        for model in models:
-            print(f"Runing: {model}")
-            solved = self.run(instance, budget, model, False, instance_list)
+        for i, model in enumerate(models):
+            print(f"Runing: {model} {i}/{len(models)}")
+            solved, run_info = self.run(instance, budget, model, False, instance_list)
 
             # Save the info
             info = {"Instance": instance,
                     "Model": model,
                     "Solved": solved}
+            info.update(run_info)
 
             self.save_to_csv(csv_path, info)
+
+        end = time.time()
+        print(f"Selection time: {end - start} seconds")
 
     def run(self, instance, budget, pth_path=None, save=True, instance_list=None):
         path = self.get_fsp_path()
