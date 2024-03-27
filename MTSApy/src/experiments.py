@@ -109,18 +109,27 @@ class Experiment(object):
                     all_fail = True
             else:
                 solved += 1
+                agent_info["synthesis_times"].append(res["synthesis time(ms)"])
+                agent_info["expanded_states"].append(res["expanded states"])
+                agent_info["expanded_transitions"].append(res["expanded transitions"])
 
             last_failed = res["failed"]
             last_n = n
 
-            agent_info["synthesis_times"].append(res["synthesis time(ms)"].replace('ms', ''))
-            agent_info["expanded_states"].append(res["expanded states"])
-            agent_info["expanded_transitions"].append(res["expanded transitions"])
-
         info = {"median synthesis time(ms)": np.median(agent_info["synthesis_times"]),
                 "median expanded states": np.median(agent_info["expanded_states"]),
-                "median expanded transitions": np.median(agent_info["expanded_transitions"])
-                }
+                "median expanded transitions": np.median(agent_info["expanded_transitions"]),
+                "mean synthesis time(ms)": np.mean(agent_info["synthesis_times"]),
+                "mean expanded states": np.mean(agent_info["expanded_states"]),
+                "mean expanded transitions": np.mean(agent_info["expanded_transitions"]),
+                "max synthesis time(ms)": np.max(agent_info["synthesis_times"]),
+                "max expanded states": np.max(agent_info["expanded_states"]),
+                "max expanded transitions": np.max(agent_info["expanded_transitions"]),
+                "min synthesis time(ms)": np.min(agent_info["synthesis_times"]),
+                "min expanded states": np.min(agent_info["expanded_states"]),
+                "min expanded transitions": np.min(agent_info["expanded_transitions"]),
+                "failed": len(instance_list) - solved}
+
         return solved, info
 
         # return solved

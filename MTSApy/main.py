@@ -9,7 +9,7 @@ if __name__ == "__main__":
 
     print(f"Current time {datetime.datetime.now()}")
     TestTrainedInAllInstances().pre_select(instancia,
-                                           1000,   # 1000
+                                           100,   # 1000
                                            f"./results/models/{instancia}/{experiment_name}",
                                            99999,
                                            f"./results/selection/{experiment_name}-{instancia}.csv",
