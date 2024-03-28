@@ -1,3 +1,5 @@
+import os
+
 import torch
 import torch.nn as nn
 import time
@@ -276,6 +278,8 @@ class DQN(Agent):
 
         instance, n, k = self.env.get_instance_info()
         csv_path = f"./results/training/{instance}-{n}-{k}-partial.csv"
+        os.makedirs(csv_path.rsplit('/', 1)[0], exist_ok=True)
+
         acumulated_reward = 0
         expansion_steps = 0
         all_rewards = []
@@ -331,6 +335,9 @@ class DQN(Agent):
                             all_rewards = all_rewards[100:]
 
                         DQN.save(self, f"{pth_path[:-4]}-{self.eps}.pth", partial=True)
+                        if not os.path.exists(csv_path):
+                            with open(csv_path, 'w') as _:  # Create the file if it doesn't exist
+                                pass
 
                         with open(csv_path, 'a') as f:
                             writer = csv.writer(f)

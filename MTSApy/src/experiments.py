@@ -188,10 +188,7 @@ class Experiment(object):
             f.close()
 
     def get_fsp_path(self):
-        if "linux" in self.platform:
-            path = "/home/dario/Documents/Tesis/mtsa/MTSApy/fsp"  # For Linux
-        else:
-            path = "F:\\UBA\\Tesis\\mtsa\\MTSApy\\fsp"  # For Windows
+        path = os.path.join(os.getcwd(), "fsp")
         return path
 
     def get_environment(self, instance, n, k, path, reward_shaping=False):
@@ -218,6 +215,7 @@ class TrainSmallInstance(Experiment):
 
         nfeatures = env.get_nfeatures()
         pth_path = f"results/models/{instance}/{experiment_name}/{instance}-{n_train}-{k_train}.pth"
+        os.makedirs(pth_path.rsplit('/', 1)[0], exist_ok=True)
 
         print(f"Starting training in instance {experiment_name}: {instance}-{n_train}-{k_train}...")
         neural_network = NeuralNetwork(nfeatures, args["nn_size"]).to("cpu")
