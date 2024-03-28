@@ -67,12 +67,13 @@ class Experiment(object):
         last_failed = False
         last_n = self.min_instance_size-1
         solved = 0
+        expansions = 0
         all_fail = False
 
         if instance_list is None:
             instance_list = [(i, j) for i in range(self.min_instance_size, self.max_instance_size) for j in range(self.min_instance_size, self.max_instance_size)]
 
-        for n, k in instance_list:
+        for i, (n, k) in enumerate(instance_list):
             if n != last_n:
                 last_failed = False
 
@@ -80,13 +81,12 @@ class Experiment(object):
                 print(f"DQN Agent in instance: {instance} {n}-{k}: Failed")
                 res = {"expanded transitions": budget + 1,
                        "expanded states": budget + 1,
-                       "synthesis time(ms)": 9999,
                        "failed": True}
+
             else:
                 env = self.get_environment(instance, n, k, path)
 
                 print(f"Runing DQN Agent in instance: {instance} {n}-{k}")
-                # print(f"Starting at: {datetime.datetime.now()}")
                 res = self.run_instance(env, agent, budget)
                 self.print_res("DQN Agent: ", res)
 
@@ -95,7 +95,6 @@ class Experiment(object):
                         "Name": agent.get_name(),
                         "Transitions": res["expanded transitions"],
                         "States": res["expanded states"],
-                        "Time(ms)": res["synthesis time(ms)"],
                         "Failed": res["failed"]}
 
                 csv_path = f"./results/csv/{instance}.csv"
@@ -104,18 +103,19 @@ class Experiment(object):
             if res["failed"]:
                 if k == 2:
                     all_fail = True
+
             else:
                 solved += 1
 
+            expansions += res["expanded transitions"]
             last_failed = res["failed"]
             last_n = n
 
-        return solved
+        return solved, expansions
 
     def print_res(self, title, res):
         print(title)
-        print(f' Syntesis Time: {res["synthesis time(ms)"]}ms')  # Time used in java synthesis
-        print(f' Expanded Transactions: {res["expanded transitions"]}')  # Amount of time step was called
+        print(f' Expanded Transactions: {res["expanded transitions"]}')  # Amount of expansions
         print(f' Expanded states: {res["expanded states"]}\n')  # Amount of states in the graph
 
     # Original parameters:
@@ -156,27 +156,21 @@ class Experiment(object):
     def init_instance_res(self):
         return {"expanded transitions max": -1,
                 "expanded states max": -1,
-                "synthesis time(max)": -1,
                 "expanded transitions min": 9999999,
                 "expanded states min": 9999999,
-                "synthesis time(min)": 9999999,
                 "expanded transitions mean": 0,
                 "expanded states mean": 0,
-                "synthesis time(mean)": 0,
                 "failed": 0}
 
     def update_instance_res(self, instance_res, res):
         instance_res["expanded transitions min"] = min(res["expanded transitions"],
                                                        instance_res["expanded transitions min"])
         instance_res["expanded states min"] = min(res["expanded states"], instance_res["expanded states min"])
-        instance_res["synthesis time(min)"] = min(res["synthesis time(ms)"], instance_res["synthesis time(min)"])
         instance_res["expanded transitions max"] = max(res["expanded transitions"],
                                                        instance_res["expanded transitions max"])
         instance_res["expanded states max"] = max(res["expanded states"], instance_res["expanded states max"])
-        instance_res["synthesis time(max)"] = max(res["synthesis time(ms)"], instance_res["synthesis time(max)"])
         instance_res["expanded transitions mean"] += res["expanded transitions"]
         instance_res["expanded states mean"] += res["expanded states"]
-        instance_res["synthesis time(mean)"] += res["synthesis time(ms)"]
         instance_res["failed"] += int(res["failed"])
 
     def save_to_csv(self, path, info):
@@ -283,12 +277,13 @@ class TestTrainedInAllInstances(Experiment):
         models = np.random.choice(all_models, min(amount_of_models, len(all_models)), replace=False)
         for model in models:
             print(f"Runing: {model}")
-            solved = self.run(instance, budget, model, False, instance_list)
+            solved, expansions = self.run(instance, budget, model, False, instance_list)
 
             # Save the info
             info = {"Instance": instance,
                     "Model": model,
-                    "Solved": solved}
+                    "Solved": solved,
+                    "Expansions": expansions}
 
             self.save_to_csv(csv_path, info)
 

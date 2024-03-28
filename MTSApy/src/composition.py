@@ -56,10 +56,10 @@ class CompositionGraph(nx.DiGraph):
         # self.auxiliar_heuristic = "Debugging"
         self.auxiliar_heuristic = "Ready"
 
-        #self.feature_group = "LRL"
+        self.feature_group = "LRL"
         #self.feature_group = "GRL"
+        #self.feature_group = "RRL"
         #self.feature_group = "CRL"
-        self.feature_group = "CRL"
 
         self.r_feature = 100
 

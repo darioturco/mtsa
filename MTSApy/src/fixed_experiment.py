@@ -1,12 +1,8 @@
-import numpy as np
-import subprocess
 from src.composition import CompositionGraph, CompositionAnalyzer
 from src.environment import Environment, FeatureEnvironment, FeatureCompleteEnvironment
 from src.agents.dqn import DQN, NeuralNetwork, TorchModel
 from src.agents.random import RandomAgent
 from src.experiments import Experiment
-from src.agents.RA import RA
-import time
 
 class RunRAInAllInstances(Experiment):
     def __init__(self, name="Test"):
@@ -28,18 +24,13 @@ class RunRAInAllInstances(Experiment):
             if last_failed or all_fail:
                 expanded = budget + 1
                 print(f"RA Agent in instance: {instance} {n}-{k}: Failed")
-                duration = 9999
 
             else:
-                start = time.time()
 
-                #expanded = DCSForPython.syntetizeWithHeuristic(f"{path}/{instance}/{instance}-{n}-{k}.fsp", "Complete", budget, verbose)
-                expanded = DCSForPython.syntetizeWithHeuristic(f"{path}/{instance}/{instance}-{n}-{k}.fsp", "Complete", budget, verbose)
-                end = time.time()
-                duration = (end - start) * 1000
+                expanded = DCSForPython.syntetizeWithHeuristic(f"{path}/{instance}/{instance}-{n}-{k}.fsp", "Ready", budget, verbose)
+
                 print(f"RA Agent in instance: {instance} {n}-{k}:")
                 print(f"   Expanded Transitions: {expanded}")
-                print(f"   Syntesis Time: {duration:.3f} ms\n")
 
 
             failed = (expanded >= budget)
@@ -48,7 +39,6 @@ class RunRAInAllInstances(Experiment):
                         "Model": "RA",
                         "Transitions": expanded,
                         "States": -1,
-                        "Time(ms)": round(duration),
                         "Failed": failed}
 
                 csv_path = f"./results/csv/{instance}.csv"
@@ -94,7 +84,7 @@ class RunRandomInAllInstances(Experiment):
                     env = Environment(context, False)
 
                     print(f"Runing Random Agent in instance: {instance} {n}-{k}")
-                    # print(f"Starting at: {datetime.datetime.now()}")
+
                     res = self.run_instance(env, agent, budget)
                     self.print_res("Random Agent: ", res)
                     self.update_instance_res(instance_res, res)
@@ -104,13 +94,12 @@ class RunRandomInAllInstances(Experiment):
 
             instance_res["expanded transitions mean"] /= repetitions
             instance_res["expanded states mean"] /= repetitions
-            instance_res["synthesis time(mean)"] /= repetitions
 
             csv_path = f"./results/csv/random.csv"
             info = {"Instance": instance, "N": n, "K": k,
-                    "Transitions (min)": instance_res["expanded transitions min"], "States (min)": instance_res["expanded states min"], "Time(min)": instance_res["synthesis time(min)"],
-                    "Transitions (max)": instance_res["expanded transitions max"], "States (max)": instance_res["expanded states max"], "Time(max)": instance_res["synthesis time(max)"],
-                    "Transitions (mean)": instance_res["expanded transitions mean"], "States (mean)": instance_res["expanded states mean"], "Time(mean)": instance_res["synthesis time(mean)"],
+                    "Transitions (min)": instance_res["expanded transitions min"], "States (min)": instance_res["expanded states min"],
+                    "Transitions (max)": instance_res["expanded transitions max"], "States (max)": instance_res["expanded states max"],
+                    "Transitions (mean)": instance_res["expanded transitions mean"], "States (mean)": instance_res["expanded states mean"],
                     "Failed": instance_res["failed"]}
             last_instance = instance
             self.save_to_csv(csv_path, info)
@@ -157,7 +146,6 @@ class TrainPPO(Experiment):
                 print(f"PPO Agent in instance: {instance} {n}-{k}: Failed")
                 res = {"expanded transitions": budget + 1,
                        "expanded states": budget + 1,
-                       "synthesis time(ms)": 9999,
                        "failed": True,
                        "features vectores": set()}
             else:
@@ -172,7 +160,6 @@ class TrainPPO(Experiment):
             info = {"Instance": instance, "N": n, "K": k,
                     "Transitions": res["expanded transitions"],
                     "States": res["expanded states"],
-                    "Time(ms)": res["synthesis time(ms)"],
                     "Failed": res["failed"],
                     "Features Vectors": res["features vectores"]}
 
