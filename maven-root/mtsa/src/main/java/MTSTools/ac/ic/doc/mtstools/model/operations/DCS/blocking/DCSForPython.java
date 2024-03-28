@@ -229,12 +229,12 @@ public class DCSForPython {
     public static int testHeuristic(int budget, String instance, String heuristic, int repetitions, int verbose){
         int solvedInstances = 0;
         int res = 0;
-        for(int n=1;n<=15;n++){
+        for(int n=2;n<=9;n++){
 
-            for(int k=1;k<=15 && res<budget;k++){
+            for(int k=2;k<=9 && res<budget;k++){
 
-                //String fsp_path = "F:\\UBA\\Tesis\\mtsa\\MTSApy\\fsp\\" + instance + "\\" + instance + "-" + n + "-" + k + ".fsp";
-                String fsp_path = "/home/dario/Documents/Tesis/mtsa/MTSApy/fsp/" + instance + "/" + instance + "-" + n + "-" + k + ".fsp";
+                String fsp_path = "F:\\UBA\\Tesis\\mtsa\\MTSApy\\fsp\\" + instance + "\\" + instance + "-" + n + "-" + k + ".fsp";
+                //String fsp_path = "/home/dario/Documents/Tesis/mtsa/MTSApy/fsp/" + instance + "/" + instance + "-" + n + "-" + k + ".fsp";
 
                 List<Integer> res_list = new ArrayList<>();
                 for(int i=0;i<repetitions;i++){
@@ -259,10 +259,10 @@ public class DCSForPython {
 
     // This main is for testing purposes only
     public static void main(String[] args) {
-        //DCSForPython.testHeuristic(10000, "CM", "BFS", 1, 1);     // Ejemplo de como correr todas las de CM con la heuristica BFS y un budget de 10000 expanciones
+        //DCSForPython.testHeuristic(10000, "TL", "Ready", 1, 0);     // Ejemplo de como correr todas las de CM con la heuristica BFS y un budget de 10000 expanciones
 
         // Acontinuacion un ejemplo de como se deberia usar DCSForPython
-        String instance = "DP";
+        String instance = "TL";
 
         //String FSP_path = "/home/dario/Documents/Tesis/mtsa/maven-root/mtsa/target/test-classes/Blocking/ControllableFSPs/GR1test1.lts"; // Falla porque tiene guiones
         //String FSP_path = "F:\\UBA\\Tesis\\mtsa\\maven-root\\mtsa\\target\\test-classes\\Blocking\\ControllableFSPs\\GR1Test43.lts";

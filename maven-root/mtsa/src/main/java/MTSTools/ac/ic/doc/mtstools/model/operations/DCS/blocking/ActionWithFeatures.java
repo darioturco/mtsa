@@ -5,6 +5,12 @@ import MTSTools.ac.ic.doc.commons.relations.Pair;
 import java.util.Arrays;
 import java.util.List;
 
+/* TODO: Arreglar todo el codigo de los features porque esta muy feito y es imposible de extender:
+        - Algunos features dependen de la etidad y otros no (actualmente solo se soportan features de la entidad)
+        - Algunos features necesitan ser reseteados
+        - Arreglar que el feature 0 es "especial" eso no deberia ser asi
+ */
+
 public class ActionWithFeatures<State, Action> {
     public HAction<Action> action;
     public Compostate<State, Action> state;
@@ -80,7 +86,7 @@ public class ActionWithFeatures<State, Action> {
 
     public String toString(){
         return state.toString() + " | " + action.toString();
-        //return state.toString() + " | " + action.toString() + " | " + arrayBoolToString(state.missionsCompletes.get(action));
+        //return state.toString() + " | " + action.toString() + " | " + arrayBoolToString(state.customFeatures.get(action).get(1));
     }
 
     public boolean getMissionValue(int mission){
@@ -113,4 +119,3 @@ public class ActionWithFeatures<State, Action> {
         }
     }
 }
-

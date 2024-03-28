@@ -14,7 +14,7 @@ if __name__ == "__main__":
     #TestTrainedInAllInstances().run("BW", 10000, pth_path="./results/models/BW/RRL\BW-2-2-710-partial.pth")
     #TestTrainedInAllInstances().run("DP", 10000, pth_path="./results/models/DP/RRL\DP-2-2-6610-partial.pth")
     #TestTrainedInAllInstances().run("TA", 10000, pth_path="./results/models/TA/RRL\TA-2-2-2580-partial.pth")
-    TestTrainedInAllInstances().run("TL", experiment_name, 10000, pth_path="./results/models/TL/LRL\TL-2-2-22240-partial.pth")
+    TestTrainedInAllInstances().run("TL", experiment_name, 10000, pth_path="./results/models/DP/CRL\DP-2-2-4600-partial.pth")
     #TestTrainedInAllInstances().run("CM", 10000, pth_path="./results/models/CM/1/CM-2-2-270-partial.pth")
 
 

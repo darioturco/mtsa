@@ -7,10 +7,12 @@ import java.util.List;
 public class InstanceDomain<State, Action> {
     public DirectedControllerSynthesisBlocking dcs;
     public int f;
+    public boolean firstExpansion;
 
     InstanceDomain(DirectedControllerSynthesisBlocking dcs){
         this.dcs = dcs;
         this.f = 1;
+        this.firstExpansion = true;
     }
 
     public List<boolean[]> copyMatrix(Compostate parent){
@@ -227,7 +229,7 @@ class InstanceDomainDP<State, Action> extends InstanceDomain{
 class InstanceDomainCM<State, Action> extends InstanceDomain{
     InstanceDomainCM(DirectedControllerSynthesisBlocking dcs){
         super(dcs);
-        this.f = 1;
+        this.f = 3;
     }
 
     public void computeCustomFeature(ActionWithFeatures transition){
@@ -241,27 +243,74 @@ class InstanceDomainCM<State, Action> extends InstanceDomain{
         if(label.contains("mouse") && label.contains("move") && index == dcs.k){
             state.customFeatures.get(action).get(0)[entity] = true;
         }
+
+        if(label.contains("mouse") && label.contains("move") && index == dcs.k){
+            state.customFeatures.get(action).get(0)[entity] = true;
+        }
+
+        for(int i=0 ; i<dcs.n ; i++){
+            state.customFeatures.get(action).get(1)[i] = false;
+            state.customFeatures.get(action).get(2)[i] = false;
+        }
+
         if(label.contains("mouse") && label.contains("move")) {
             int newIndex = 2 * dcs.k - index;
             int oldIndex = parent.getLastentityIndex()[entity];
             state.entityIndexes.get(action)[entity] = newIndex;
             if (newIndex > oldIndex) {
                 transition.upIndex = true;
+                state.customFeatures.get(action).get(1)[entity] = true;
             }
             if (newIndex < oldIndex) {
                 transition.downIndex = true;
+                state.customFeatures.get(action).get(2)[entity] = true;
             }
         }
     }
 }
 
 class InstanceDomainTL<State, Action> extends InstanceDomain{
+    int lastEntity;
+
     InstanceDomainTL(DirectedControllerSynthesisBlocking dcs){
         super(dcs);
-        this.f = 1;
+        this.f = 5;
+        this.lastEntity = -1;
     }
 
     public void computeCustomFeature(ActionWithFeatures transition){
+        HAction<Action> action = transition.action;
+        String label = action.toString();
+        Compostate<State, Action> state = transition.state;
+        int entity = transition.entity;
 
+        for(int i=0 ; i<dcs.n ; i++){
+            // reset custom features
+        }
+
+        if(label.contains("put") && (entity < dcs.n)){
+            state.customFeatures.get(action).get(0)[entity] = true;
+        }
+
+        // TODO: ponerle buenos nombres a los features
+        boolean a = entity != 2 && label.contains("get") && (entity == (lastEntity + 1)) && dcs.lastExpandedAction.getAction().toString().contains("put");
+        if(entity < dcs.n){
+            state.customFeatures.get(action).get(1)[entity] = a;
+        }
+
+        boolean b = entity != 2 && label.contains("put") && (entity == (lastEntity + 1)) && dcs.lastExpandedAction.getAction().toString().contains("get");
+        if(entity < dcs.n){
+            state.customFeatures.get(action).get(2)[entity] = b;
+        }
+
+        boolean c = entity != 2 && label.contains("return") && (entity == (lastEntity + 1)) && dcs.lastExpandedAction.getAction().toString().contains("akjghfakjgfhn");
+        if(entity < dcs.n){
+            state.customFeatures.get(action).get(3)[entity] = c;
+        }
+
+        state.customFeatures.get(action).get(4)[0] = firstExpansion;
+
+        lastEntity = entity;
+        firstExpansion = false;
     }
 }

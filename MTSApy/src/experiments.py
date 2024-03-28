@@ -103,7 +103,7 @@ class Experiment(object):
                         "States": res["expanded states"],
                         "Failed": res["failed"]}
 
-                csv_path = f"./results/csv/{instance}.csv"
+                csv_path = f"./results/csv/{experiment_name}-{instance}.csv"
                 self.save_to_csv(csv_path, info)
 
             if res["failed"]:

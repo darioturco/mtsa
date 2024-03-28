@@ -202,7 +202,7 @@ if __name__ == "__main__":
     #graph_training_process(sliding_window=100, repetitions=5, save_path='./results/plots', use_steps=True)
 
     # Budget of 10000
-    comparative_bar_plot(data=None, instances_solved=False)
+    #comparative_bar_plot(data=None, instances_solved=False)
     #comparative_bar_plot(data={"Random": {"AT": 59, "BW": 44, "DP": 62, "TA": 60, "TL": 134, "CM": 18},
     #                           "2-2": {"AT": 85, "BW": 53, "DP": 101, "TA": 60, "TL": 225, "CM": 18},
     #                           #"ERL": {"AT": 87, "BW": 57, "DP": 150, "TA": 60, "TL": 225, "CM": 0},
@@ -214,14 +214,14 @@ if __name__ == "__main__":
 
 
 
-    #method_name = "CRL"
-    #check_method_in_instance("BW", method_name)
+    method_name = "CRL"
+    check_method_in_instance("BW", method_name)
     #check_method_in_instance("DP", method_name)
     #check_method_in_instance("AT", method_name)
     #check_method_in_instance("TA", method_name)
 
-    #method_name = "RA"
-    #check_method_in_instance("BW", method_name)
+    method_name = "RA"
+    check_method_in_instance("BW", method_name)
     #check_method_in_instance("DP", method_name)
     #check_method_in_instance("AT", method_name)
     #check_method_in_instance("TA", method_name)
