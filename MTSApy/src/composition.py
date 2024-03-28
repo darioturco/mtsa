@@ -35,9 +35,10 @@ class CompositionGraph(nx.DiGraph):
     def getDCSForPython():
         return DCSForPython
 
-    def __init__(self, problem, n, k, fsp_path):
+    def __init__(self, problem, feature_group, n, k, fsp_path):
         super().__init__()
         self.problem, self.n, self.k = problem, n, k
+        self.feature_group = feature_group
         self._fsp_path = fsp_path
         self._initial_state = None
         self._frontier = []
@@ -49,19 +50,12 @@ class CompositionGraph(nx.DiGraph):
         self.javaEnv = None
 
     def reset_from_copy(self):
-        return self.__class__(self.problem, self.n, self.k, self._fsp_path).start_composition()
+        return self.__class__(self.problem, self.feature_group, self.n, self.k, self._fsp_path).start_composition()
 
     def set_composition_parameters(self):
         # self.auxiliar_heuristic = "BFS"
         # self.auxiliar_heuristic = "Debugging"
         self.auxiliar_heuristic = "Ready"
-
-        self.feature_group = "LRL"
-        #self.feature_group = "GRL"
-        #self.feature_group = "RRL"
-        #self.feature_group = "CRL"
-
-        self.r_feature = 100
 
     def start_composition(self):
         assert (self._initial_state is None)
@@ -187,6 +181,7 @@ class CompositionAnalyzer:
 
 
         elif feature_group_name == "RRL":   # RRL: Random RL (Es lo mismo que LRL pero con un feature random)
+            self.r_feature = 100
             return [self.event_label_feature, self.state_label_feature, self.controllable, self.marked_state,
                     self.current_phase, self.child_node_state, self.uncontrollable_neighborhood,
                     self.explored_state_child, self.isLastExpanded, self.child_dealdlock, self.mission_feature,

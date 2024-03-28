@@ -112,12 +112,10 @@ class TorchModel(Model):
     # should be called only at the end of each episode
     def current_loss(self):
         avg_loss = np.mean(self.losses)
-        #avg_loss = np.max(self.losses)
         self.losses = []
         return avg_loss
 
     def to_onnx(self):
-
         x = torch.randn(1, self.nfeatures, device=self.device)
 
         torch.onnx.export(self.model,  # model being run

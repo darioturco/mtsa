@@ -61,7 +61,7 @@ class Experiment(object):
         env.close()
         return res
 
-    def run_agent(self, budget, agent, instance, save=True, instance_list=None):
+    def run_agent(self, budget, agent, instance, experiment_name, save=True, instance_list=None, total_budget=None):
         path = self.get_fsp_path()
 
         last_failed = False
@@ -73,9 +73,15 @@ class Experiment(object):
         if instance_list is None:
             instance_list = [(i, j) for i in range(self.min_instance_size, self.max_instance_size) for j in range(self.min_instance_size, self.max_instance_size)]
 
+        if total_budget is None:
+            total_budget = budget * len(instance_list) + 1
+
         for i, (n, k) in enumerate(instance_list):
             if n != last_n:
                 last_failed = False
+
+            if expansions > total_budget:
+                all_fail = True
 
             if last_failed or all_fail:
                 print(f"DQN Agent in instance: {instance} {n}-{k}: Failed")
@@ -84,7 +90,7 @@ class Experiment(object):
                        "failed": True}
 
             else:
-                env = self.get_environment(instance, n, k, path)
+                env = self.get_environment(instance, experiment_name, n, k, path)
 
                 print(f"Runing DQN Agent in instance: {instance} {n}-{k}")
                 res = self.run_instance(env, agent, budget)
@@ -191,8 +197,8 @@ class Experiment(object):
         path = os.path.join(os.getcwd(), "fsp")
         return path
 
-    def get_environment(self, instance, n, k, path, reward_shaping=False):
-        d = CompositionGraph(instance, n, k, path).start_composition()
+    def get_environment(self, instance, experiment_name, n, k, path, reward_shaping=False):
+        d = CompositionGraph(instance, experiment_name, n, k, path).start_composition()
         context = CompositionAnalyzer(d)
         return FeatureEnvironment(context, reward_shaping)
 
@@ -211,7 +217,7 @@ class TrainSmallInstance(Experiment):
     def train(self, instance, n_train, k_train, experiment_name):
         args = self.default_args()
         path = self.get_fsp_path()
-        env = self.get_environment(instance, n_train, k_train, path, args["reward_shaping"])
+        env = self.get_environment(instance, experiment_name, n_train, k_train, path, args["reward_shaping"])
 
         nfeatures = env.get_nfeatures()
         pth_path = f"results/models/{instance}/{experiment_name}/{instance}-{n_train}-{k_train}.pth"
@@ -226,11 +232,11 @@ class TrainSmallInstance(Experiment):
 
 
 
-    def curriculum_train(self, instance, train_args):
+    def curriculum_train(self, instance, experiment_name, train_args):
         path = self.get_fsp_path()
         args = self.default_args()
         small_n, small_k = train_args[0]["n"], train_args[0]["k"]
-        env = self.get_environment(instance, small_n, small_k, path)
+        env = self.get_environment(instance, experiment_name, small_n, small_k, path)
         nfeatures = env.get_nfeatures()
         neural_network = NeuralNetwork(nfeatures, args["nn_size"]).to("cpu")
         nn_model = TorchModel(nfeatures, network=neural_network, args=args)
@@ -238,7 +244,7 @@ class TrainSmallInstance(Experiment):
 
         for t_args in train_args:
             n, k = t_args["n"], t_args["k"]
-            env = self.get_environment(instance, n, k, path)
+            env = self.get_environment(instance, experiment_name, n, k, path)
             pth_path = f"results/models/curriculum/{instance}/{instance}-{n}-{k}.pth"
             dqn_agent.reset_train_for(env)
 
@@ -257,25 +263,27 @@ class TestTrainedInAllInstances(Experiment):
     def get_previous_models(self, path):
         try:
             df = pd.read_csv(path)
-            return set(df["Model"])
+            return set(df["Model"]), min(df["Expansions"])
         except:
-            return set()
+            return set(), float('inf')
 
     #def pre_select_with_only_instance(self, instance, budget, path, amount_of_models=1000, csv_path=None, n, k):
 
-    def pre_select(self, instance, budget, path, amount_of_models=1000, csv_path=None, instance_list=None):
-        all_models = set([os.path.join(r, file) for r, d, f in os.walk(path) for file in f])
-        if csv_path is None:
-            csv_path = f"./results/selection/{instance}.csv"
+    def pre_select(self, instance, experiment_name, budget, amount_of_models=1000, instance_list=None):
+        path = f"./results/models/{instance}/{experiment_name}"
+        all_models = {os.path.join(r, file) for r, d, f in os.walk(path) for file in f}
+        csv_path = f"./results/selection/{experiment_name}-{instance}.csv"
 
-        previous_models = self.get_previous_models(csv_path)
+        previous_models, best_expansions = self.get_previous_models(csv_path)
         all_models = list(all_models - previous_models)
-        print(all_models)
+        #print(all_models)
 
         models = np.random.choice(all_models, min(amount_of_models, len(all_models)), replace=False)
+        best_expansions = min(len(models) * budget + 1, best_expansions)
         for model in models:
             print(f"Runing: {model}")
-            solved, expansions = self.run(instance, budget, model, False, instance_list)
+            solved, expansions = self.run(instance, experiment_name, budget, model, False, instance_list, best_expansions)
+            best_expansions = min(best_expansions, expansions)
 
             # Save the info
             info = {"Instance": instance,
@@ -285,9 +293,9 @@ class TestTrainedInAllInstances(Experiment):
 
             self.save_to_csv(csv_path, info)
 
-    def run(self, instance, budget, pth_path=None, save=True, instance_list=None):
+    def run(self, instance, experiment_name, budget, pth_path=None, save=True, instance_list=None, total_budget=None):
         path = self.get_fsp_path()
-        env = self.get_environment(instance, self.min_instance_size, self.min_instance_size, path)
+        env = self.get_environment(instance, experiment_name, self.min_instance_size, self.min_instance_size, path)
 
         nfeatures = env.get_nfeatures()
         args = self.default_args()
@@ -297,4 +305,4 @@ class TestTrainedInAllInstances(Experiment):
         nn_model = TorchModel.load(nfeatures, pth_path, args=args)
         dqn_agent = DQN(env, nn_model, args, verbose=False)
 
-        return self.run_agent(budget, dqn_agent, instance, save, instance_list)
+        return self.run_agent(budget, dqn_agent, instance, experiment_name, save, instance_list, total_budget=total_budget)
