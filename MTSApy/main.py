@@ -5,14 +5,14 @@ import cProfile
 
 if __name__ == "__main__":
     experiment_name = "2-2"
-    instance = "DP"
+    instance = "AT"
     #TrainSmallInstance().train(instance, 2, 2, experiment_name)
 
 
 
-    #TestTrainedInAllInstances().select_with_java(instance, experiment_name, 1000)
+    TestTrainedInAllInstances().select_with_java(instance, experiment_name, 1000)
 
-    TestTrainedInAllInstances().test_with_java(instance, experiment_name, 10000, None)
+    #TestTrainedInAllInstances().test_with_java(instance, experiment_name, 10000, None)
 
 
 

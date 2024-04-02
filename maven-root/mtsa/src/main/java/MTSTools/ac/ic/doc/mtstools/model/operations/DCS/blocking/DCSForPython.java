@@ -227,11 +227,8 @@ public class DCSForPython {
         for(int n=minSize;n<=maxSize;n++){
             int res = 0;
             for(int k=minSize;k<=maxSize;k++){
-
                 if(res < budget){
-                    // TODO: Mejorar como se arma el path
-                    String fsp_path = "F:\\UBA\\Tesis\\mtsa\\MTSApy\\fsp\\" + instance + "\\" + instance + "-" + n + "-" + k + ".fsp";
-                    //String fsp_path = "/home/dario/Documents/Tesis/mtsa/MTSApy/fsp/" + instance + "/" + instance + "-" + n + "-" + k + ".fsp";
+                    String fsp_path = "./fsp/" + instance + "/" + instance + "-" + n + "-" + k + ".fsp";
 
                     res = DCSForPython.syntetizeWithHeuristic(fsp_path, heuristic, featuresGroup, modelPath, budget, false);
 
@@ -240,7 +237,6 @@ public class DCSForPython {
                     }else{
                         res = budget;
                     }
-
                 }
                 totalExpansions += res;
 
@@ -251,7 +247,7 @@ public class DCSForPython {
                 }
 
                 if(save){
-                    String csvPath = "F:\\UBA\\Tesis\\mtsa\\MTSApy\\results\\csv\\" + featuresGroup + "-" + instance + ".csv";
+                    String csvPath = "./results/csv/" + featuresGroup + "-" + instance + ".csv";
                     String[] data = {instance, String.valueOf(n), String.valueOf(k), modelPath, String.valueOf(res)};
                     writeCSV(csvPath, data, testHeader);
                 }
@@ -290,13 +286,12 @@ public class DCSForPython {
 
     // Esta funcion levanta todos los modelos de un experimento para una instancia y los testea con el budget dado
     public static void selectRL(String instance, String experimentName, int budget){
-        //String folderPath = "./results/models/" + instance + "/" + experimentName + "/" // TODO: Arreglar el path
-        String folderPath = "F:\\UBA\\Tesis\\mtsa\\MTSApy\\results\\models\\" + instance + "\\" + experimentName + "\\";
+        String folderPath = "./results/models/" + instance + "/" + experimentName + "/";
 
         File folder = new File(folderPath);
         Set<File> setOfFiles = new HashSet<>(Arrays.asList(folder.listFiles()));
 
-        Set<String> setAllModelsPaths = readCSVColumn("path/to/selection/csv");
+        Set<String> setAllModelsPaths = readCSVColumn("./results/selection/" + experimentName + "-" + instance + ".csv");
         for(File f : setOfFiles){
             if(f.isFile()){
                 String fileName = f.getName();
@@ -326,7 +321,7 @@ public class DCSForPython {
             }
 
             System.out.println("Model " + modelName + ": " + totalExpansions);
-            String csvPath = "F:\\UBA\\Tesis\\mtsa\\MTSApy\\results\\selection\\" + experimentName + "-" + instance + ".csv";
+            String csvPath = "./results/selection/" + experimentName + "-" + instance + ".csv";
             String[] data = {instance, folderPath + modelName, String.valueOf(solvedInstances), String.valueOf(totalExpansions)};
 
             writeCSV(csvPath, data, selectionHeader);
@@ -335,7 +330,6 @@ public class DCSForPython {
     }
 
     public static Set<String> readCSVColumn(String folderPath){
-        folderPath = "F:\\UBA\\Tesis\\mtsa\\MTSApy\\results\\selection\\2-2-DP.csv";
         Set<String> res = new HashSet<>();
 
         try{
@@ -343,8 +337,7 @@ public class DCSForPython {
             String line = br.readLine();
             System.out.println(line);
             while (line != null) {
-                // use comma as separator
-                String[] cols = line.split(",");
+                String[] cols = line.split(","); // use comma as separator
                 if(cols[1].contains(".onnx")){
                     res.add(cols[1]);
                 }
@@ -361,7 +354,6 @@ public class DCSForPython {
 
     // This function is for testing purposes only
     public static void testExample(){
-
         //String modelPath = "F:\\UBA\\Tesis\\mtsa\\MTSApy\\TA-2-2-10-partial.onnx";
         //String modelPath = "F:\\UBA\\Tesis\\mtsa\\MTSApy\\DP-2-2-4460-partial.onnx";
         //String modelPath = "F:\\UBA\\Tesis\\mtsa\\MTSApy\\results\\models\\DP\\2-2\\DP-2-2-690-partial.onnx";
