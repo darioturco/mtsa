@@ -197,7 +197,7 @@ def comparative_bar_plot_data(data, instances, title):
 if __name__ == "__main__":
     print("Plotting...")
     #graph_individual_training_process(sliding_window=500, save_path='./results/plots', use_steps=True, problems=BENCHMARK_PROBLEMS)
-    #graph_individual_training_process(sliding_window=1000, save_path=None, use_steps=True, problems=["BW"])
+    graph_individual_training_process(sliding_window=1, save_path=None, use_steps=True, problems=["DP"])
 
     #graph_training_process(sliding_window=100, repetitions=5, save_path='./results/plots', use_steps=True)
 
@@ -214,14 +214,14 @@ if __name__ == "__main__":
 
 
 
-    method_name = "CRL"
-    check_method_in_instance("BW", method_name)
+    method_name = "LRL"
+    #check_method_in_instance("BW", method_name)
     #check_method_in_instance("DP", method_name)
     #check_method_in_instance("AT", method_name)
     #check_method_in_instance("TA", method_name)
 
     method_name = "RA"
-    check_method_in_instance("BW", method_name)
+    #check_method_in_instance("BW", method_name)
     #check_method_in_instance("DP", method_name)
     #check_method_in_instance("AT", method_name)
     #check_method_in_instance("TA", method_name)

@@ -92,8 +92,6 @@ public class BiddingWorkflowExplorationHeuristic<State, Action> implements Explo
         List<Integer> candidates = new ArrayList<>();
         for(int i=0;i<actionsToExplore.size();i++){
             ActionWithFeatures actionWithFeature = actionsToExplore.get(i);
-            if(!actionWithFeature.enable)
-                continue;
 
             String action = actionWithFeature.action.toString();
             if(action.contains(search_for) && (actionWithFeature.entity == crew || actionWithFeature.entity == -1)){

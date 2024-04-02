@@ -82,7 +82,7 @@ public class TestBlockingDCSForPythonRL {
 
         String heuristicModeString = "Ready";
         HeuristicMode heuristicMode = HeuristicMode.valueOf(heuristicModeString);
-        ExplorationHeuristic<Long, String> heuristic = dcs.getHeuristic(heuristicMode);
+        ExplorationHeuristic<Long, String> heuristic = dcs.getHeuristic(heuristicMode, "");
         dcs.heuristic = heuristic;
 
 

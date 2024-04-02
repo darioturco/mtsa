@@ -138,7 +138,7 @@ public class Compostate<State, Action> implements Comparable<Compostate<State, A
 
     /** For each action a matrix, each row is the features for the n entities
      *  The amount of rows is f and depend of the family of instances */
-    public Map<HAction<Action>, List<boolean[]>> customFeatures;
+    public List<boolean[]> compostateCustomFeatures;
 
     /** For each action the indexes(states) of each entity */
     public Map<HAction<Action>, int[]> entityIndexes;
@@ -198,7 +198,6 @@ public class Compostate<State, Action> implements Comparable<Compostate<State, A
         this.transitions = buildTransitions();
         dcs.heuristic.initialize(this);
         this.uncontrollablesCount = countUncontrollables();
-        this.customFeatures = new HashMap<>();
         this.entityIndexes = new HashMap<>();
         this.lastExpandedAction = null;
     }
@@ -588,11 +587,6 @@ public class Compostate<State, Action> implements Comparable<Compostate<State, A
     public void initRecommendations(Integer color) {
         recommendit.put(color, recommendations.get(color).iterator());
         updateRecommendation(color);
-    }
-
-    /** Returns the array with the completes missions of an action */
-    public boolean[] getLastMissions(int feature){
-        return customFeatures.get(lastExpandedAction).get(feature);
     }
 
     public int[] getLastentityIndex(){

@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 from src.composition import CompositionGraph, CompositionAnalyzer
 from src.environment import Environment, FeatureEnvironment, FeatureCompleteEnvironment
-from src.agents.dqn import DQN, NeuralNetwork, TorchModel
+from src.agents.dqn import DQN, NeuralNetwork, TorchModel, OnnxModel
 from src.agents.random import RandomAgent
 import csv
 
@@ -71,7 +71,7 @@ class Experiment(object):
         all_fail = False
 
         if instance_list is None:
-            instance_list = [(i, j) for i in range(self.min_instance_size, self.max_instance_size) for j in range(self.min_instance_size, self.max_instance_size)]
+            instance_list = [(i, j) for i in range(self.min_instance_size-1, self.max_instance_size+1) for j in range(self.min_instance_size-1, self.max_instance_size+1)]
 
         if total_budget is None:
             total_budget = budget * len(instance_list) + 1
@@ -155,8 +155,9 @@ class Experiment(object):
                 ### Miscellaneous
                 'freq_save': 10,
                 'seconds': None,
-                'max_steps': 500000,    # None
-                "max_eps": 1000000
+                'max_steps': 500000,    # 500000
+                "max_eps": 1000000,
+                "compute_python_features": False
                 }
 
     def init_instance_res(self):
@@ -301,6 +302,7 @@ class TestTrainedInAllInstances(Experiment):
         args = self.default_args()
         if pth_path is None:
             pth_path = f"results/models/{instance}/{instance}-{self.min_instance_size}-{self.min_instance_size}.pth"
+
 
         nn_model = TorchModel.load(nfeatures, pth_path, args=args)
         dqn_agent = DQN(env, nn_model, args, verbose=False)
