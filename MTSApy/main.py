@@ -4,12 +4,17 @@ from src.instance_maker import *
 import cProfile
 
 if __name__ == "__main__":
-    experiment_name = "CRL"
+    experiment_name = "2-2"
     instance = "DP"
-    TrainSmallInstance().train(instance, 2, 2, experiment_name)
-    #TestTrainedInAllInstances().pre_select(instance, experiment_name, 1000, 99999,
-    #                                        [(n, k) for n in range(2, 10) for k in range(2, 10)])
-    #                                        [(3, 1), (5, 1)])
+    #TrainSmallInstance().train(instance, 2, 2, experiment_name)
+
+
+
+    #TestTrainedInAllInstances().select_with_java(instance, experiment_name, 1000)
+
+    TestTrainedInAllInstances().test_with_java(instance, experiment_name, 10000, None)
+
+
 
 
 
@@ -30,4 +35,9 @@ if __name__ == "__main__":
 
 ### Notas:
 
+# Ver:  ["java", "-Xmx8g", "-XX:MaxDirectMemorySize=512m", "-classpath", "mtsa.jar",
 
+# My java command(for selection):
+# java -classpath mtsa.jar MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.DCSForPython -s -i DP -e "2-2" -b 1000
+#
+#

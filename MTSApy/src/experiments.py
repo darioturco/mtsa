@@ -2,6 +2,7 @@ import sys
 import os
 import random
 import datetime
+import subprocess
 import numpy as np
 import pandas as pd
 from src.composition import CompositionGraph, CompositionAnalyzer
@@ -155,7 +156,7 @@ class Experiment(object):
                 ### Miscellaneous
                 'freq_save': 10,
                 'seconds': None,
-                'max_steps': 500000,    # 500000
+                'max_steps': 450000,    # 450000
                 "max_eps": 1000000,
                 "compute_python_features": False
                 }
@@ -227,6 +228,7 @@ class TrainSmallInstance(Experiment):
         print(f"Starting training in instance {experiment_name}: {instance}-{n_train}-{k_train}...")
         neural_network = NeuralNetwork(nfeatures, args["nn_size"]).to("cpu")
         nn_model = TorchModel(nfeatures, network=neural_network, args=args)
+        nn_model.set_tmp_path(f"./results/models/{instance}/{experiment_name}/tmp.onnx")
         dqn_agent = DQN(env, nn_model, args, verbose=False)
         dqn_agent.train(seconds=args["seconds"], max_steps=args["max_steps"], max_eps=args["max_eps"], pth_path=pth_path, transitions_path=None, freq_save=args["freq_save"])
         print(f"Trained in instance: {instance} {n_train}-{k_train}\n")
@@ -241,6 +243,7 @@ class TrainSmallInstance(Experiment):
         nfeatures = env.get_nfeatures()
         neural_network = NeuralNetwork(nfeatures, args["nn_size"]).to("cpu")
         nn_model = TorchModel(nfeatures, network=neural_network, args=args)
+        nn_model.set_tmp_path(f"./results/models/{instance}/{experiment_name}/tmp.onnx")
         dqn_agent = DQN(env, nn_model, args, verbose=False)
 
         for t_args in train_args:
@@ -308,3 +311,41 @@ class TestTrainedInAllInstances(Experiment):
         dqn_agent = DQN(env, nn_model, args, verbose=False)
 
         return self.run_agent(budget, dqn_agent, instance, experiment_name, save, instance_list, total_budget=total_budget)
+
+    def get_best_model(self, csv_path):
+        best_model = None
+        max_solved = float('-inf')
+        min_expansions = float('inf')
+
+        with open(csv_path, 'r') as file:
+            reader = csv.reader(file)
+            next(reader)  # Skip header
+
+            for row in reader:
+                solved = int(row[2])
+                expansions = int(row[3])
+                if solved > max_solved:
+                    best_model = row[1]
+                    max_solved = solved
+                    min_expansions = expansions
+
+                elif solved == max_solved and expansions < min_expansions:
+                    best_model = row[1]
+                    max_solved = solved
+                    min_expansions = expansions
+
+        return best_model
+
+    def select_with_java(self, instance, experiment_name, budget):
+        command = f'java -Xmx4g -classpath mtsa.jar MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.DCSForPython -s -i {instance} -e "{experiment_name}" -b {budget}'
+        subprocess.call(command, shell=True)
+
+    def test_with_java(self, instance, experiment_name, budget, onnx_path=None):
+        if onnx_path is None:
+            onnx_path = self.get_best_model(f"./results/selection/{experiment_name}-{instance}.csv")
+
+        print(f"Testing model: {onnx_path}")
+
+        command = f'java -Xmx4g -classpath mtsa.jar MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.DCSForPython -i {instance} -e "{experiment_name}" -b {budget} -m {onnx_path}'
+        subprocess.call(command, shell=True)
+

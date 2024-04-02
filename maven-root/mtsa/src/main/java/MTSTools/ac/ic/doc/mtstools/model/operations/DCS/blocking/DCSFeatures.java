@@ -93,8 +93,6 @@ public class DCSFeatures<State, Action> {
             methodFeatures.add(this.random_feature);
         }
 
-        // TODO: Chequear que tengan el mismo orden que en python
-
         setAmountOfFeatures();
     }
 
@@ -139,7 +137,7 @@ public class DCSFeatures<State, Action> {
             int idx;
             for(Pair<HAction<Action>, Compostate<State, Action>> parent : a.state.getParents()){
                 String actionWithoutIndex = parent.getFirst().toString().replaceAll("\\d", "");
-                idx = labels_idx.get(actionWithoutIndex);   // TODO: ojo que puede tirar una exapcion (ver cuando puede pasar)
+                idx = labels_idx.get(actionWithoutIndex);
                 a.featureVector[i+idx] = 1.0f;
             }
         }
@@ -152,7 +150,7 @@ public class DCSFeatures<State, Action> {
         public void compute(RLExplorationHeuristic<State, Action> h, ActionWithFeatures<State, Action> a, int i) {
             a.resetFeatureVectorSlice(i, i+nactions);
             String actionWithoutIndex = a.action.toString().replaceAll("\\d", "");
-            int idx = labels_idx.get(actionWithoutIndex);   // TODO: ojo que puede tirar una exapcion (ver cuando puede pasar)
+            int idx = labels_idx.get(actionWithoutIndex);
             a.featureVector[i+idx] = 1.0f;
         }
         public int size() {return nactions;}

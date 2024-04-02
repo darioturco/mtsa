@@ -62,7 +62,8 @@ public class RLExplorationHeuristic<State, Action> implements ExplorationHeurist
     public Compostate<State, Action> lastExpandedFrom = null;
     public ActionWithFeatures<State, Action> lastExpandedStateAction = null;
 
-    public String featureGroup;
+    /** Name of the set of features used by the learner */
+    public String featureGroup;     // TODO: convertirlo a enumerate
 
     public OrtEnvironment ortEnv;
     public OrtSession session;
@@ -109,7 +110,6 @@ public class RLExplorationHeuristic<State, Action> implements ExplorationHeurist
     }
 
     // this assumes updateOpen was called just before, so getNextState returns an action that was not previously explored
-    // TODO: Ver si se puede borrar
     public Pair<Compostate<State,Action>, HAction<Action>> getNextAction(boolean updateUnexploredTransaction) {
         assert(!frontiers.get(currentTargetLTSIndex).isEmpty());
         Compostate<State,Action> state = getNextState(currentTargetLTSIndex, updateUnexploredTransaction);

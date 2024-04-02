@@ -64,7 +64,7 @@ class TorchModel(Model):
         self.has_learned_something = False
         self.losses = []
         self.path = ""
-        self.tmp_path = f"./{random.randint(0, 1000)}-tmp.onnx"
+        self.tmp_path = f"./tmp.onnx"
 
     def constant_one_function(self, epoach):
         return 1.0
@@ -122,7 +122,6 @@ class TorchModel(Model):
 
     def to_onnx(self):
         x = torch.randn(1, self.nfeatures, device=self.device)
-
         torch.onnx.export(self.model,  # model being run
                           x,  # model input (or a tuple for multiple inputs)
                           self.tmp_path,  # where to save the model (can be a file or file-like object)
@@ -143,10 +142,14 @@ class TorchModel(Model):
         net.load_state_dict(weights)
         return net
 
+    def set_tmp_path(self, new_path):
+        self.tmp_path = new_path
+
     def copy(self):
         network_copy = self.copy_network()
         res = TorchModel(self.nfeatures, network_copy, self.args)
         res.has_learned_something = self.has_learned_something
+        res.set_tmp_path(self.tmp_path)
         return res
 
     def save(self, path):

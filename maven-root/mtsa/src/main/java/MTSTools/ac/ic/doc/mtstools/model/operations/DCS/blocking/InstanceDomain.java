@@ -61,7 +61,7 @@ public class InstanceDomain<State, Action> {
 
 
     public void computeCustomFeature(ActionWithFeatures transition, int i){}
-    public int size(){return 1 + customFSize;}    // TODO: cambiarle el nimbre a customSize y que solo tenga la cantidad de features custom (no cuenta el de misiion)
+    public int size(){return 1 + customFSize;}
     public boolean missionFeature(ActionWithFeatures transition){return false;}
     public void updateMatrixFeature(HAction<Action> action, Compostate<State, Action> newState){}
 }
@@ -399,7 +399,6 @@ class InstanceDomainTL<State, Action> extends InstanceDomain{
             state.customFeatures.get(action).get(0)[entity] = true;
         }
 
-        // TODO: ponerle buenos nombres a los features
         boolean a = entity != 2 && label.contains("get") && (entity == (lastEntity + 1)) && dcs.lastExpandedAction.getAction().toString().contains("put");
         if(entity < dcs.n){
             state.customFeatures.get(action).get(1)[entity] = a;

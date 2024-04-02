@@ -12,7 +12,7 @@ import ai.onnxruntime.OrtException;
 import jargs.gnu.CmdLineParser;
 import ltsa.dispatcher.TransitionSystemDispatcher;
 import ltsa.lts.*;
-import ltsa.ui.StandardOutput;;
+import ltsa.ui.StandardOutput;
 
 import static org.junit.Assert.*;
 
@@ -216,12 +216,17 @@ public class DCSForPython {
     }
 
     // Este metodo corre todas las instancias de una familia con una heuristica dada
-    public static Pair<Integer, Integer> testHeuristic(int budget, String instance, String heuristic, String featuresGroup, String modelPath, boolean save, int verbose){
+    public static Pair<Integer, Integer> testHeuristic(int budget, String instance, String heuristic, String featuresGroup, String modelPath, boolean save, int minSize, int maxSize, int verbose){
         int solvedInstances = 0;
         int totalExpansions = 0;
-        for(int n=2;n<=15;n++){
+
+        if(verbose >= 1){
+            System.out.println("Testing model: " + modelPath);
+        }
+
+        for(int n=minSize;n<=maxSize;n++){
             int res = 0;
-            for(int k=2;k<=15;k++){
+            for(int k=minSize;k<=maxSize;k++){
 
                 if(res < budget){
                     // TODO: Mejorar como se arma el path
@@ -289,55 +294,85 @@ public class DCSForPython {
         String folderPath = "F:\\UBA\\Tesis\\mtsa\\MTSApy\\results\\models\\" + instance + "\\" + experimentName + "\\";
 
         File folder = new File(folderPath);
-        File[] listOfFiles = folder.listFiles();
+        Set<File> setOfFiles = new HashSet<>(Arrays.asList(folder.listFiles()));
+
+        Set<String> setAllModelsPaths = readCSVColumn("path/to/selection/csv");
+        for(File f : setOfFiles){
+            if(f.isFile()){
+                String fileName = f.getName();
+                if(fileName.contains(".onnx")){
+                    setAllModelsPaths.add(folderPath + fileName);
+                }
+            }
+        }
+
+        List<String> listModels = new ArrayList<>();
+        listModels.addAll(setAllModelsPaths);
+
+        Collections.shuffle(listModels);
         int bestValue = budget * 225 + 1;
         String bestModel = "";
 
         System.out.println("Starting selection...");
-        for (int i = 0; i < listOfFiles.length; i++) {
-            if(listOfFiles[i].isFile()){
-                String modelName = listOfFiles[i].getName();
-                if(modelName.contains(".onnx")){
-                    Pair<Integer, Integer> res = testHeuristic(budget, instance, "RL", experimentName, folderPath + modelName, false, 0);
-                    int solvedInstances = res.getFirst();
-                    int totalExpansions = res.getSecond();
+        for (String modelName : listModels) {
+            System.out.println("Testing model: " + modelName);
+            Pair<Integer, Integer> res = testHeuristic(budget, instance, "RL", experimentName, modelName, false, 2, 9, 0);
+            int solvedInstances = res.getFirst();
+            int totalExpansions = res.getSecond();
 
-                    if(totalExpansions < bestValue){
-                        bestModel = modelName;
-                        bestValue = totalExpansions;
-                    }
-
-                    System.out.println("Model " + modelName + ": " + totalExpansions);
-                    String csvPath = "F:\\UBA\\Tesis\\mtsa\\MTSApy\\results\\selection\\" + experimentName + "-" + instance + ".csv";
-                    String[] data = {instance, folderPath + modelName, String.valueOf(solvedInstances), String.valueOf(totalExpansions)};
-
-                    writeCSV(csvPath, data, selectionHeader);
-                }
+            if(totalExpansions < bestValue){
+                bestModel = modelName;
+                bestValue = totalExpansions;
             }
+
+            System.out.println("Model " + modelName + ": " + totalExpansions);
+            String csvPath = "F:\\UBA\\Tesis\\mtsa\\MTSApy\\results\\selection\\" + experimentName + "-" + instance + ".csv";
+            String[] data = {instance, folderPath + modelName, String.valueOf(solvedInstances), String.valueOf(totalExpansions)};
+
+            writeCSV(csvPath, data, selectionHeader);
         }
         System.out.println("Best Model: " + bestModel);
     }
 
+    public static Set<String> readCSVColumn(String folderPath){
+        folderPath = "F:\\UBA\\Tesis\\mtsa\\MTSApy\\results\\selection\\2-2-DP.csv";
+        Set<String> res = new HashSet<>();
+
+        try{
+            BufferedReader br = new BufferedReader(new FileReader(folderPath));
+            String line = br.readLine();
+            System.out.println(line);
+            while (line != null) {
+                // use comma as separator
+                String[] cols = line.split(",");
+                if(cols[1].contains(".onnx")){
+                    res.add(cols[1]);
+                }
+                line = br.readLine();
+            }
+        } catch (Exception e) {}
+        return res;
+    }
+
+    public static void printHelp(){
+        // TODO: completar
+        System.out.println("Esta es la ayuda... completar");
+    }
+
     // This function is for testing purposes only
     public static void testExample(){
-        //DCSForPython.testHeuristic(10000, "TL", "Ready", false, 0);     // Ejemplo de como correr todas las de CM con la heuristica BFS y un budget de 10000 expanciones
-
 
         //String modelPath = "F:\\UBA\\Tesis\\mtsa\\MTSApy\\TA-2-2-10-partial.onnx";
         //String modelPath = "F:\\UBA\\Tesis\\mtsa\\MTSApy\\DP-2-2-4460-partial.onnx";
-        //String modelPath = "F:\\UBA\\Tesis\\mtsa\\MTSApy\\DP-2-2-300-partial.onnx";
-        String modelPath = "";
+        //String modelPath = "F:\\UBA\\Tesis\\mtsa\\MTSApy\\results\\models\\DP\\2-2\\DP-2-2-690-partial.onnx";
+        //String modelPath = "";
 
-        //selectRL("TL", "2-2", 1000);
+        //selectRL("DP", "2-2", 1000);
 
-        //DCSForPython.testHeuristic(1000, "DP", "RL", "2-2", modelPath, false, 2);
+        //DCSForPython.testHeuristic(1000, "DP", "RL", "2-2", modelPath, false, 1, 15, 2);
 
-
-
-        String fsp_path = "F:\\UBA\\Tesis\\mtsa\\MTSApy\\fsp\\DP\\DP-2-2.fsp";
-        DCSForPython.syntetizeWithHeuristic(fsp_path, "RL", "CRL", modelPath, 1000, true);
-
-
+        //String fsp_path = "F:\\UBA\\Tesis\\mtsa\\MTSApy\\fsp\\DP\\DP-2-2.fsp";
+        //DCSForPython.syntetizeWithHeuristic(fsp_path, "RL", "CRL", modelPath, 1000, true);
 
 
 
@@ -392,11 +427,11 @@ public class DCSForPython {
 
 
     public static void main(String[] args) {
-        testExample();
+        //testExample();
 
-        /*
         CmdLineParser cmdParser = new CmdLineParser();
         CmdLineParser.Option selection_opt = cmdParser.addBooleanOption('s', "selection");
+        CmdLineParser.Option help_opt = cmdParser.addBooleanOption('h', "help");
         CmdLineParser.Option instance_opt = cmdParser.addStringOption('i', "instance");
         CmdLineParser.Option experiment_opt = cmdParser.addStringOption('e', "experiment");
         CmdLineParser.Option budget_opt = cmdParser.addIntegerOption('b', "budget");
@@ -413,16 +448,22 @@ public class DCSForPython {
         Boolean selection_b = (Boolean)cmdParser.getOptionValue(selection_opt);
         boolean selection = (selection_b != null && selection_b);
 
-        String instance = (String)cmdParser.getOptionValue(instance_opt);
-        String experiment = (String)cmdParser.getOptionValue(experiment_opt);
-        int budget = (int)cmdParser.getOptionValue(budget_opt);
+        Boolean help_b = (Boolean)cmdParser.getOptionValue(help_opt);
+        boolean help = (help_b != null && help_b);
 
-        if(selection){
-            selectRL(instance, experiment, budget);
+        if(help){
+            DCSForPython.printHelp();
         }else{
-            String modelPath = (String)cmdParser.getOptionValue(model_opt);
-            DCSForPython.testHeuristic(budget, instance, "RL", experiment, modelPath, true, 2);
+            String instance = (String)cmdParser.getOptionValue(instance_opt);
+            String experiment = (String)cmdParser.getOptionValue(experiment_opt);
+            int budget = (int)cmdParser.getOptionValue(budget_opt);
+
+            if(selection){
+                selectRL(instance, experiment, budget);
+            }else {
+                String modelPath = (String) cmdParser.getOptionValue(model_opt);
+                DCSForPython.testHeuristic(budget, instance, "RL", experiment, modelPath, true, 1, 15, 2);
+            }
         }
-         */
     }
 }
