@@ -212,6 +212,10 @@ public class DCSForPython {
             i = i + 1;
         }
 
+        env.dcs.notify_end_synthesis();
+
+
+
         return i;
     }
 
@@ -291,20 +295,18 @@ public class DCSForPython {
         File folder = new File(folderPath);
         Set<File> setOfFiles = new HashSet<>(Arrays.asList(folder.listFiles()));
 
-        Set<String> setAllModelsPaths = readCSVColumn("./results/selection/" + experimentName + "-" + instance + ".csv");
+        Set<String> setTestedModels = readCSVColumn("./results/selection/" + experimentName + "-" + instance + ".csv");
+        List<String> listModels = new ArrayList<>();
         for(File f : setOfFiles){
             if(f.isFile()){
-                String fileName = f.getName();
-                if(fileName.contains(".onnx")){
-                    setAllModelsPaths.add(folderPath + fileName);
+                String fileName = folderPath + f.getName();
+                if(fileName.contains(".onnx") && !setTestedModels.contains(fileName)){
+                    listModels.add(fileName);
                 }
             }
         }
-
-        List<String> listModels = new ArrayList<>();
-        listModels.addAll(setAllModelsPaths);
-
         Collections.shuffle(listModels);
+
         int bestValue = budget * 225 + 1;
         String bestModel = "";
 
@@ -359,7 +361,7 @@ public class DCSForPython {
         //String modelPath = "F:\\UBA\\Tesis\\mtsa\\MTSApy\\results\\models\\DP\\2-2\\DP-2-2-690-partial.onnx";
         //String modelPath = "";
 
-        //selectRL("DP", "2-2", 1000);
+        selectRL("AT", "2-2", 1000);
 
         //DCSForPython.testHeuristic(1000, "DP", "RL", "2-2", modelPath, false, 1, 15, 2);
 
@@ -434,6 +436,7 @@ public class DCSForPython {
             cmdParser.parse(args);
         } catch (CmdLineParser.OptionException e) {
             System.out.println("Invalid args: " + e.getMessage() + "\n");
+            DCSForPython.printHelp();
             System.exit(0);
         }
 

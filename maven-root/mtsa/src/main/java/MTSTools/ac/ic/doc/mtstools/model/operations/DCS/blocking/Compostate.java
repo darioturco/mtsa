@@ -138,7 +138,7 @@ public class Compostate<State, Action> implements Comparable<Compostate<State, A
 
     /** For each action a matrix, each row is the features for the n entities
      *  The amount of rows is f and depend of the family of instances */
-    public List<boolean[]> compostateCustomFeatures;
+    public List<boolean[]> compostateCustomFeatures; // TODO: cambiar a boolean[][]
 
     /** For each action the indexes(states) of each entity */
     public Map<HAction<Action>, int[]> entityIndexes;

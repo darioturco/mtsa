@@ -5,7 +5,7 @@ import cProfile
 
 if __name__ == "__main__":
     experiment_name = "2-2"
-    instance = "AT"
+    instance = "TA"
     #TrainSmallInstance().train(instance, 2, 2, experiment_name)
 
 

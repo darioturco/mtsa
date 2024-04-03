@@ -1268,6 +1268,10 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
         return -1;
     }
 
+    public void notify_end_synthesis(){
+        heuristic.notify_end_synthesis();
+    }
+
     /** Auxiliary function to add a value to a set contained as value of a map. */
     private static <K,V> boolean putadd(Map<K, Set<V>> map, K key, V value) {
         Set<V> set = map.get(key);

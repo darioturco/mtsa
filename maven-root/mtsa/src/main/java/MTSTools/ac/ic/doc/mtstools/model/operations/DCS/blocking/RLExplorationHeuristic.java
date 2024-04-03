@@ -67,6 +67,7 @@ public class RLExplorationHeuristic<State, Action> implements ExplorationHeurist
 
     public OrtEnvironment ortEnv;
     public OrtSession session;
+    public OrtSession.SessionOptions opts;
 
     public int nfeatures;
 
@@ -134,12 +135,16 @@ public class RLExplorationHeuristic<State, Action> implements ExplorationHeurist
             availableActions[i] = actionsToExplore.get(i).featureVector;
         }
 
+        OnnxTensor t = null;
+        OnnxTensor tRes = null;
+        OrtSession.Result results = null;
+
         FloatBuffer values = null;
         try {
-            OnnxTensor t = OnnxTensor.createTensor(this.ortEnv, availableActions);
-            OrtSession.Result results = session.run(Collections.singletonMap("X", t));
-            OnnxTensor tensorRes = (OnnxTensor)results.get(0);
-            values = tensorRes.getFloatBuffer();
+            t = OnnxTensor.createTensor(this.ortEnv, availableActions);
+            results = session.run(Collections.singletonMap("X", t));
+            tRes = (OnnxTensor)results.get(0);
+            values = tRes.getFloatBuffer();
         } catch (OrtException e) {
             e.printStackTrace();
         }
@@ -154,6 +159,10 @@ public class RLExplorationHeuristic<State, Action> implements ExplorationHeurist
                 bestValue = v;
             }
         }
+
+        t.close();
+        tRes.close();
+        results.close();
         return best;
     }
 
@@ -162,7 +171,7 @@ public class RLExplorationHeuristic<State, Action> implements ExplorationHeurist
             session = null;
         }else{
             ortEnv = OrtEnvironment.getEnvironment();
-            OrtSession.SessionOptions opts = new OrtSession.SessionOptions();
+            opts = new OrtSession.SessionOptions();
             opts.setOptimizationLevel(OrtSession.SessionOptions.OptLevel.BASIC_OPT);
             session = ortEnv.createSession(modelPath);
         }
@@ -488,6 +497,14 @@ public class RLExplorationHeuristic<State, Action> implements ExplorationHeurist
             idx++;
         }
         return -1;
+    }
+
+    public void notify_end_synthesis(){
+        try {
+            session.close();
+            ortEnv.close();
+            opts.close();
+        }catch (Exception e){System.out.println("Error trying to close the onnx runtime environment");}
     }
 
     public void printFrontier(){

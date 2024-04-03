@@ -455,6 +455,8 @@ public class OpenSetExplorationHeuristic<State, Action> implements ExplorationHe
         return -1;
     }
 
+    public void notify_end_synthesis(){}
+
     public void printFrontier(){
         System.out.println("Frontier: ");
         for(ActionWithFeatures<State, Action> stateAction : actionsToExplore){

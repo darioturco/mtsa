@@ -430,6 +430,8 @@ public class ReadyExplorationHeuristic<State, Action> implements ExplorationHeur
         return -1;
     }
 
+    public void notify_end_synthesis(){}
+
     public void printFrontier(){
         System.out.println("Frontier: ");
         for(int i=0 ; i<actionsToExplore.size() ; i++){
