@@ -136,9 +136,11 @@ public class RLExplorationHeuristic<State, Action> implements ExplorationHeurist
         }
 
         OnnxTensor tRes = null;
+        OnnxTensor inputTensor = null;
         FloatBuffer values = null;
         try {
-            tRes = (OnnxTensor)session.run(Collections.singletonMap("X", OnnxTensor.createTensor(this.ortEnv, availableActions))).get(0);
+            inputTensor = OnnxTensor.createTensor(this.ortEnv, availableActions);
+            tRes = (OnnxTensor)session.run(Collections.singletonMap("X", inputTensor)).get(0);
             values = tRes.getFloatBuffer();
         } catch (OrtException e) {
             e.printStackTrace();
@@ -156,6 +158,7 @@ public class RLExplorationHeuristic<State, Action> implements ExplorationHeurist
         }
 
         tRes.close();
+        inputTensor.close();
         return best;
     }
 
@@ -525,3 +528,4 @@ public class RLExplorationHeuristic<State, Action> implements ExplorationHeurist
         state.readyInLTS = new InitMap<>(HashSet.class);
     }
 }
+

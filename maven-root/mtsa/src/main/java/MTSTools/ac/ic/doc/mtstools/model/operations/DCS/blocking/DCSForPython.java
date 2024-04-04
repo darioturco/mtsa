@@ -218,7 +218,7 @@ public class DCSForPython {
     }
 
     // Este metodo corre todas las instancias de una familia con una heuristica dada
-    public static Pair<Integer, Integer> testHeuristic(int budget, String instance, String heuristic, String featuresGroup, String modelPath, boolean save, int minSize, int maxSize, int verbose){
+    public static Pair<Integer, Integer> testHeuristic(int budget, String instance, String heuristic, String featuresGroup, String modelPath, boolean save, int minSize, int maxSize, int expansionLimit, int verbose){
         int solvedInstances = 0;
         int totalExpansions = 0;
 
@@ -228,8 +228,11 @@ public class DCSForPython {
 
         for(int n=minSize;n<=maxSize;n++){
             int res = 0;
+            if(expansionLimit < totalExpansions){
+                res = budget;
+            }
             for(int k=minSize;k<=maxSize;k++){
-                if(res < budget){
+                if(res < budget && expansionLimit < totalExpansions){
                     String fsp_path = "./fsp/" + instance + "/" + instance + "-" + n + "-" + k + ".fsp";
 
                     res = DCSForPython.syntetizeWithHeuristic(fsp_path, heuristic, featuresGroup, modelPath, budget, false);
@@ -292,7 +295,7 @@ public class DCSForPython {
     }
 
     // Esta funcion levanta todos los modelos de un experimento para una instancia y los testea con el budget dado
-    public static void selectRL(String instance, String experimentName, int budget, int startInModel){
+    public static void selectRL(String instance, String experimentName, int budget, int startInModel, boolean onlyBestOptimization){
         String folderPath = "./results/models/" + instance + "/" + experimentName + "/";
 
         File folder = new File(folderPath);
@@ -313,18 +316,21 @@ public class DCSForPython {
         Collections.shuffle(listModels);
 
         int bestValue = budget * 225 + 1;
+        int bestSolved = -1;
         String bestModel = "";
 
         System.out.println("Starting selection...");
         for (String modelName : listModels) {
             System.out.println("Testing model: " + modelName);
-            Pair<Integer, Integer> res = testHeuristic(budget, instance, "RL", experimentName, modelName, false, 1, 9, 0);
+            int expansionLimit = onlyBestOptimization ? bestValue : budget * 225 + 1;
+            Pair<Integer, Integer> res = testHeuristic(budget, instance, "RL", experimentName, modelName, false, 1, 9, expansionLimit, 0);
             int solvedInstances = res.getFirst();
             int totalExpansions = res.getSecond();
 
-            if(totalExpansions < bestValue){
+            if(solvedInstances < bestSolved){
                 bestModel = modelName;
                 bestValue = totalExpansions;
+                bestSolved = solvedInstances;
             }
 
             System.out.println("Model " + modelName + ": " + totalExpansions);
@@ -333,7 +339,7 @@ public class DCSForPython {
 
             writeCSV(csvPath, data, selectionHeader);
         }
-        System.out.println("Best Model: " + bestModel);
+        System.out.println("Best Model: " + bestModel + " = " + bestSolved + " - " + bestValue);
     }
 
     public static Set<String> readCSVColumn(String folderPath){
@@ -380,7 +386,7 @@ public class DCSForPython {
         //String modelPath = "F:\\UBA\\Tesis\\mtsa\\MTSApy\\results\\models\\DP\\2-2\\DP-2-2-690-partial.onnx";
         //String modelPath = "";
 
-        selectRL("AT", "2-2", 1000, 0);
+        //selectRL("AT", "2-2", 1000, 0);
 
         //DCSForPython.testHeuristic(1000, "DP", "RL", "2-2", modelPath, false, 1, 15, 2);
 
@@ -438,6 +444,10 @@ public class DCSForPython {
         */
     }
 
+    public static boolean getBoolValue(CmdLineParser cmdParser, CmdLineParser.Option opt){
+        Boolean value = (Boolean)cmdParser.getOptionValue(opt);
+        return (value != null && value);
+    }
 
     public static void main(String[] args) {
         //testExample();
@@ -445,6 +455,7 @@ public class DCSForPython {
         CmdLineParser cmdParser = new CmdLineParser();
         CmdLineParser.Option selection_opt = cmdParser.addBooleanOption('s', "selection");
         CmdLineParser.Option help_opt = cmdParser.addBooleanOption('h', "help");
+        CmdLineParser.Option onlyBestOptimization_opt = cmdParser.addBooleanOption('o', "onlyBestOptimization");
         CmdLineParser.Option instance_opt = cmdParser.addStringOption('i', "instance");
         CmdLineParser.Option experiment_opt = cmdParser.addStringOption('e', "experiment");
         CmdLineParser.Option budget_opt = cmdParser.addIntegerOption('b', "budget");
@@ -460,11 +471,9 @@ public class DCSForPython {
             System.exit(0);
         }
 
-        Boolean selection_b = (Boolean)cmdParser.getOptionValue(selection_opt);
-        boolean selection = (selection_b != null && selection_b);
-
-        Boolean help_b = (Boolean)cmdParser.getOptionValue(help_opt);
-        boolean help = (help_b != null && help_b);
+        boolean selection = getBoolValue(cmdParser, selection_opt);
+        boolean help = getBoolValue(cmdParser, help_opt);
+        boolean onlyBestOptimization = getBoolValue(cmdParser, onlyBestOptimization_opt);
 
         if(help){
             DCSForPython.printHelp();
@@ -479,10 +488,10 @@ public class DCSForPython {
                 if(startModelObj != null){
                     startModel = (int)startModelObj;
                 }
-                selectRL(instance, experiment, budget, startModel);
+                selectRL(instance, experiment, budget, startModel, onlyBestOptimization);
             }else {
                 String modelPath = (String) cmdParser.getOptionValue(model_opt);
-                DCSForPython.testHeuristic(budget, instance, "RL", experiment, modelPath, true, 1, 15, 2);
+                DCSForPython.testHeuristic(budget, instance, "RL", experiment, modelPath, true, 1, 15, budget * 15 * 15 + 1, 2);
             }
         }
     }

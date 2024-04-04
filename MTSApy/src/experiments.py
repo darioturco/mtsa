@@ -156,7 +156,7 @@ class Experiment(object):
                 ### Miscellaneous
                 'freq_save': 25,
                 'seconds': None,
-                'max_steps': 650000,    # 650000
+                'max_steps': 700000,    # 700000
                 "max_eps": 1000000,
                 "compute_python_features": False
                 }
