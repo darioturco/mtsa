@@ -142,7 +142,7 @@ class Experiment(object):
                 "buffer_size": 10000,   # 10000
                 "n_step": 1,
                 "last_epsilon": 0.01,          # 0.01
-                "epsilon_decay_steps": 250000,   # 250000
+                "epsilon_decay_steps": 300000,   # 300000
                 "exp_replay": True,
                 "target_q": True,
                 "reset_target_freq": 10000,      # 10000
@@ -154,9 +154,9 @@ class Experiment(object):
                 #"lambda_warm_up": lambda step: 1.0 if step > 5000 else step * 0.99,
 
                 ### Miscellaneous
-                'freq_save': 10,
+                'freq_save': 25,
                 'seconds': None,
-                'max_steps': 450000,    # 450000
+                'max_steps': 650000,    # 650000
                 "max_eps": 1000000,
                 "compute_python_features": False
                 }
@@ -344,7 +344,7 @@ class TestTrainedInAllInstances(Experiment):
         if onnx_path is None:
             onnx_path = self.get_best_model(f"./results/selection/{experiment_name}-{instance}.csv")
 
-        print(f"Testing model: {onnx_path}")
+        print(onnx_path)
 
         command = f'java -Xmx4g -classpath mtsa.jar MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.DCSForPython -i {instance} -e "{experiment_name}" -b {budget} -m {onnx_path}'
         subprocess.call(command, shell=True)

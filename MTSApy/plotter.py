@@ -10,7 +10,7 @@ BENCHMARK_PROBLEMS = ["AT", "BW", "DP", "TA", "TL"]
 #SCALE = 1
 SCALE = 1000
 
-def graph_individual_training_process(sliding_window=5, save_path=None, use_steps=False, problems=None, graph_loss=False):
+def graph_individual_training_process(experiment_name, sliding_window=5, save_path=None, use_steps=False, problems=None, graph_loss=False):
     #random_data = pd.read_csv("./results/csv/random budget=5000 repetitions=100.csv")
     random_data = pd.read_csv("./results/csv/random.csv")
     ra_data = pd.read_csv("./results/csv/Ready Abstraction.csv")
@@ -20,7 +20,7 @@ def graph_individual_training_process(sliding_window=5, save_path=None, use_step
         problems = BENCHMARK_PROBLEMS
 
     for instance in problems:
-        rl_path = f"./results/training/{instance}-2-2-partial.csv"
+        rl_path = f"./results/training/{instance}-{experiment_name}.csv"
         rewards, episodes, steps, rewards_win, losses = get_info_of_instance(rl_path, sliding_window, limit)
 
         #random_mean = -int(random_data[(random_data["Instance"] == instance) & (random_data["N"] == 2) & (random_data["K"] == 2)]["Transitions (mean)"])
@@ -196,13 +196,16 @@ def comparative_bar_plot_data(data, instances, title):
 
 if __name__ == "__main__":
     print("Plotting...")
-    #graph_individual_training_process(sliding_window=500, save_path='./results/plots', use_steps=True, problems=BENCHMARK_PROBLEMS)
-    graph_individual_training_process(sliding_window=1, save_path=None, use_steps=True, problems=["DP"])
+    #graph_individual_training_process("2-2", sliding_window=500, save_path='./results/plots', use_steps=True, problems=["AT", "TA", "BW"])
+    #graph_individual_training_process("CRL", sliding_window=500, save_path='./results/plots', use_steps=True, problems=["AT", "TA", "BW"])
+    #graph_individual_training_process("LRL", sliding_window=1000, save_path='./results/plots', use_steps=True, problems=["DP"])
+
 
     #graph_training_process(sliding_window=100, repetitions=5, save_path='./results/plots', use_steps=True)
 
     # Budget of 10000
-    #comparative_bar_plot(data=None, instances_solved=False)
+    comparative_bar_plot(data=None, instances_solved=True)
+    comparative_bar_plot(data=None, instances_solved=False)
     #comparative_bar_plot(data={"Random": {"AT": 59, "BW": 44, "DP": 62, "TA": 60, "TL": 134, "CM": 18},
     #                           "2-2": {"AT": 85, "BW": 53, "DP": 101, "TA": 60, "TL": 225, "CM": 18},
     #                           #"ERL": {"AT": 87, "BW": 57, "DP": 150, "TA": 60, "TL": 225, "CM": 0},
@@ -214,14 +217,14 @@ if __name__ == "__main__":
 
 
 
-    method_name = "LRL"
-    #check_method_in_instance("BW", method_name)
-    #check_method_in_instance("DP", method_name)
-    #check_method_in_instance("AT", method_name)
-    #check_method_in_instance("TA", method_name)
+    method_name = "CRL"
+    check_method_in_instance("BW", method_name)
+    check_method_in_instance("DP", method_name)
+    check_method_in_instance("AT", method_name)
+    check_method_in_instance("TA", method_name)
 
     method_name = "RA"
-    #check_method_in_instance("BW", method_name)
-    #check_method_in_instance("DP", method_name)
-    #check_method_in_instance("AT", method_name)
-    #check_method_in_instance("TA", method_name)
+    check_method_in_instance("BW", method_name)
+    check_method_in_instance("DP", method_name)
+    check_method_in_instance("AT", method_name)
+    check_method_in_instance("TA", method_name)
