@@ -287,6 +287,11 @@ public class DCSForPython {
         }
     }
 
+    public static int getModelNumber(String modelName){ // TODO: testear que funque bien
+        try{return Integer.valueOf(modelName.split("-")[3]);}
+        catch (Exception e){return 0;}
+    }
+
     // Esta funcion levanta todos los modelos de un experimento para una instancia y los testea con el budget dado
     public static void selectRL(String instance, String experimentName, int budget, int startInModel){
         String folderPath = "./results/models/" + instance + "/" + experimentName + "/";
@@ -299,7 +304,9 @@ public class DCSForPython {
         for(File f : setOfFiles){
             if(f.isFile()){
                 String fileName = folderPath + f.getName();
-                if(fileName.contains(".onnx") && !setTestedModels.contains(fileName)){
+                int modelNumber = getModelNumber(f.getName());
+
+                if(fileName.contains(".onnx") && !setTestedModels.contains(fileName) && startInModel <= modelNumber){
                     listModels.add(fileName);
                 }
             }
@@ -351,7 +358,7 @@ public class DCSForPython {
     public static void printHelp(){
         // TODO: completar
         System.out.println("Esta es la ayuda... completar");
-        
+
     }
 
     // This function is for testing purposes only
