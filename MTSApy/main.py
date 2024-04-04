@@ -4,11 +4,11 @@ from src.instance_maker import *
 import cProfile
 
 if __name__ == "__main__":
-    experiment_name = "LRL"
+    experiment_name = "CRL"
     instance = "DP"
     TrainSmallInstance().train(instance, 2, 2, experiment_name)
 
-    TestTrainedInAllInstances().select_with_java(instance, experiment_name, 1000)
+    TestTrainedInAllInstances().select_with_java(instance, experiment_name, 1000, 25)
 
     TestTrainedInAllInstances().test_with_java(instance, experiment_name, 10000, None)
 

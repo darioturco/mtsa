@@ -214,7 +214,6 @@ public class DCSForPython {
         env.dcs.notify_end_synthesis();
 
 
-
         return i;
     }
 
@@ -319,7 +318,7 @@ public class DCSForPython {
         System.out.println("Starting selection...");
         for (String modelName : listModels) {
             System.out.println("Testing model: " + modelName);
-            Pair<Integer, Integer> res = testHeuristic(budget, instance, "RL", experimentName, modelName, false, 2, 9, 0);
+            Pair<Integer, Integer> res = testHeuristic(budget, instance, "RL", experimentName, modelName, false, 1, 9, 0);
             int solvedInstances = res.getFirst();
             int totalExpansions = res.getSecond();
 
@@ -356,9 +355,22 @@ public class DCSForPython {
     }
 
     public static void printHelp(){
-        // TODO: completar
-        System.out.println("Esta es la ayuda... completar");
+        System.out.println("Parameters:");
+        System.out.println(" -s (selection): flag that indicate if the class is used for select the model.");
+        System.out.println(" -i (instance): instance to solve (AT, TA, DP, BW, CM, TL)");
+        System.out.println(" -e (experiment): experiment name and also feature group to use.");
+        System.out.println(" -b (budget): budget to use.");
+        System.out.println(" -r (startModel): first model to select(only used in selection mode).");
+        System.out.println(" -m (model): model to test (only used in testing mode).");
+        System.out.println(" -h (help): help flag.");
 
+        System.out.println("\nUse examples:");
+
+        System.out.println("\n Example for selection:");
+        System.out.println("java -classpath mtsa.jar MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.DCSForPython -s -i DP -e \"CRL\" -b 1000");
+
+        System.out.println("\n Example for testing:");
+        System.out.println("java -classpath mtsa.jar MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.DCSForPython -i DP -e \"CRL\" -b 1000 -m ./results/models/DP/CRL/DP-2-2-350-partial.onnx");
     }
 
     // This function is for testing purposes only

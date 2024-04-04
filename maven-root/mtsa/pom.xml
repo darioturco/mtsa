@@ -47,6 +47,7 @@
 
     <build>
         <testSourceDirectory>src/test/java/</testSourceDirectory>
+        <finalName>lajsodgj</finalName>
         <plugins>
 
 

@@ -336,16 +336,14 @@ class TestTrainedInAllInstances(Experiment):
 
         return best_model
 
-    def select_with_java(self, instance, experiment_name, budget):
-        command = f'java -Xmx4g -classpath mtsa.jar MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.DCSForPython -s -i {instance} -e "{experiment_name}" -b {budget}'
+    def select_with_java(self, instance, experiment_name, budget, start_model=0):
+        command = f'java -classpath mtsa.jar MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.DCSForPython -s -i {instance} -e "{experiment_name}" -b {budget} -r {start_model}'
         subprocess.call(command, shell=True)
 
     def test_with_java(self, instance, experiment_name, budget, onnx_path=None):
         if onnx_path is None:
             onnx_path = self.get_best_model(f"./results/selection/{experiment_name}-{instance}.csv")
 
-        print(onnx_path)
-
-        command = f'java -Xmx4g -classpath mtsa.jar MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.DCSForPython -i {instance} -e "{experiment_name}" -b {budget} -m {onnx_path}'
+        command = f'java -classpath mtsa.jar MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.DCSForPython -i {instance} -e "{experiment_name}" -b {budget} -m {onnx_path}'
         subprocess.call(command, shell=True)
 

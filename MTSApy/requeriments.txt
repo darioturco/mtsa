@@ -54,6 +54,7 @@ nvidia-nvtx-cu12==12.1.105
 oauthlib==3.2.2
 onnx==1.15.0
 onnx2pytorch==0.4.1
+onnx2torch==1.5.14
 onnxconverter-common==1.13.0
 onnxruntime==1.12.1
 opencv-python==4.8.1.78
@@ -79,7 +80,7 @@ scipy==1.11.2
 seaborn==0.11.2
 six==1.16.0
 skl2onnx==1.10.4
-scikit-learn==1.0.2
+sklearn==0.0.post7
 snakeviz==2.2.0
 stable-baselines==2.10.2
 stable-baselines3==2.1.0
