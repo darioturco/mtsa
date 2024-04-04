@@ -4,9 +4,13 @@ import MTSTools.ac.ic.doc.commons.relations.Pair;
 import java.util.*;
 
 public class DCSFeatures<State, Action> {
+    /** Amount of features is updated when all the features are added in methodFeatures depending on the method group */
     public int nfeatures;
+
+    /** Amount of action (removing the index) on the alphabet */
     public int nactions;
 
+    /** The amount of random features added of the method group is RRL */
     public int randomAmount = 100;
 
     public LinkedList<ComputeFeature<State, Action>> methodFeatures;
@@ -257,10 +261,6 @@ public class DCSFeatures<State, Action> {
         public boolean requiresUpdate() { return true; }
         public String toString(){return "random_feature";}
     };
-
-
-
-
 
     private final ComputeFeature<State, Action> mission_feature = new ComputeFeature<>() {
         public void compute(RLExplorationHeuristic<State, Action> h, ActionWithFeatures<State, Action> a, int i) {

@@ -20,7 +20,6 @@ import static org.junit.Assert.*;
 
 /** This class can be used from python with jpype */
 public class DCSForPython {
-
     public DirectedControllerSynthesisBlocking<Long, String> dcs;
     public ExplorationHeuristic<Long, String> heuristic;
     public HeuristicMode heuristicMode;
@@ -289,7 +288,7 @@ public class DCSForPython {
     }
 
     // Esta funcion levanta todos los modelos de un experimento para una instancia y los testea con el budget dado
-    public static void selectRL(String instance, String experimentName, int budget){
+    public static void selectRL(String instance, String experimentName, int budget, int startInModel){
         String folderPath = "./results/models/" + instance + "/" + experimentName + "/";
 
         File folder = new File(folderPath);
@@ -324,7 +323,7 @@ public class DCSForPython {
 
             System.out.println("Model " + modelName + ": " + totalExpansions);
             String csvPath = "./results/selection/" + experimentName + "-" + instance + ".csv";
-            String[] data = {instance, folderPath + modelName, String.valueOf(solvedInstances), String.valueOf(totalExpansions)};
+            String[] data = {instance, modelName, String.valueOf(solvedInstances), String.valueOf(totalExpansions)};
 
             writeCSV(csvPath, data, selectionHeader);
         }
@@ -352,6 +351,7 @@ public class DCSForPython {
     public static void printHelp(){
         // TODO: completar
         System.out.println("Esta es la ayuda... completar");
+        
     }
 
     // This function is for testing purposes only
@@ -361,7 +361,7 @@ public class DCSForPython {
         //String modelPath = "F:\\UBA\\Tesis\\mtsa\\MTSApy\\results\\models\\DP\\2-2\\DP-2-2-690-partial.onnx";
         //String modelPath = "";
 
-        selectRL("AT", "2-2", 1000);
+        selectRL("AT", "2-2", 1000, 0);
 
         //DCSForPython.testHeuristic(1000, "DP", "RL", "2-2", modelPath, false, 1, 15, 2);
 
@@ -429,6 +429,7 @@ public class DCSForPython {
         CmdLineParser.Option instance_opt = cmdParser.addStringOption('i', "instance");
         CmdLineParser.Option experiment_opt = cmdParser.addStringOption('e', "experiment");
         CmdLineParser.Option budget_opt = cmdParser.addIntegerOption('b', "budget");
+        CmdLineParser.Option start_opt = cmdParser.addIntegerOption('r', "startModel");
 
         CmdLineParser.Option model_opt = cmdParser.addStringOption('m', "model");
 
@@ -454,7 +455,12 @@ public class DCSForPython {
             int budget = (int)cmdParser.getOptionValue(budget_opt);
 
             if(selection){
-                selectRL(instance, experiment, budget);
+                Object startModelObj = cmdParser.getOptionValue(start_opt);
+                int startModel = 0;
+                if(startModelObj != null){
+                    startModel = (int)startModelObj;
+                }
+                selectRL(instance, experiment, budget, startModel);
             }else {
                 String modelPath = (String) cmdParser.getOptionValue(model_opt);
                 DCSForPython.testHeuristic(budget, instance, "RL", experiment, modelPath, true, 1, 15, 2);

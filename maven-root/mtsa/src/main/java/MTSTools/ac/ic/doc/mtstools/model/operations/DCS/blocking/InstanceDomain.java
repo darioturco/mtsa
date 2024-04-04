@@ -5,12 +5,17 @@ import java.util.Arrays;
 import java.util.List;
 
 public class InstanceDomain<State, Action> {
+    /** dcs blocking that keep the curren partial exploration */
     public DirectedControllerSynthesisBlocking dcs;
+
+    /** Boolean that indicate if the dcs didn't expand anything yet */
     public boolean firstExpansion;
+
+    /** Amount of features of custom of each specific instance domain */
     public int customFSize;
+
+    /** Amount of local features of each compostote */
     public int compostateFeatureSize;
-
-
 
     /** Matrix where each row is the memory used for a diferent feature
      * For example the first row is used to feature 'missionComplete' in that row is saved whether a entity completed his mission or don't */
@@ -58,10 +63,10 @@ public class InstanceDomain<State, Action> {
     public static float toFloat(boolean b) {
         return b ? 1.0f : 0.0f;
     }
-
-
-    public void computeCustomFeature(ActionWithFeatures transition, int i){}
     public int size(){return 1 + customFSize;}
+
+    // Each new InstanceDomainBW should overwrite this functions
+    public void computeCustomFeature(ActionWithFeatures transition, int i){}
     public boolean missionFeature(ActionWithFeatures transition){return false;}
     public void updateMatrixFeature(HAction<Action> action, Compostate<State, Action> newState){}
 }
