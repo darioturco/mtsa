@@ -55,7 +55,8 @@ class CompositionGraph(nx.DiGraph):
     def set_composition_parameters(self):
         # self.auxiliar_heuristic = "BFS"
         # self.auxiliar_heuristic = "Debugging"
-        self.auxiliar_heuristic = "Ready"
+        #self.auxiliar_heuristic = "Ready"
+        self.auxiliar_heuristic = "RL"
 
     def start_composition(self):
         assert (self._initial_state is None)
@@ -68,6 +69,7 @@ class CompositionGraph(nx.DiGraph):
         self.set_composition_parameters()
         self.javaEnv = DCSForPython(self.auxiliar_heuristic)
         assert (self.javaEnv is not None)
+        self.javaEnv.setRLParameters(self.feature_group, "")
         self.javaEnv.startSynthesis(problem_path)
 
         self._initial_state = self.javaEnv.dcs.initial
@@ -148,24 +150,12 @@ class CompositionAnalyzer:
         self._feature_methods = self.select_feature_group(self.composition.feature_group)
 
     def select_feature_group(self, feature_group_name):
-        if feature_group_name == "GRL":
-            # Nuevos features globales (GRL)
-            return [self.event_label_feature, self.state_label_feature, self.controllable, self.marked_state,
-                    self.current_phase, self.child_node_state, self.uncontrollable_neighborhood,
-                    self.explored_state_child, self.isLastExpanded, self.child_dealdlock, self.missions_end]
-
-        elif feature_group_name == "LRL":
+        if feature_group_name == "LRL":
             # Nuevos features locales mejorados (LRL)
             return [self.event_label_feature, self.state_label_feature, self.controllable, self.marked_state,
                     self.current_phase, self.child_node_state, self.uncontrollable_neighborhood,
                     self.explored_state_child, self.isLastExpanded, self.child_dealdlock, self.mission_feature,
-                    self.has_index, self.entity_state_move]
-
-        elif feature_group_name == "ERL": # No importa (No da buenos resultados)
-            # Nuevos features locales (ERL)
-            return [self.event_label_feature, self.state_label_feature, self.controllable, self.marked_state,
-                    self.current_phase, self.child_node_state, self.uncontrollable_neighborhood,
-                    self.explored_state_child, self.isLastExpanded, self.child_dealdlock, self.mission_feature]
+                    self.has_index]
 
         elif feature_group_name == "2-2":
             # Viejos features (2-2)
@@ -176,8 +166,8 @@ class CompositionAnalyzer:
         elif feature_group_name == "CRL":   # CRL: Custom RL (Es LRL pero agregando feature custom de para cada dominio)
             return [self.event_label_feature, self.state_label_feature, self.controllable, self.marked_state,
                     self.current_phase, self.child_node_state, self.uncontrollable_neighborhood,
-                    self.explored_state_child, self.isLastExpanded, self.child_dealdlock, self.mission_feature,
-                    self.has_index, self.entity_state_move, self.custom_feature]
+                    self.explored_state_child, self.isLastExpanded, self.child_dealdlock,
+                    self.has_index, self.custom_feature]
 
 
         elif feature_group_name == "RRL":   # RRL: Random RL (Es lo mismo que LRL pero con un feature random)
@@ -185,7 +175,7 @@ class CompositionAnalyzer:
             return [self.event_label_feature, self.state_label_feature, self.controllable, self.marked_state,
                     self.current_phase, self.child_node_state, self.uncontrollable_neighborhood,
                     self.explored_state_child, self.isLastExpanded, self.child_dealdlock, self.mission_feature,
-                    self.has_index, self.entity_state_move, self.random_feature]
+                    self.has_index, self.random_feature]
 
         #elif feature_group_name == "BWFeatures":
             # Es igual a LRL pero con el feature de last expanded (la idea es que BW mejore con esto)
@@ -211,14 +201,18 @@ class CompositionAnalyzer:
         return [float(transition.upIndex), float(transition.downIndex)]
 
     def mission_feature(self, transition):
-        # Es lo mismo que transiton.getMissionValue(0) TODO: mejorar y Unir
-        return [float(transition.missionComplete)]
+        return [float(transition.getMissionValue(0))]
 
     def custom_feature(self, transition):
-        return [float(transition.getMissionValue(i)) for i in range(1, int(transition.dcs.instanceDomain.f))]
+        return [float(transition.getMissionValue(i)) for i in range(0, int(transition.dcs.instanceDomain.f))]
 
     def missions_end(self, transition):
         return [float(transition.amountMissionComplete > 0), float(transition.amountMissionComplete > 1)]
+
+    def _set_transition_type_bit(self, feature_vec_slice, transition):
+        no_idx_label = self.remove_indices(str(transition.toString()))
+        feature_vec_slice_pos = self._fast_no_indices_alphabet_dict[no_idx_label]
+        feature_vec_slice[feature_vec_slice_pos] = 1.0
 
     def event_label_feature(self, transition):
         """
@@ -227,11 +221,6 @@ class CompositionAnalyzer:
         feature_vec_slice = [0.0 for _ in self._no_indices_alphabet]
         self._set_transition_type_bit(feature_vec_slice, transition.action)
         return feature_vec_slice
-
-    def _set_transition_type_bit(self, feature_vec_slice, transition):
-        no_idx_label = self.remove_indices(str(transition.toString()))
-        feature_vec_slice_pos = self._fast_no_indices_alphabet_dict[no_idx_label]
-        feature_vec_slice[feature_vec_slice_pos] = 1.0
 
     def state_label_feature(self, transition):
         """
@@ -288,7 +277,8 @@ class CompositionAnalyzer:
         return [float(transition.child is not None and len(transition.child.getTransitions()) == 0)]
 
     def isLastExpanded(self, transition):
-        return [float(transition.state == transition.dcs.heuristic.lastExpandedTo), float(transition.state == transition.dcs.heuristic.lastExpandedFrom)]
+        return [float(transition.state == transition.dcs.heuristic.lastExpandedTo),
+                float(transition.state == transition.dcs.heuristic.lastExpandedFrom)]
 
     def remove_indices(self, transition_label: str):
         res = ""
@@ -302,10 +292,22 @@ class CompositionAnalyzer:
         else:
             return self.nfeatures
 
-    def compute_features(self, transition):
+    def check_use_java_feature(self, use_java_features):
+        if use_java_features and self.composition.auxiliar_heuristic != "RL":   # The java features can be computed only with the RL heuristic
+            use_java_features = False
+
+        return use_java_features
+    def compute_features(self, transition, use_java_features=True):
+        use_java_features = self.check_use_java_feature(use_java_features)
+
         res = []
-        for feature_method in self._feature_methods:
-            res += feature_method(transition)
+        if use_java_features:
+            res = [float(f) for f in list(transition.featureVector)]
+
+        else:
+            # [vec for feature_method in self._feature_methods for vec in feature_method(transition)]
+            for feature_method in self._feature_methods:
+                res += feature_method(transition)
 
         if self.nfeatures is None:
             self.nfeatures = len(res)
@@ -313,4 +315,8 @@ class CompositionAnalyzer:
         return res
 
     def compute_feature_of_list(self, transactions):
+        use_java_features = self.check_use_java_feature(True)
+        if(use_java_features):
+            self.composition.javaEnv.dcs.heuristic.computeFeatures()
+
         return [self.compute_features(t) for t in transactions]

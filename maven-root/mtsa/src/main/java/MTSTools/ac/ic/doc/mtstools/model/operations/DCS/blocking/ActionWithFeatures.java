@@ -1,16 +1,14 @@
 package MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking;
 
 import MTSTools.ac.ic.doc.commons.relations.Pair;
+import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.DCSFeatures;
 
 import java.util.Arrays;
+import java.util.LinkedList;
 import java.util.List;
 
-/* TODO: Arreglar todo el codigo de los features porque esta muy feito y es imposible de extender:
-        - Algunos features dependen de la etidad y otros no (actualmente solo se soportan features de la entidad)
-        - Algunos features necesitan ser reseteados
-        - Arreglar que el feature 0 es "especial" eso no deberia ser asi
+/** The expancion frontier is a list of ActionWithFeatures (represents a transition to expand).
  */
-
 public class ActionWithFeatures<State, Action> {
     public HAction<Action> action;
     public Compostate<State, Action> state;
@@ -19,15 +17,11 @@ public class ActionWithFeatures<State, Action> {
     public List<State> childStates;
     public DirectedControllerSynthesisBlocking<State, Action> dcs;
     public boolean childMarked;
-    public boolean missionComplete;
     public int entity;
     public int index;
-    public boolean upIndex;
-    public boolean downIndex;
     public int amountMissionComplete;
-    public boolean enable;
     public int expansionStep;
-    public int f;
+    public float[] featureVector;
 
     ActionWithFeatures(Compostate<State, Action> state, HAction<Action> action, Compostate<State, Action> parent) {
         this.state = state;
@@ -38,45 +32,35 @@ public class ActionWithFeatures<State, Action> {
         this.child = this.dcs.compostates.get(childStates);
         this.entity = getNumber(action.toString(), 1);
         this.index = getNumber(action.toString(), 2);
-        this.upIndex = false;
-        this.downIndex = false;
-        this.enable = true;
+        this.featureVector = new float[dcs.nfeatures];
         this.expansionStep = dcs.expansionStep;
 
         if(parent == null){
-            state.customFeatures.put(action, dcs.instanceDomain.newFeatureMatrix());
+            state.compostateCustomFeatures = dcs.instanceDomain.newFeatureMatrix(dcs.instanceDomain.compostateFeatureSize);
             state.entityIndexes.put(action, new int[dcs.n]);
         }else{
-            state.customFeatures.put(action, dcs.instanceDomain.copyMatrix(parent));
+            state.compostateCustomFeatures = dcs.instanceDomain.copyMatrix(parent);
             state.entityIndexes.put(action, Arrays.copyOf(parent.getLastentityIndex(), dcs.n));
-            updateMissions();
         }
 
         this.childMarked = true;
         for (int lts = 0; childMarked && lts < this.dcs.ltssSize; ++lts)
             childMarked = this.dcs.defaultTargets.get(lts).contains(childStates.get(lts));
-
-        missionComplete = getMissionValue(0);
-        amountMissionComplete = countMissionComplete();
     }
 
-    public int countMissionComplete(){
-        int res = 0;
-        for(boolean missionComplete : state.customFeatures.get(action).get(0)){
-            if(missionComplete){
-                res += 1;
-            }
+    public void resetFeatureVectorSlice(int init, int end){
+        for(int i=init ; i<end ; i++){
+            featureVector[i] = 0.0f;
         }
-        return res;
     }
 
     public Pair<Compostate<State, Action>, HAction<Action>> toPair(){
         return new Pair<>(state, action);
     }
 
-    public String arrayBoolToString(boolean[] arr){
+    public String arrayBoolToString(float[] arr){
         String res = "[";
-        for(boolean b : arr){
+        for(float b : arr){
             res += b + ", ";
         }
 
@@ -85,22 +69,11 @@ public class ActionWithFeatures<State, Action> {
     }
 
     public String toString(){
-        return state.toString() + " | " + action.toString();
-        //return state.toString() + " | " + action.toString() + " | " + arrayBoolToString(state.customFeatures.get(action).get(1));
+        //return state.toString() + " | " + action.toString();
+        return state.toString() + " | " + action.toString() + " | " + arrayBoolToString(featureVector);
     }
 
-    public boolean getMissionValue(int mission){
-        // There are n entities, this actionWithFeature refers about the entity number ´this.entity´
-        String label = action.toString();
-        if(label.matches(".*\\d.*") && !dcs.instance.equals("")) {
-            if (entity < dcs.n) {
-                return state.customFeatures.get(action).get(mission)[entity];
-            }
-        }
-        return false;
-    }
-
-    public int getNumber(String label, int n){
+    public static int getNumber(String label, int n){
         String[] values = label.split("\\.");
         for(String s : values){
             if(s.matches("\\d*")){
@@ -113,9 +86,19 @@ public class ActionWithFeatures<State, Action> {
         return -1;
     }
 
-    public void updateMissions() {
-        if(parent != null && action.toString().matches(".*\\d.*")){
-            dcs.instanceDomain.computeCustomFeature(this);
+    public boolean has_entity(){
+        return entity != -1;
+    }
+
+    public void updateFeatures(){
+        int i = 0;
+        RLExplorationHeuristic heuristic = ((RLExplorationHeuristic) dcs.heuristic);
+        LinkedList<DCSFeatures.ComputeFeature<State, Action>> methods = heuristic.featureMaker.methodFeatures;
+        for(DCSFeatures.ComputeFeature<State, Action> f : methods){
+            if(f.requiresUpdate()){
+                f.compute(heuristic, this, i);
+            }
+            i += f.size();
         }
     }
 }

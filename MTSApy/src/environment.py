@@ -71,11 +71,19 @@ class Environment:
     def actions_to_features(self, actions):
         if actions is None:
             return []
+
+        use_java_features = self.context.check_use_java_feature(True)
+        if (use_java_features):
+            self.context.composition.javaEnv.dcs.heuristic.computeFeatures()
+
         return [self.context.compute_features(action) for action in actions]
 
     def get_instance_info(self):
         info = self.context.composition.get_info()
         return info["problem"], info["n"], info["k"]
+
+    def get_experiment_name(self):
+        return self.context.composition.feature_group
 
     def close(self):
         pass
@@ -83,6 +91,7 @@ class Environment:
 class FeatureEnvironment(object):
     def __init__(self, context, normalize_reward):
         self.env = Environment(context, normalize_reward)
+        self.original_state = None
 
         # self.state_size = env.observation_space.shape[0]
         #         self.num_actions = env.action_space.n
@@ -94,6 +103,7 @@ class FeatureEnvironment(object):
 
     def reset(self, new_composition=None):
         state = self.env.reset(new_composition)
+        self.original_state = state
         return self.env.actions_to_features(state)
         #return self.env.actions_to_features(state), False
 
@@ -103,6 +113,7 @@ class FeatureEnvironment(object):
 
     def step(self, action):
         state, reward, done, info = self.env.step(action)
+        self.original_state = state
         return self.env.actions_to_features(state), reward, done, info
 
     def close(self):
@@ -113,6 +124,9 @@ class FeatureEnvironment(object):
 
     def get_instance_info(self):
         return self.env.get_instance_info()
+
+    def get_experiment_name(self):
+        return self.env.get_experiment_name()
 
     def get_nfeatures(self):
         return self.env.get_nfeatures()

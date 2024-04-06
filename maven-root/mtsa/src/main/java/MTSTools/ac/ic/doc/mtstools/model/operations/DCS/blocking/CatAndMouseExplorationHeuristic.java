@@ -212,6 +212,8 @@ public class CatAndMouseExplorationHeuristic<State, Action> implements Explorati
         return state.uncontrollableUnexploredTransitions > 0;
     }
 
+    public void notify_end_synthesis(){}
+
     public void printFrontier(){
         System.out.println("Frontier: ");
         for(int i = 0 ; i<actionsToExplore.size() ; i++){

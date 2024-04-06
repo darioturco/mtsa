@@ -92,8 +92,6 @@ public class BiddingWorkflowExplorationHeuristic<State, Action> implements Explo
         List<Integer> candidates = new ArrayList<>();
         for(int i=0;i<actionsToExplore.size();i++){
             ActionWithFeatures actionWithFeature = actionsToExplore.get(i);
-            if(!actionWithFeature.enable)
-                continue;
 
             String action = actionWithFeature.action.toString();
             if(action.contains(search_for) && (actionWithFeature.entity == crew || actionWithFeature.entity == -1)){
@@ -247,6 +245,8 @@ public class BiddingWorkflowExplorationHeuristic<State, Action> implements Explo
     public boolean hasUncontrollableUnexplored(Compostate<State, Action> state) {
         return state.uncontrollableUnexploredTransitions > 0;
     }
+
+    public void notify_end_synthesis(){}
 
     public void printFrontier(){
         System.out.println("Frontier: ");

@@ -47,9 +47,8 @@
 
     <build>
         <testSourceDirectory>src/test/java/</testSourceDirectory>
+        <finalName>mtsa</finalName>
         <plugins>
-
-
             <plugin>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.5</version>

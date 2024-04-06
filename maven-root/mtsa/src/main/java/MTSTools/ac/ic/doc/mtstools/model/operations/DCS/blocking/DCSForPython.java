@@ -2,25 +2,17 @@ package MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking;
 
 import MTSTools.ac.ic.doc.commons.relations.Pair;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.nio.FloatBuffer;
+import java.io.*;
 import java.util.*;
 
 import MTSTools.ac.ic.doc.mtstools.model.LTS;
-import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.DirectedControllerSynthesisBlocking;
-import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.abstraction.HEstimate;
 import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.abstraction.HeuristicMode;
 import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.abstraction.ReadyAbstraction;
-import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.abstraction.Recommendation;
+import ai.onnxruntime.OrtException;
+import jargs.gnu.CmdLineParser;
 import ltsa.dispatcher.TransitionSystemDispatcher;
 import ltsa.lts.*;
 import ltsa.ui.StandardOutput;
-import org.junit.Test;
 
 import static org.junit.Assert.*;
 
@@ -28,16 +20,19 @@ import static org.junit.Assert.*;
 
 /** This class can be used from python with jpype */
 public class DCSForPython {
-
     public DirectedControllerSynthesisBlocking<Long, String> dcs;
     public ExplorationHeuristic<Long, String> heuristic;
     public HeuristicMode heuristicMode;
+    public String featureGroup;     // TODO: Cambiar a un enumerate
+    public String modelPath;
     public boolean realizable;
     public boolean finished;
     public int lastEntityExpanded;
     public int lastEntityExpandedWithoutReset;
-
     public boolean started_synthesis;
+
+    static String testHeader = "Instance,N,K,Name,Transitions\n";
+    static String selectionHeader = "Instance,Model,Solved,Expansions\n";
 
     public DCSForPython(String heuristicMode){
         this.started_synthesis = false;
@@ -46,6 +41,7 @@ public class DCSForPython {
         this.heuristicMode = HeuristicMode.valueOf(heuristicMode);
         this.lastEntityExpanded = -1;
         this.lastEntityExpandedWithoutReset = -1;
+        this.featureGroup = "";
     }
 
     public static Pair<CompositeState, LTSOutput> compileFSP(String filename){
@@ -96,7 +92,12 @@ public class DCSForPython {
         this.dcs = dcs;
 
         this.dcs.load_data(path);
-        this.heuristic = this.dcs.getHeuristic(this.heuristicMode);
+        this.heuristic = this.dcs.getHeuristic(this.heuristicMode, featureGroup);
+        if(this.heuristicMode == HeuristicMode.RL){
+            try {
+                ((RLExplorationHeuristic) this.heuristic).loadModelFromPath(modelPath);
+            }catch (OrtException e){e.printStackTrace();}
+        }
         this.dcs.heuristic = this.heuristic;
         this.dcs.setupInitialState();
         this.heuristic.filterFrontier();
@@ -184,90 +185,224 @@ public class DCSForPython {
         }
     }
 
-    public static int syntetizeWithHeuristic(String FSP_path, String heuristic, int budget, boolean verbose){
+    public void setRLParameters(String featureGroup, String modelPath){
+        this.featureGroup = featureGroup;
+        this.modelPath = modelPath;
+    }
+
+    public static int syntetizeWithHeuristic(String FSP_path, String heuristic, String featuresGroup, String modelPath, int budget, boolean verbose){
         DCSForPython env = new DCSForPython(heuristic);
+        env.setRLParameters(featuresGroup, modelPath);
         env.setFlags(true, true);
         env.startSynthesis(FSP_path);
 
         int idx;
         int i = 0;
         while (!env.isFinished() && i < budget) {
+
             idx = env.getActionFronAuxiliarHeuristic();
             if(verbose){
                 System.out.println("----------------------------------: " + (i+1));
-                System.out.println("Expanded: " + env.heuristic.getFrontier().get(idx));
+                env.heuristic.printFrontier();
+                System.out.println("Expanded(" + idx + "): " + env.heuristic.getFrontier().get(idx));
             }
 
             env.expandAction(idx);
             i = i + 1;
         }
 
+        env.dcs.notify_end_synthesis();
+
+
         return i;
     }
 
-    public static float mean(List<Integer> ls) {
-        int total = 0;
-        for (int i = 0; i < ls.size(); i++)
-            total += ls.get(i);
-
-        return total / ls.size();
-    }
-
-    public static double std(List<Integer> ls, float mean) {
-        float squareSum = 0;
-        for(int i = 0; i < ls.size(); i++)
-            squareSum += Math.pow(ls.get(i) - mean, 2);
-
-        if((ls.size() - 1) == 0){
-            return 0;
-        }else{
-            return Math.sqrt((squareSum) / (ls.size() - 1));
-        }
-    }
-
     // Este metodo corre todas las instancias de una familia con una heuristica dada
-    public static int testHeuristic(int budget, String instance, String heuristic, int repetitions, int verbose){
+    public static Pair<Integer, Integer> testHeuristic(int budget, String instance, String heuristic, String featuresGroup, String modelPath, boolean save, int minSize, int maxSize, int expansionLimit, int verbose){
         int solvedInstances = 0;
-        int res = 0;
-        for(int n=2;n<=9;n++){
+        int totalExpansions = 0;
 
-            for(int k=2;k<=9 && res<budget;k++){
+        if(verbose >= 1){
+            System.out.println("Testing model: " + modelPath);
+        }
 
-                String fsp_path = "F:\\UBA\\Tesis\\mtsa\\MTSApy\\fsp\\" + instance + "\\" + instance + "-" + n + "-" + k + ".fsp";
-                //String fsp_path = "/home/dario/Documents/Tesis/mtsa/MTSApy/fsp/" + instance + "/" + instance + "-" + n + "-" + k + ".fsp";
+        for(int n=minSize;n<=maxSize;n++){
+            int res = 0;
+            if(expansionLimit < totalExpansions){
+                res = budget;
+            }
+            for(int k=minSize;k<=maxSize;k++){
+                if(res < budget && expansionLimit < totalExpansions){
+                    String fsp_path = "./fsp/" + instance + "/" + instance + "-" + n + "-" + k + ".fsp";
 
-                List<Integer> res_list = new ArrayList<>();
-                for(int i=0;i<repetitions;i++){
-                    res = DCSForPython.syntetizeWithHeuristic(fsp_path, heuristic, budget, false);
-                    if(res < 10000){
+                    res = DCSForPython.syntetizeWithHeuristic(fsp_path, heuristic, featuresGroup, modelPath, budget, false);
+
+                    if(res < budget){
                         solvedInstances += 1;
+                    }else{
+                        res = budget;
                     }
-                    res_list.add(res);
+                }
+                totalExpansions += res;
+
+                if(verbose == 1) {
+                    System.out.println(res);
+                } else if (verbose == 2) {
+                    System.out.println("Result of " + instance + "-" + n + "-" + k + ": " + res);
                 }
 
-                if(verbose == 0) {
-                    System.out.println(res);
-                } else if (verbose == 1) {
-                    float m = mean(res_list);
-                    System.out.println("Result of " + instance + "-" + n + "-" + k + ": " + m + " std: " + std(res_list, m));
+                if(save){
+                    String csvPath = "./results/csv/" + featuresGroup + "-" + instance + ".csv";
+                    String[] data = {instance, String.valueOf(n), String.valueOf(k), modelPath, String.valueOf(res)};
+                    writeCSV(csvPath, data, testHeader);
                 }
             }
         }
-        System.out.println("Solved instances:  " + solvedInstances);
-        return solvedInstances;
+        return new Pair<>(solvedInstances, totalExpansions);
+    }
+    public static void writeCSV(String csvPath, String[] data, String header){
+        File file = new File(csvPath);
+        boolean exists = file.exists();
+
+        try{
+            FileWriter outputFile = new FileWriter(file, true);
+            StringBuilder line = new StringBuilder();
+
+            if(!exists && !header.isEmpty()){
+                line.append(header);
+                outputFile.write(line.toString());
+                line = new StringBuilder();
+            }
+
+            for (int i = 0; i < data.length; i++) {
+                line.append(data[i]);
+                if (i != data.length - 1) {
+                    line.append(',');
+                }
+            }
+            line.append("\n");
+
+            outputFile.write(line.toString());
+            outputFile.close();
+        }catch (IOException e){
+            e.printStackTrace();
+        }
     }
 
-    // This main is for testing purposes only
-    public static void main(String[] args) {
-        //DCSForPython.testHeuristic(10000, "TL", "Ready", 1, 0);     // Ejemplo de como correr todas las de CM con la heuristica BFS y un budget de 10000 expanciones
+    public static int getModelNumber(String modelName){ // TODO: testear que funque bien
+        try{return Integer.valueOf(modelName.split("-")[3]);}
+        catch (Exception e){return 0;}
+    }
 
+    // Esta funcion levanta todos los modelos de un experimento para una instancia y los testea con el budget dado
+    public static void selectRL(String instance, String experimentName, int budget, int startInModel, boolean onlyBestOptimization){
+        String folderPath = "./results/models/" + instance + "/" + experimentName + "/";
+
+        File folder = new File(folderPath);
+        Set<File> setOfFiles = new HashSet<>(Arrays.asList(folder.listFiles()));
+
+        Set<String> setTestedModels = readCSVColumn("./results/selection/" + experimentName + "-" + instance + ".csv");
+        List<String> listModels = new ArrayList<>();
+        for(File f : setOfFiles){
+            if(f.isFile()){
+                String fileName = folderPath + f.getName();
+                int modelNumber = getModelNumber(f.getName());
+
+                if(fileName.contains(".onnx") && !setTestedModels.contains(fileName) && startInModel <= modelNumber){
+                    listModels.add(fileName);
+                }
+            }
+        }
+        Collections.shuffle(listModels);
+
+        int bestValue = budget * 225 + 1;
+        int bestSolved = -1;
+        String bestModel = "";
+
+        System.out.println("Starting selection...");
+        for (String modelName : listModels) {
+            System.out.println("Testing model: " + modelName);
+            int expansionLimit = onlyBestOptimization ? bestValue : budget * 225 + 1;
+            Pair<Integer, Integer> res = testHeuristic(budget, instance, "RL", experimentName, modelName, false, 1, 9, expansionLimit, 0);
+            int solvedInstances = res.getFirst();
+            int totalExpansions = res.getSecond();
+
+            if(solvedInstances < bestSolved){
+                bestModel = modelName;
+                bestValue = totalExpansions;
+                bestSolved = solvedInstances;
+            }
+
+            System.out.println("Model " + modelName + ": " + totalExpansions);
+            String csvPath = "./results/selection/" + experimentName + "-" + instance + ".csv";
+            String[] data = {instance, modelName, String.valueOf(solvedInstances), String.valueOf(totalExpansions)};
+
+            writeCSV(csvPath, data, selectionHeader);
+        }
+        System.out.println("Best Model: " + bestModel + " = " + bestSolved + " - " + bestValue);
+    }
+
+    public static Set<String> readCSVColumn(String folderPath){
+        Set<String> res = new HashSet<>();
+
+        try{
+            BufferedReader br = new BufferedReader(new FileReader(folderPath));
+            String line = br.readLine();
+            System.out.println(line);
+            while (line != null) {
+                String[] cols = line.split(","); // use comma as separator
+                if(cols[1].contains(".onnx")){
+                    res.add(cols[1]);
+                }
+                line = br.readLine();
+            }
+        } catch (Exception e) {}
+        return res;
+    }
+
+    public static void printHelp(){
+        System.out.println("Parameters:");
+        System.out.println(" -s (selection): flag that indicate if the class is used for select the model.");
+        System.out.println(" -i (instance): instance to solve (AT, TA, DP, BW, CM, TL)");
+        System.out.println(" -e (experiment): experiment name and also feature group to use.");
+        System.out.println(" -b (budget): budget to use.");
+        System.out.println(" -r (startModel): first model to select(only used in selection mode).");
+        System.out.println(" -m (model): model to test (only used in testing mode).");
+        System.out.println(" -h (help): help flag.");
+
+        System.out.println("\nUse examples:");
+
+        System.out.println("\n Example for selection:");
+        System.out.println("java -classpath mtsa.jar MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.DCSForPython -s -i DP -e \"CRL\" -b 1000");
+
+        System.out.println("\n Example for testing:");
+        System.out.println("java -classpath mtsa.jar MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.DCSForPython -i DP -e \"CRL\" -b 1000 -m ./results/models/DP/CRL/DP-2-2-350-partial.onnx");
+    }
+
+    // This function is for testing purposes only
+    public static void testExample(){
+        //String modelPath = "F:\\UBA\\Tesis\\mtsa\\MTSApy\\TA-2-2-10-partial.onnx";
+        //String modelPath = "F:\\UBA\\Tesis\\mtsa\\MTSApy\\DP-2-2-4460-partial.onnx";
+        //String modelPath = "F:\\UBA\\Tesis\\mtsa\\MTSApy\\results\\models\\DP\\2-2\\DP-2-2-690-partial.onnx";
+        //String modelPath = "";
+
+        //selectRL("AT", "2-2", 1000, 0);
+
+        //DCSForPython.testHeuristic(1000, "DP", "RL", "2-2", modelPath, false, 1, 15, 2);
+
+        //String fsp_path = "F:\\UBA\\Tesis\\mtsa\\MTSApy\\fsp\\DP\\DP-2-2.fsp";
+        //DCSForPython.syntetizeWithHeuristic(fsp_path, "RL", "CRL", modelPath, 1000, true);
+
+
+
+        /*
         // Acontinuacion un ejemplo de como se deberia usar DCSForPython
-        String instance = "TL";
+        String instance = "BW";
 
         //String FSP_path = "/home/dario/Documents/Tesis/mtsa/maven-root/mtsa/target/test-classes/Blocking/ControllableFSPs/GR1test1.lts"; // Falla porque tiene guiones
         //String FSP_path = "F:\\UBA\\Tesis\\mtsa\\maven-root\\mtsa\\target\\test-classes\\Blocking\\ControllableFSPs\\GR1Test43.lts";
         //String FSP_path = "F:\\UBA\\Tesis\\mtsa\\maven-root\\mtsa\\target\\test-classes\\Blocking\\NoControllableFSPs\\GR1Test11.lts";
-        String FSP_path = "F:\\UBA\\Tesis\\mtsa\\MTSApy\\fsp\\" + instance + "\\" + instance + "-2-2.fsp";
+        String FSP_path = "F:\\UBA\\Tesis\\mtsa\\MTSApy\\fsp\\" + instance + "\\" + instance + "-5-3.fsp";
         //String FSP_path = "/home/dario/Documents/Tesis/Learning-Synthesis/fsp/Blocking/ControllableFSPs/GR1Test10.lts";
         //String FSP_path = "/home/dario/Documents/Tesis/mtsa/MTSApy/fsp/" + instance + "/" + instance + "-2-2.fsp";
 
@@ -287,7 +422,7 @@ public class DCSForPython {
 
         while (!env.isFinished()) {
             System.out.println("----------------------------------: " + (i+1));
-            env.heuristic.printFrontier();
+            //env.heuristic.printFrontier();
 
             if(i < list.size()){
                 idx = list.get(i);
@@ -306,5 +441,58 @@ public class DCSForPython {
             System.out.println("Director's Transitions: " + director.getTransitions().size());
         }
         System.out.println("End Run :)");
+        */
+    }
+
+    public static boolean getBoolValue(CmdLineParser cmdParser, CmdLineParser.Option opt){
+        Boolean value = (Boolean)cmdParser.getOptionValue(opt);
+        return (value != null && value);
+    }
+
+    public static void main(String[] args) {
+        //testExample();
+
+        CmdLineParser cmdParser = new CmdLineParser();
+        CmdLineParser.Option selection_opt = cmdParser.addBooleanOption('s', "selection");
+        CmdLineParser.Option help_opt = cmdParser.addBooleanOption('h', "help");
+        CmdLineParser.Option onlyBestOptimization_opt = cmdParser.addBooleanOption('o', "onlyBestOptimization");
+        CmdLineParser.Option instance_opt = cmdParser.addStringOption('i', "instance");
+        CmdLineParser.Option experiment_opt = cmdParser.addStringOption('e', "experiment");
+        CmdLineParser.Option budget_opt = cmdParser.addIntegerOption('b', "budget");
+        CmdLineParser.Option start_opt = cmdParser.addIntegerOption('r', "startModel");
+
+        CmdLineParser.Option model_opt = cmdParser.addStringOption('m', "model");
+
+        try {
+            cmdParser.parse(args);
+        } catch (CmdLineParser.OptionException e) {
+            System.out.println("Invalid args: " + e.getMessage() + "\n");
+            DCSForPython.printHelp();
+            System.exit(0);
+        }
+
+        boolean selection = getBoolValue(cmdParser, selection_opt);
+        boolean help = getBoolValue(cmdParser, help_opt);
+        boolean onlyBestOptimization = getBoolValue(cmdParser, onlyBestOptimization_opt);
+
+        if(help){
+            DCSForPython.printHelp();
+        }else{
+            String instance = (String)cmdParser.getOptionValue(instance_opt);
+            String experiment = (String)cmdParser.getOptionValue(experiment_opt);
+            int budget = (int)cmdParser.getOptionValue(budget_opt);
+
+            if(selection){
+                Object startModelObj = cmdParser.getOptionValue(start_opt);
+                int startModel = 0;
+                if(startModelObj != null){
+                    startModel = (int)startModelObj;
+                }
+                selectRL(instance, experiment, budget, startModel, onlyBestOptimization);
+            }else {
+                String modelPath = (String) cmdParser.getOptionValue(model_opt);
+                DCSForPython.testHeuristic(budget, instance, "RL", experiment, modelPath, true, 1, 15, budget * 15 * 15 + 1, 2);
+            }
+        }
     }
 }

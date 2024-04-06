@@ -43,6 +43,8 @@ public interface ExplorationHeuristic<State, Action> {
 
     void notifyExpansionDidntFindAnything(Compostate<State, Action> parent, HAction<Action> action, Compostate<State, Action> child);
 
+    void notify_end_synthesis();
+
     boolean fullyExplored(Compostate<State, Action> state);
 
     boolean hasUncontrollableUnexplored(Compostate<State, Action> state);

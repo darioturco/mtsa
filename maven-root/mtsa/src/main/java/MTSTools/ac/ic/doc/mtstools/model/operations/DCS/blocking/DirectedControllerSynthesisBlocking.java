@@ -117,6 +117,8 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
 
     public int expansionStep;
 
+    public int nfeatures;
+
     public void setupSynthesis(List<LTS<State, Action>> ltss,
                                Set<Action> controllable,
                                boolean reachability,
@@ -177,7 +179,7 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
         expansionStep = 1;
     }
 
-    public ExplorationHeuristic<State, Action> getHeuristic(HeuristicMode heuristicMode){
+    public ExplorationHeuristic<State, Action> getHeuristic(HeuristicMode heuristicMode, String featureGroup){
         if(heuristicMode == HeuristicMode.Interactive){
             return new InteractiveExplorationHeuristic<>(this);
         } else if(heuristicMode == HeuristicMode.BFS) {
@@ -188,6 +190,8 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
             return new LexicographicExplorationHeuristic<>();
         } else if(heuristicMode == HeuristicMode.Ready) {
             return new ReadyExplorationHeuristic<>(this);
+        } else if(heuristicMode == HeuristicMode.RL) {
+            return new RLExplorationHeuristic<>(this, featureGroup);
         } else if(heuristicMode == HeuristicMode.CMHeuristic) {
             return new CatAndMouseExplorationHeuristic<>(this);
         } else if(heuristicMode == HeuristicMode.BWHeuristic) {
@@ -216,7 +220,7 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
         setupSynthesis(ltss, controllable, reachability, guarantees, assumptions);
 
         // FIXME, this is only done here until it can be chosen from the FSP instead of hardcoded
-        heuristic = getHeuristic(mode);
+        heuristic = getHeuristic(mode, "");
 
         initial = buildInitialState();
         heuristic.setInitialState(initial);
@@ -1262,6 +1266,10 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
             }
         }
         return -1;
+    }
+
+    public void notify_end_synthesis(){
+        heuristic.notify_end_synthesis();
     }
 
     /** Auxiliary function to add a value to a set contained as value of a map. */

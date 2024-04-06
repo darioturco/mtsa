@@ -1,4 +1,5 @@
 import os
+import random
 
 import torch
 import torch.nn as nn
@@ -7,6 +8,7 @@ import numpy as np
 import csv
 import matplotlib.pyplot as plt
 
+from onnx2torch import convert
 from src.agents.replay_buffer import ReplayBuffer
 from src.agents.agent import Agent
 import onnx
@@ -62,6 +64,7 @@ class TorchModel(Model):
         self.has_learned_something = False
         self.losses = []
         self.path = ""
+        self.tmp_path = f"./tmp.onnx"
 
     def constant_one_function(self, epoach):
         return 1.0
@@ -77,7 +80,9 @@ class TorchModel(Model):
     def best(self, s):
         if not self.has_learned_something or s is None:
             return 0
-        return int(self.predict(s).argmax())
+        res = self.predict(s)
+        #for fv in
+        return int(res.argmax())
 
     def predict(self, s):
         if not self.has_learned_something or s is None:
@@ -117,10 +122,9 @@ class TorchModel(Model):
 
     def to_onnx(self):
         x = torch.randn(1, self.nfeatures, device=self.device)
-
         torch.onnx.export(self.model,  # model being run
                           x,  # model input (or a tuple for multiple inputs)
-                          "tmp.onnx",  # where to save the model (can be a file or file-like object)
+                          self.tmp_path,  # where to save the model (can be a file or file-like object)
                           export_params=True,  # store the trained parameter weights inside the model file
                           opset_version=10,  # the ONNX version to export the model to
                           do_constant_folding=True,  # whether to execute constant folding for optimization
@@ -129,19 +133,8 @@ class TorchModel(Model):
                           output_names=['output'],  # the model's output names
                           dynamic_axes={'X': {0: 'batch_size'},  # variable length axes
                                         'output': {0: 'batch_size'}})
-                                        
-        """
-        verbose = True
-        torch.onnx.export(self.model,  # model being run
-                          x,  # model input (or a tuple for multiple inputs)
-                          "tmp.onnx",  # where to save the model (can be a file or file-like object)
-                          export_params=True,  # store the trained parameter weights inside the model file
-                          opset_version=10,  # the ONNX version to export the model to
-                          do_constant_folding=True,  # whether to execute constant folding for optimization
-                          verbose=True,
-                          input_names=['X'],  # the model's input names
-                          output_names=['output'])  # the model's output names"""
-        return onnx.load("tmp.onnx"), InferenceSession("tmp.onnx")
+
+        return onnx.load(self.tmp_path), InferenceSession(self.tmp_path)
 
     def copy_network(self):
         net = NeuralNetwork(self.nfeatures, self.model.nnsize)
@@ -149,17 +142,25 @@ class TorchModel(Model):
         net.load_state_dict(weights)
         return net
 
+    def set_tmp_path(self, new_path):
+        self.tmp_path = new_path
+
     def copy(self):
         network_copy = self.copy_network()
         res = TorchModel(self.nfeatures, network_copy, self.args)
         res.has_learned_something = self.has_learned_something
+        res.set_tmp_path(self.tmp_path)
         return res
 
     def save(self, path):
-        torch.save(self.model, path)
+        OnnxModel(self).save(path)
+
+    def remove_temp_files(self):
+        os.system(f"rm {self.tmp_path}")
+
     @classmethod
     def load(cls, nfeatures, path, args):
-        network = torch.load(path)
+        network = convert(onnx.load(path))
         new_model = cls(nfeatures, network, args)
         new_model.has_learned_something = True
         new_model.path = path
@@ -275,7 +276,8 @@ class DQN(Agent):
             self.freq_save = freq_save
 
         instance, n, k = self.env.get_instance_info()
-        csv_path = f"./results/training/{instance}-{n}-{k}-partial.csv"
+        experiment_name = self.env.get_experiment_name()
+        csv_path = f"./results/training/{instance}-{experiment_name}.csv"
         os.makedirs(csv_path.rsplit('/', 1)[0], exist_ok=True)
 
         acumulated_reward = 0
@@ -327,12 +329,12 @@ class DQN(Agent):
                 all_rewards.append(acumulated_reward)
                 all_expansions.append(expansion_steps)
                 print(f"Step: {self.steps} - Epsode: {self.eps} - Expansions: {expansion_steps} - Reward: {acumulated_reward} - Acumulated: {np.mean(all_rewards[-32:])} - Epsilon: {self.epsilon}")
-                if self.eps % self.freq_save == 0:
+                if self.freq_save is not None and self.eps % self.freq_save == 0:
                     if pth_path is not None:
                         if len(all_rewards) > 1000:
                             all_rewards = all_rewards[100:]
 
-                        DQN.save(self, f"{pth_path[:-4]}-{self.eps}.pth", partial=True)
+                        DQN.save(self, f"{pth_path[:-4]}-{self.eps}", partial=True)
                         if not os.path.exists(csv_path):
                             with open(csv_path, 'w') as _:  # Create the file if it doesn't exist
                                 pass
@@ -362,7 +364,6 @@ class DQN(Agent):
 
             if self.args["target_q"] and self.steps % self.args["reset_target_freq"] == 0:
                 print("Resetting target.")
-                #self.target = OnnxModel(self.model)
                 self.target = self.model.copy()
 
             self.steps += 1
@@ -372,6 +373,7 @@ class DQN(Agent):
             if seconds is not None and time.time() - self.training_start > seconds:
                 break
 
+        self.model.remove_temp_files()
         return obs.copy()
 
     # TODO: Arreglar este desorden
@@ -421,5 +423,5 @@ class DQN(Agent):
     @staticmethod
     def save(agent, path, partial=False):
         if partial:
-            path = path[:-4] + f"-partial.pth"
+            path = path + f"-partial"
         agent.model.save(path)

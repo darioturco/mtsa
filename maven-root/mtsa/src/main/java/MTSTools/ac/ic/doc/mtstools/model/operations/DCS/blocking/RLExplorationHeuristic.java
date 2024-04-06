@@ -2,24 +2,25 @@ package MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking;
 
 import MTSTools.ac.ic.doc.commons.collections.BidirectionalMap;
 import MTSTools.ac.ic.doc.commons.collections.InitMap;
-import MTSTools.ac.ic.doc.commons.collections.QueueSet;
 import MTSTools.ac.ic.doc.commons.relations.Pair;
-import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.abstraction.HeuristicMode;
-import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.abstraction.*;
+import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.abstraction.Abstraction;
+import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.abstraction.ReadyAbstraction;
+import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.abstraction.Recommendation;
+import ai.onnxruntime.*;
 
+import java.nio.FloatBuffer;
 import java.util.*;
-
 import java.util.logging.ConsoleHandler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import static java.util.Collections.emptyList;
 
-public class OpenSetExplorationHeuristic<State, Action> implements ExplorationHeuristic<State, Action> {
+public class RLExplorationHeuristic<State, Action> implements ExplorationHeuristic<State, Action> {
 
-    /** Queue of open states, the most promising state should be expanded first.
+    /** Queue of states, the most promising state should be expanded first.
      *  Key:index of LTS with marked states -> Value: Queue for that color */
-    public HashMap<Integer, Queue<Compostate<State, Action>>> opens;
+    public HashMap<Integer, Queue<Compostate<State, Action>>> frontiers;
 
     /** Abstraction used to rank the transitions from a state.
     *  Key:index of LTS with marked states -> Value: Queue for that color */
@@ -48,15 +49,11 @@ public class OpenSetExplorationHeuristic<State, Action> implements ExplorationHe
     /** Initially dcs.guarantees. Updated to dcs.assumptions when it is clear there is no way to win by guarantees*/
     public HashMap<Integer, Integer> currentObjectives;
 
-    /** save the abstraction mode in case we need to reset for assumptions*/
-    public HeuristicMode mode;
-
-    private final Logger logger = Logger.getLogger(OpenSetExplorationHeuristic.class.getName());
+    private final Logger logger = Logger.getLogger(RLExplorationHeuristic.class.getName());
 
     public ArrayList<ActionWithFeatures<State, Action>> actionsToExplore;
     public ArrayList<Compostate<State, Action>> allActionsToExplore;
 
-    //// Update this values
     public int goals_found = 0;
     public int marked_states_found = 0;
     public int closed_potentially_winning_loops = 0;
@@ -64,10 +61,20 @@ public class OpenSetExplorationHeuristic<State, Action> implements ExplorationHe
     public Compostate<State, Action> lastExpandedTo = null;
     public Compostate<State, Action> lastExpandedFrom = null;
     public ActionWithFeatures<State, Action> lastExpandedStateAction = null;
-    
-    public OpenSetExplorationHeuristic(
-            DirectedControllerSynthesisBlocking<State,Action> dcs,
-            HeuristicMode mode) {
+
+    /** Name of the set of features used by the learner */
+    public String featureGroup;     // TODO: convertirlo a enumerate
+
+    public OrtEnvironment ortEnv;
+    public OrtSession session;
+    public OrtSession.SessionOptions opts;
+
+    public int nfeatures;
+
+    public DCSFeatures featureMaker;
+
+    public RLExplorationHeuristic(
+            DirectedControllerSynthesisBlocking<State,Action> dcs, String featureGroup) {
 
         //LOGGER
         //set logger formatter for more control over logs
@@ -83,10 +90,10 @@ public class OpenSetExplorationHeuristic<State, Action> implements ExplorationHe
         handler.setLevel(Level.FINEST);
         
         this.dcs = dcs;
-        this.mode = mode;
+        this.featureGroup = featureGroup;
         this.actionsToExplore = new ArrayList<>();
         this.allActionsToExplore = new ArrayList<>();
-        opens = new HashMap<>();
+        frontiers = new HashMap<>();
         abstractions = new HashMap<>();
         objectivesIndex = new ArrayList<>();
         objectivesIndex.addAll(dcs.guarantees.values());
@@ -95,54 +102,85 @@ public class OpenSetExplorationHeuristic<State, Action> implements ExplorationHe
         defaultTargets = buildDefaultTargets();
         currentObjectives = dcs.guarantees;
 
-        //FIXME, this is only done here until it can be chosen from the FSP instead of hardcoded
-        switch (mode){
-            case Monotonic:
-                for (Integer color : objectivesIndex) {
-                    //MA still isn't updated to handle multiple objectives
-                    abstractions.put(color, new MonotonicAbstraction<State, Action>(/*color,*/ dcs.ltss, defaultTargets.get(color), dcs.base, dcs.alphabet));
-                    opens.put(color, new PriorityQueue<>(new DefaultCompostateRanker<>()));
-                }
-                break;
-            case Ready:
-                for (Integer color : objectivesIndex) {
-                    abstractions.put(color, new ReadyAbstraction<>(color, dcs.ltss, defaultTargets.get(color), dcs.alphabet));
-                    opens.put(color, new PriorityQueue<>(new ReadyAbstraction.CompostateRanker<State, Action>(color)));
-                }
-                break;
-            default:
-                logger.severe("Mode desconocido: " + mode);
-                break;
+        for (Integer color : objectivesIndex) {
+            abstractions.put(color, new ReadyAbstraction<>(color, dcs.ltss, defaultTargets.get(color), dcs.alphabet));
+            frontiers.put(color, new PriorityQueue<>(new ReadyAbstraction.CompostateRanker<>(color)));
         }
 
+        featureMaker = new DCSFeatures<>(featureGroup, this);
     }
 
-    /*this assumes updateOpen was called just before, so getNextState returns an action that was not previously explored*/
+    // this assumes updateOpen was called just before, so getNextState returns an action that was not previously explored
     public Pair<Compostate<State,Action>, HAction<Action>> getNextAction(boolean updateUnexploredTransaction) {
-        assert(!opens.get(currentTargetLTSIndex).isEmpty());
-        Compostate<State,Action> state = getNextState(currentTargetLTSIndex);
+        assert(!frontiers.get(currentTargetLTSIndex).isEmpty());
+        Compostate<State,Action> state = getNextState(currentTargetLTSIndex, updateUnexploredTransaction);
         Recommendation<Action> recommendation = state.nextRecommendation(currentTargetLTSIndex);
         HAction<Action> action = recommendation.getAction();
-
-        //assert(!state.getExploredActions().contains(action));
         return new Pair<>(state, action);
     }
 
+    /** Load the features of all the actions to explore */
+    public void computeFeatures(){
+        actionsToExplore.parallelStream().forEach(ActionWithFeatures::updateFeatures);
+    }
+
     public int getNextActionIndex() {
-        int res = getIndexOfStateAction(getNextAction(true));
-        while(res == -1){
-            res = getIndexOfStateAction(getNextAction(true));
+        computeFeatures();
+        if(session == null){
+            return 0;
         }
-        return res;
+
+        float[][] availableActions = new float[actionsToExplore.size()][nfeatures];
+        for(int i=0 ; i<actionsToExplore.size() ; i++){
+            availableActions[i] = actionsToExplore.get(i).featureVector;
+        }
+
+        OnnxTensor tRes = null;
+        OnnxTensor inputTensor = null;
+        FloatBuffer values = null;
+        try {
+            inputTensor = OnnxTensor.createTensor(this.ortEnv, availableActions);
+            tRes = (OnnxTensor)session.run(Collections.singletonMap("X", inputTensor)).get(0);
+            values = tRes.getFloatBuffer();
+        } catch (OrtException e) {
+            e.printStackTrace();
+        }
+        assert values != null;
+
+        int best = 0;
+        float bestValue = values.get();
+        for(int i = 1; i < actionsToExplore.size(); i++){
+            float v = values.get();
+            if(v > bestValue){
+                best = i;
+                bestValue = v;
+            }
+        }
+
+        tRes.close();
+        inputTensor.close();
+        return best;
+    }
+
+    public void loadModelFromPath(String modelPath) throws OrtException {
+        if(modelPath.equals("")) {
+            session = null;
+        }else{
+            ortEnv = OrtEnvironment.getEnvironment();
+            opts = new OrtSession.SessionOptions();
+            opts.setOptimizationLevel(OrtSession.SessionOptions.OptLevel.BASIC_OPT);
+            session = ortEnv.createSession(modelPath);
+        }
     }
 
     public ArrayList<Integer> getOrder(){
         ArrayList<Integer> res = new ArrayList<>();
+        removeNotLive(currentTargetLTSIndex);
 
-        Queue<Compostate<State, Action>> openCopy = new LinkedList<>(opens.get(currentTargetLTSIndex));
-        int openSize = openCopy.size();
-        for(int i=0 ; i<openSize ; i++){
-            Compostate<State, Action> state = openCopy.remove();
+        Queue<Compostate<State, Action>> frontierCopy = new LinkedList<>(frontiers.get(currentTargetLTSIndex));
+        int frontierSize = frontierCopy.size();
+        for(int i=0 ; i<frontierSize ; i++){
+            Compostate<State, Action> state = frontierCopy.remove();
             List<Recommendation<Action>> recommendations = state.recommendations.get(currentTargetLTSIndex);
 
             if(recommendations != null){
@@ -183,9 +221,12 @@ public class OpenSetExplorationHeuristic<State, Action> implements ExplorationHe
         return stateAction;
     }
 
-    public Compostate<State,Action> getNextState(Integer color) {
-        Compostate<State,Action> state = opens.get(color).remove();
+    public Compostate<State,Action> getNextState(Integer color, boolean updateUnexploredTransaction) {
+        removeNotLive(color);
+        Compostate<State,Action> state = frontiers.get(color).remove();
         state.inOpen.put(color, false);
+        if(updateUnexploredTransaction)
+            state.unexploredTransitions--;
         return state;
     }
 
@@ -194,9 +235,10 @@ public class OpenSetExplorationHeuristic<State, Action> implements ExplorationHe
 
         for (Integer it = 0; it< currentObjectives.size(); ++it) {
             Integer ltsIndex = currentObjectives.get((currentTargetColor + it)%(currentObjectives.size()));
-            Queue<Compostate<State, Action>> open = opens.get(ltsIndex);
-            updateOpen(ltsIndex);
-            if (open.isEmpty()){
+            Queue<Compostate<State, Action>> frontier = frontiers.get(ltsIndex);
+            updateFrontier(ltsIndex);
+            removeNotLive(ltsIndex);
+            if (frontier.isEmpty()){
                 aColorIsUnreachable = true;
                 break;
             }
@@ -226,24 +268,34 @@ public class OpenSetExplorationHeuristic<State, Action> implements ExplorationHe
         return actionsToExplore.size();
     }
 
-    /** removes from open the states and transitions that were already explored until the next state recommendation
+    private void removeNotLive(Integer color) {
+        while (!frontiers.get(color).isEmpty() && (
+                !frontiers.get(color).peek().isStatus(Status.NONE) ||
+                        fullyExplored(frontiers.get(color).peek()) ||
+                        !frontiers.get(color).peek().isLive()
+        )) {
+            frontiers.get(color).remove();
+        }
+    }
+
+    /** removes from frontier the states and transitions that were already explored until the next state recommendation
      * is one that was never explored */
-    private void updateOpen(Integer color){
-        Queue<Compostate<State, Action>> open = opens.get(color);
-        if(open.isEmpty()) return;
+    private void updateFrontier(Integer color){
+        Queue<Compostate<State, Action>> frontier = frontiers.get(color);
+        if(frontier.isEmpty()) return;
         Compostate<State,Action> state = null;
 
         while(true){
-            while(state == null || fullyExplored(state) || !state.isLive() || state.cantWinColor(color)){
-                if(open.isEmpty()) return;
-                state = getNextState(color);
+            while(state == null || fullyExplored(state) || !state.isLive() || state.cantWinColor(color) || state.peekRecommendation(color) == null){
+                if(frontier.isEmpty()) return;
+                state = getNextState(color, false);
             }
             assert(state.isEvaluated(color));
 
             Recommendation<Action> recommendation = state.peekRecommendation(color);
-            assert(recommendation != null);
+            assert(recommendation != null); // state.toString(.equals("[8, 10, 13, 10, 0]"))
             if(!state.getExploredActions().contains(recommendation.getAction())){
-                addToOpen(color, state);
+                addToFrontier(color, state);
                 return;
             }else{
                 while(state.peekRecommendation(color) != null &&
@@ -251,39 +303,11 @@ public class OpenSetExplorationHeuristic<State, Action> implements ExplorationHe
                     state.updateRecommendation(color);
                 }
                 if (state.peekRecommendation(color) != null) {
-                    addToOpen(color, state);
-                } else {
-                    System.out.println("CHECK! State was actually fullyExplored");
+                    addToFrontier(color, state);
                 }
             }
             state = null; //we dont want to check the same state again
         }
-    }
-
-    /** Adds this state to the open queue (reopening it if was previously closed). */
-    public boolean open(Compostate<State,Action> state) {
-        // System.err.println("opening" + state);
-        boolean result = false;
-        state.live = true;
-        // TODO: considerar agregarlo solamente al open del color que se está explorando ahora.
-        for (Integer color : opens.keySet()) {
-            if (!state.inOpen.get(color)) {
-                if (!state.hasStatusChild(Status.NONE)) {
-                    result = addToOpen(color, state);
-                } else { // we are reopening a state, thus we reestablish it's exploredChildren instead
-                    for (Pair<HAction<Action>,Compostate<State, Action>> transition : state.getExploredChildren()) {
-                        Compostate<State, Action> child = transition.getSecond();
-                        if (!child.isLive() && child.isStatus(Status.NONE) && !fullyExplored(child)) // !isGoal(child)
-                            result |= open(child);
-                    }
-                    if (!result || state.isControlled()){
-                        result = addToOpen(color, state);
-                    }
-                }
-            }
-        }
-
-        return result;
     }
 
     private Map<Integer, List<Set<State>>> buildDefaultTargets() {
@@ -304,10 +328,20 @@ public class OpenSetExplorationHeuristic<State, Action> implements ExplorationHe
         }
         return result;
     }
-    
-    public boolean addToOpen(Integer color, Compostate<State, Action> state) {
-        state.inOpen.put(color, true);
-        return opens.get(color).add(state);
+
+    public void addToAllFrontier(Compostate<State, Action> state) {
+        for (Integer color : frontiers.keySet()) {
+            addToFrontier(color, state);
+        }
+    }
+
+    public boolean addToFrontier(Integer color, Compostate<State, Action> state) {
+        if (state.isStatus(Status.NONE) && !fullyExplored(state) && !state.inOpen.get(color)) {
+            state.inOpen.put(color, true);
+            state.live = true;
+            return frontiers.get(color).add(state);
+        }
+        return false;
     }
 
     public void filterFrontier(){
@@ -320,21 +354,29 @@ public class OpenSetExplorationHeuristic<State, Action> implements ExplorationHe
         }
     }
 
+    public void notifyClosedPotentiallyWinningLoop(Set<Compostate<State, Action>> loop) {
+        closed_potentially_winning_loops ++;
+    }
+
     public void setInitialState(Compostate<State, Action> state) {
-        open(state);
         newState(state, null);
+        addToAllFrontier(state);
     }
 
     public void notifyStateIsNone(Compostate<State, Action> state) {
         if(!fullyExplored(state))
-            open(state);
+            addToAllFrontier(state);
     }
 
     public void newState(Compostate<State, Action> state, Compostate<State, Action> parent) {
         if(parent != null){
             state.setTargets(parent.getTargets());
         }
+
         state.addTargets(state); //we always call addTargets, if the state is not marked, it will not be added to any list
+        if(state.isMarked()) {
+            marked_states_found++;
+        }
 
         for (Abstraction<State,Action> abstraction : abstractions.values()) {
             abstraction.eval(state);
@@ -384,10 +426,11 @@ public class OpenSetExplorationHeuristic<State, Action> implements ExplorationHe
             List<State> childStates = state.dcs.getChildStates(state, action);
 
             state.actionChildStates.put(action, childStates);
-            state.unexploredTransitions ++;
+            state.unexploredTransitions++;
             if(!action.isControllable()){
                 state.uncontrollableUnexploredTransitions++;
             }
+
         }
     }
 
@@ -399,39 +442,36 @@ public class OpenSetExplorationHeuristic<State, Action> implements ExplorationHe
     }
 
     public void notifyStateSetErrorOrGoal(Compostate<State, Action> state) {
-        state.live = false;
+        state.close();
         state.clearRecommendations();
+        if(state.isStatus(Status.GOAL)){
+            goals_found++;
+        }
     }
 
     public void notifyExpandingState(Compostate<State, Action> parent, HAction<Action> action, Compostate<State, Action> state) {
-        if(state.wasExpanded()){ // todo: understand this, i am copying the behavior of the code pre refactor
+        if(state.wasExpanded()){
             state.setTargets(parent.getTargets());
             state.addTargets(state); //we always call addTargets, if the state is not marked, it will not be added to any list
         }
     }
 
     public void expansionDone(Compostate<State, Action> state, HAction<Action> action, Compostate<State, Action> child) {
-        if (state.isControlled() && state.isStatus(Status.NONE) && !fullyExplored(state)) {
-            open(state);
-        }
-        lastExpandedTo = child;
+        dcs.instanceDomain.updateMatrixFeature(action, child);
+        addToAllFrontier(state);
+        addToAllFrontier(child);
         lastExpandedFrom = state;
+        lastExpandedTo = child;
     }
 
     public void notifyExpansionDidntFindAnything(Compostate<State, Action> parent, HAction<Action> action, Compostate<State, Action> child) {
         if (!child.isLive() && !fullyExplored(child)) {
-            open(child);
+            addToAllFrontier(child);
         }
     }
 
-    public void notifyClosedPotentiallyWinningLoop(Set<Compostate<State, Action>> loop) {
-        closed_potentially_winning_loops++;
-    }
-
     public boolean fullyExplored(Compostate<State, Action> state) {
-        return (state.getExploredActions().size() + state.getDiscardedActions().size()) >= state.transitions.size();
-        //return (state.getExploredActions().size()) >= state.transitions.size();
-        //puede ser que este cambio rompa casos si recommendation era null antes de ver todas las transiciones
+        return (state.getExploredActions().size()) >= state.transitions.size();
     }
     
     public boolean hasUncontrollableUnexplored(Compostate<State, Action> state) {
@@ -455,19 +495,29 @@ public class OpenSetExplorationHeuristic<State, Action> implements ExplorationHe
         return -1;
     }
 
-    public void notify_end_synthesis(){}
+    public void notify_end_synthesis(){
+        try {
+            session.close();
+            ortEnv.close();
+            opts.close();
+        }catch (Exception e){System.out.println("Error trying to close the onnx runtime environment");}
+    }
 
     public void printFrontier(){
         System.out.println("Frontier: ");
-        for(ActionWithFeatures<State, Action> stateAction : actionsToExplore){
-            System.out.println(new StringBuilder(stateAction.state.toString() + " | " + stateAction.action.toString()));
+        for(int i=0 ; i<actionsToExplore.size() ; i++){
+            System.out.println(i + ": " + actionsToExplore.get(i).toString());
         }
+        //for(ActionWithFeatures<State, Action> stateAction : actionsToExplore){
+        //    System.out.println(stateAction.toString());
+        //}
     }
 
     public void initialize(Compostate<State, Action> state) {
-        state.live = false;
+        state.unexploredTransitions = state.transitions.size();
+        state.close();
         state.actionChildStates = new HashMap<>();
-        for (Integer color : opens.keySet()) {
+        for (Integer color : frontiers.keySet()) {
             state.inOpen.put(color, false);
         }
 
@@ -478,3 +528,4 @@ public class OpenSetExplorationHeuristic<State, Action> implements ExplorationHe
         state.readyInLTS = new InitMap<>(HashSet.class);
     }
 }
+

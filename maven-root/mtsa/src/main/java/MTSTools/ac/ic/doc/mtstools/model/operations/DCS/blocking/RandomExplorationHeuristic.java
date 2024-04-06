@@ -177,6 +177,8 @@ public class RandomExplorationHeuristic<State, Action>  implements ExplorationHe
         return state.uncontrollableUnexploredTransitions > 0;
     }
 
+    public void notify_end_synthesis(){}
+
     public void printFrontier(){
         System.out.println("Frontier: ");
         for(ActionWithFeatures<State, Action> stateAction : actionsToExplore){
