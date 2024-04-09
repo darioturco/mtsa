@@ -196,16 +196,16 @@ def comparative_bar_plot_data(data, instances, title):
 
 if __name__ == "__main__":
     print("Plotting...")
-    #graph_individual_training_process("2-2", sliding_window=500, save_path='./results/plots', use_steps=True, problems=["AT", "TA", "BW"])
+    #graph_individual_training_process("2-2", sliding_window=500, save_path='./results/plots', use_steps=True, problems=["DP"])
     graph_individual_training_process("CRL", sliding_window=500, save_path='./results/plots', use_steps=True, problems=["DP"])
-    graph_individual_training_process("LRL", sliding_window=1000, save_path='./results/plots', use_steps=True, problems=["DP"])
+    #graph_individual_training_process("LRL", sliding_window=1000, save_path='./results/plots', use_steps=True, problems=["DP"])
 
 
     #graph_training_process(sliding_window=100, repetitions=5, save_path='./results/plots', use_steps=True)
 
     # Budget of 10000
-    #comparative_bar_plot(data=None, instances_solved=True)
-    #comparative_bar_plot(data=None, instances_solved=False)
+    comparative_bar_plot(data=None, instances_solved=True)
+    comparative_bar_plot(data=None, instances_solved=False)
     #comparative_bar_plot(data={"Random": {"AT": 59, "BW": 44, "DP": 62, "TA": 60, "TL": 134, "CM": 18},
     #                           "2-2": {"AT": 85, "BW": 53, "DP": 101, "TA": 60, "TL": 225, "CM": 18},
     #                           #"ERL": {"AT": 87, "BW": 57, "DP": 150, "TA": 60, "TL": 225, "CM": 0},

@@ -12,7 +12,7 @@ public class InstanceDomain<State, Action> {
     public boolean firstExpansion;
 
     /** Amount of features of custom of each specific instance domain */
-    public int customFSize;
+    public int customFeatureSize;
 
     /** Amount of local features of each compostote */
     public int compostateFeatureSize;
@@ -63,7 +63,7 @@ public class InstanceDomain<State, Action> {
     public static float toFloat(boolean b) {
         return b ? 1.0f : 0.0f;
     }
-    public int size(){return 1 + customFSize;}
+    public int size(){return 1 + customFeatureSize;}
 
     // Each new InstanceDomainBW should overwrite this functions
     public void computeCustomFeature(ActionWithFeatures transition, int i){}
@@ -72,11 +72,16 @@ public class InstanceDomain<State, Action> {
 }
 
 class InstanceDomainBW extends InstanceDomain{
+    boolean know_reach_approve;
+    boolean know_reach_refuse;
+
     InstanceDomainBW(DirectedControllerSynthesisBlocking dcs){
         super(dcs);
-        this.customFSize = 3;
+        this.customFeatureSize = 5;
         this.compostateFeatureSize = 0;
         this.featureMatrix = newFeatureMatrix(size());
+        know_reach_approve = false;
+        know_reach_refuse = false;
     }
 
     @Override
@@ -106,6 +111,12 @@ class InstanceDomainBW extends InstanceDomain{
             } else if(label.contains("accept")) {
                 ((boolean[])featureMatrix.get(3))[entity] = true;
             }
+        }else{
+            if(label.contains("approve")){
+                know_reach_approve = true;
+            }else if(label.contains("refuse")){
+                know_reach_refuse = true;
+            }
         }
     }
 
@@ -121,6 +132,9 @@ class InstanceDomainBW extends InstanceDomain{
 
         boolean entity_was_accepted = transition.has_entity() && ((boolean[])featureMatrix.get(3))[entity];
         transition.featureVector[i+2] = toFloat(entity_was_accepted);
+
+        transition.featureVector[i+3] = toFloat(know_reach_approve);
+        transition.featureVector[i+4] = toFloat(know_reach_refuse);
     }
 }
 
@@ -130,7 +144,7 @@ class InstanceDomainTA extends InstanceDomain{
     InstanceDomainTA(DirectedControllerSynthesisBlocking dcs){
         super(dcs);
         this.service = 0;
-        this.customFSize = 6;
+        this.customFeatureSize = 8;
         this.featureMatrix = newFeatureMatrix(size());
     }
 
@@ -155,9 +169,14 @@ class InstanceDomainTA extends InstanceDomain{
         String label = action.toString();
         int entity = ActionWithFeatures.getNumber(label, 1);
         if(entity != -1) {
-            if(!((List<boolean[]>)featureMatrix).get(1)[entity] && label.contains("query")) {
+            if(!((boolean[]) featureMatrix.get(1))[entity] && label.contains("query")) {
                 ((boolean[]) featureMatrix.get(1))[entity] = true;
                 service += 1;
+                if(label.contains("succ")){
+                    ((boolean[]) featureMatrix.get(4))[entity] = true;
+                } else if(label.contains("fail")){
+                    ((boolean[]) featureMatrix.get(5))[entity] = true;
+                }
             } else if(label.contains("committed") && !label.contains("un")){
                 ((boolean[])featureMatrix.get(2))[entity] = true;
             } else if(label.contains("uncommitted")){
@@ -179,21 +198,27 @@ class InstanceDomainTA extends InstanceDomain{
         boolean entity_was_uncommitted = transition.has_entity() && ((boolean[])featureMatrix.get(3))[entity];
         transition.featureVector[i+2] = toFloat(entity_was_uncommitted);
 
+        boolean entity_query_succ = transition.has_entity() && ((boolean[])featureMatrix.get(4))[entity];
+        transition.featureVector[i+3] = toFloat(entity_query_succ);
+
+        boolean entity_query_fail = transition.has_entity() && ((boolean[])featureMatrix.get(5))[entity];
+        transition.featureVector[i+4] = toFloat(entity_query_fail);
+
         boolean entity_is_current_service = transition.has_entity() && service == entity;
-        transition.featureVector[i+3] = toFloat(entity_is_current_service);
+        transition.featureVector[i+5] = toFloat(entity_is_current_service);
 
         boolean entity_is_next_service = transition.has_entity() && (service == entity+1);
-        transition.featureVector[i+4] = toFloat(entity_is_next_service);
+        transition.featureVector[i+6] = toFloat(entity_is_next_service);
 
         boolean entity_is_greater_service = transition.has_entity() && (service > entity+1);
-        transition.featureVector[i+5] = toFloat(entity_is_greater_service);
+        transition.featureVector[i+7] = toFloat(entity_is_greater_service);
     }
 }
 
 class InstanceDomainAT extends InstanceDomain{
     InstanceDomainAT(DirectedControllerSynthesisBlocking dcs){
         super(dcs);
-        this.customFSize = 3;
+        this.customFeatureSize = 5;
         this.compostateFeatureSize = 0;
         this.featureMatrix = newFeatureMatrix(size());
     }
@@ -225,6 +250,10 @@ class InstanceDomainAT extends InstanceDomain{
                 ((boolean[])featureMatrix.get(2))[entity] = true;
             } else if(label.contains("extendFlight")){
                 ((boolean[])featureMatrix.get(3))[entity] = true;
+            }else if(label.contains("descend")){
+                ((boolean[])featureMatrix.get(4))[entity] = true;
+            } else if(label.contains("approach")){
+                ((boolean[])featureMatrix.get(5))[entity] = true;
             }
         }
     }
@@ -241,15 +270,24 @@ class InstanceDomainAT extends InstanceDomain{
 
         boolean entity_extended_flight = transition.has_entity() && ((boolean[])featureMatrix.get(3))[entity];
         transition.featureVector[i+2] = toFloat(entity_extended_flight);
+
+        boolean entity_descend = transition.has_entity() && ((boolean[])featureMatrix.get(4))[entity];
+        transition.featureVector[i+3] = toFloat(entity_descend);
+
+        boolean entity_approach = transition.has_entity() && ((boolean[])featureMatrix.get(5))[entity];
+        transition.featureVector[i+4] = toFloat(entity_approach);
     }
 }
 
 class InstanceDomainDP extends InstanceDomain{
+    int actualPhilosofer;
+
     InstanceDomainDP(DirectedControllerSynthesisBlocking dcs){
         super(dcs);
-        this.customFSize = 4;
+        this.customFeatureSize = 5;
         this.compostateFeatureSize = 1;
         this.featureMatrix = newFeatureMatrix(size());
+        this.actualPhilosofer = 0;
     }
 
     @Override
@@ -275,8 +313,10 @@ class InstanceDomainDP extends InstanceDomain{
         if(entity != -1) {
             if (label.contains("take")) {
                 ((boolean[])newState.compostateCustomFeatures.get(0))[index] = true;
+                ((boolean[])featureMatrix.get(2))[entity] = true;
             } else if (label.contains("release")) {
                 ((boolean[])newState.compostateCustomFeatures.get(0))[index] = false;
+                ((boolean[])featureMatrix.get(2))[entity] = false;
             } else if(label.contains("eat")){
                 ((boolean[])featureMatrix.get(1))[entity] = true;
             }
@@ -303,13 +343,16 @@ class InstanceDomainDP extends InstanceDomain{
 
         boolean entity_ate = transition.has_entity() && ((boolean[])featureMatrix.get(1))[transition.entity];
         transition.featureVector[i+3] = toFloat(entity_ate);
+
+        boolean expanding_philosopher = transition.has_entity() && ((boolean[])featureMatrix.get(2))[transition.entity];
+        transition.featureVector[i+4] = toFloat(expanding_philosopher);
     }
 }
 
 class InstanceDomainCM<State, Action> extends InstanceDomain{
     InstanceDomainCM(DirectedControllerSynthesisBlocking dcs){
         super(dcs);
-        this.customFSize = 3; // TODO: modificar
+        this.customFeatureSize = 3; // TODO: modificar
         this.compostateFeatureSize = 0;
         this.featureMatrix = newFeatureMatrix(size());
     }
@@ -367,7 +410,7 @@ class InstanceDomainTL<State, Action> extends InstanceDomain{
     InstanceDomainTL(DirectedControllerSynthesisBlocking dcs){
         super(dcs);
         this.lastEntity = -1;
-        this.customFSize = 3; // TODO: modificar
+        this.customFeatureSize = 3; // TODO: modificar
         this.compostateFeatureSize = 0;
         this.featureMatrix = newFeatureMatrix(size());
     }

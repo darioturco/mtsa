@@ -64,7 +64,7 @@ public class DCSFeatures<State, Action> {
             methodFeatures.add(this.just_explored_feature);
             methodFeatures.add(this.child_deadlock_feature);
             methodFeatures.add(this.mission_feature);
-            methodFeatures.add(this.has_index_feature);
+            methodFeatures.add(this.has_entity_feature);
 
         }else if(featureGroup.equals("CRL")){
             methodFeatures.add(this.action_labels_feature);
@@ -77,7 +77,10 @@ public class DCSFeatures<State, Action> {
             methodFeatures.add(this.state_child_explored_feature);
             methodFeatures.add(this.just_explored_feature);
             methodFeatures.add(this.child_deadlock_feature);
+            methodFeatures.add(this.to_error_feature);
+            methodFeatures.add(this.return_to_start_feature);
             methodFeatures.add(this.mission_feature);
+            methodFeatures.add(this.has_entity_feature);
             methodFeatures.add(this.has_index_feature);
             methodFeatures.add(this.custom_feature);
 
@@ -93,7 +96,7 @@ public class DCSFeatures<State, Action> {
             methodFeatures.add(this.just_explored_feature);
             methodFeatures.add(this.child_deadlock_feature);
             methodFeatures.add(this.mission_feature);
-            methodFeatures.add(this.has_index_feature);
+            methodFeatures.add(this.has_entity_feature);
             methodFeatures.add(this.random_feature);
         }
 
@@ -242,9 +245,18 @@ public class DCSFeatures<State, Action> {
         public String toString(){return "just_explored_feature";}
     };
 
-    private final ComputeFeature<State, Action> has_index_feature = new ComputeFeature<>() {
+    private final ComputeFeature<State, Action> has_entity_feature = new ComputeFeature<>() {
         public void compute(RLExplorationHeuristic<State, Action> h, ActionWithFeatures<State, Action> a, int i) {
             a.featureVector[i] = toFloat(a.has_entity());
+        }
+        public int size() {return 1;}
+        public boolean requiresUpdate() { return true; }
+        public String toString(){return "has_index_feature";}
+    };
+
+    private final ComputeFeature<State, Action> has_index_feature = new ComputeFeature<>() {
+        public void compute(RLExplorationHeuristic<State, Action> h, ActionWithFeatures<State, Action> a, int i) {
+            a.featureVector[i] = toFloat(a.index != -1);
         }
         public int size() {return 1;}
         public boolean requiresUpdate() { return true; }
@@ -262,6 +274,36 @@ public class DCSFeatures<State, Action> {
         public String toString(){return "random_feature";}
     };
 
+    private final ComputeFeature<State, Action> to_error_feature = new ComputeFeature<>() {
+        public void compute(RLExplorationHeuristic<State, Action> h, ActionWithFeatures<State, Action> a, int i) {
+            boolean go_to_error = false;
+            for(State s : a.childStates){
+                if(s.equals(-1L)){
+                    go_to_error = true;
+                }
+            }
+            a.featureVector[i] = toFloat(go_to_error);
+        }
+        public int size() {return 1;}
+        public boolean requiresUpdate() { return true; }
+        public String toString(){return "to_error_feature";}
+    };
+
+    private final ComputeFeature<State, Action> return_to_start_feature = new ComputeFeature<>() {
+        public void compute(RLExplorationHeuristic<State, Action> h, ActionWithFeatures<State, Action> a, int i) {
+            boolean go_to_zero = false;
+            for(int j=0 ; j<a.childStates.size() ; j++){
+                if(a.state.states.get(j) != a.childStates.get(j) &&  a.childStates.get(j).equals(0L)){
+                    go_to_zero = true;
+                }
+            }
+            a.featureVector[i] = toFloat(go_to_zero);
+        }
+        public int size() {return 1;}
+        public boolean requiresUpdate() { return true; }
+        public String toString(){return "return_to_start_feature";}
+    };
+
     private final ComputeFeature<State, Action> mission_feature = new ComputeFeature<>() {
         public void compute(RLExplorationHeuristic<State, Action> h, ActionWithFeatures<State, Action> a, int i) {
             boolean mission = dcs.instanceDomain.missionFeature(a);
@@ -276,7 +318,7 @@ public class DCSFeatures<State, Action> {
         public void compute(RLExplorationHeuristic<State, Action> h, ActionWithFeatures<State, Action> a, int i) {
             dcs.instanceDomain.computeCustomFeature(a, i);
         }
-        public int size() {return dcs.instanceDomain.size();}
+        public int size() {return dcs.instanceDomain.customFeatureSize;}
         public boolean requiresUpdate() { return true; }
         public String toString(){return "custom_feature";}
     };

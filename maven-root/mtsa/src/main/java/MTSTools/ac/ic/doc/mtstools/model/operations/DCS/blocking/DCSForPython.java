@@ -232,7 +232,7 @@ public class DCSForPython {
                 res = budget;
             }
             for(int k=minSize;k<=maxSize;k++){
-                if(res < budget && expansionLimit < totalExpansions){
+                if(res < budget && totalExpansions < expansionLimit){
                     String fsp_path = "./fsp/" + instance + "/" + instance + "-" + n + "-" + k + ".fsp";
 
                     res = DCSForPython.syntetizeWithHeuristic(fsp_path, heuristic, featuresGroup, modelPath, budget, false);
@@ -327,7 +327,7 @@ public class DCSForPython {
             int solvedInstances = res.getFirst();
             int totalExpansions = res.getSecond();
 
-            if(solvedInstances < bestSolved){
+            if(solvedInstances > bestSolved){
                 bestModel = modelName;
                 bestValue = totalExpansions;
                 bestSolved = solvedInstances;
@@ -386,7 +386,7 @@ public class DCSForPython {
         //String modelPath = "F:\\UBA\\Tesis\\mtsa\\MTSApy\\results\\models\\DP\\2-2\\DP-2-2-690-partial.onnx";
         //String modelPath = "";
 
-        //selectRL("AT", "2-2", 1000, 0);
+        //selectRL("AT", "2-2", 1000, 0, false);
 
         //DCSForPython.testHeuristic(1000, "DP", "RL", "2-2", modelPath, false, 1, 15, 2);
 
@@ -395,25 +395,27 @@ public class DCSForPython {
 
 
 
-        /*
+
         // Acontinuacion un ejemplo de como se deberia usar DCSForPython
-        String instance = "BW";
+       String instance = "DP";
 
         //String FSP_path = "/home/dario/Documents/Tesis/mtsa/maven-root/mtsa/target/test-classes/Blocking/ControllableFSPs/GR1test1.lts"; // Falla porque tiene guiones
         //String FSP_path = "F:\\UBA\\Tesis\\mtsa\\maven-root\\mtsa\\target\\test-classes\\Blocking\\ControllableFSPs\\GR1Test43.lts";
         //String FSP_path = "F:\\UBA\\Tesis\\mtsa\\maven-root\\mtsa\\target\\test-classes\\Blocking\\NoControllableFSPs\\GR1Test11.lts";
-        String FSP_path = "F:\\UBA\\Tesis\\mtsa\\MTSApy\\fsp\\" + instance + "\\" + instance + "-5-3.fsp";
+        String FSP_path = "F:\\UBA\\Tesis\\mtsa\\MTSApy\\fsp\\" + instance + "\\" + instance + "-2-2.fsp";
         //String FSP_path = "/home/dario/Documents/Tesis/Learning-Synthesis/fsp/Blocking/ControllableFSPs/GR1Test10.lts";
         //String FSP_path = "/home/dario/Documents/Tesis/mtsa/MTSApy/fsp/" + instance + "/" + instance + "-2-2.fsp";
 
         String heuristicMode = "Ready";
         //String heuristicMode = "Random";
+        //String heuristicMode = "RL";
         //String heuristicMode = "Interactive";
         //String heuristicMode = "BFS";
         //String heuristicMode = "Debugging";
         //String heuristicMode = "CMHeuristic";
         //String heuristicMode = "BWHeuristic";
         DCSForPython env = new DCSForPython(heuristicMode);
+        env.setRLParameters("CRL", "");
         env.startSynthesis(FSP_path);
 
         List<Integer> list = Arrays.asList();
@@ -441,7 +443,7 @@ public class DCSForPython {
             System.out.println("Director's Transitions: " + director.getTransitions().size());
         }
         System.out.println("End Run :)");
-        */
+
     }
 
     public static boolean getBoolValue(CmdLineParser cmdParser, CmdLineParser.Option opt){

@@ -126,6 +126,7 @@ public class RLExplorationHeuristic<State, Action> implements ExplorationHeurist
 
     public int getNextActionIndex() {
         computeFeatures();
+
         if(session == null){
             return 0;
         }

@@ -133,7 +133,7 @@ class Experiment(object):
     # ltr=False, boolean=True, cbs=False, overwrite=False, max_instance_size=15, nn_size=(20,))
 
     def default_args(self):
-        return {"nn_size": [20],            # [20]
+        return {"nn_size": [32],            # [20]
                 "learning_rate": 1e-5,
                 "momentum": 0.9,
                 "nesterov": True,
@@ -154,9 +154,9 @@ class Experiment(object):
                 #"lambda_warm_up": lambda step: 1.0 if step > 5000 else step * 0.99,
 
                 ### Miscellaneous
-                'freq_save': 25,
+                'freq_save': 5,
                 'seconds': None,
-                'max_steps': 700000,    # 700000
+                'max_steps': 1000000,    # 700000
                 "max_eps": 1000000,
                 "compute_python_features": False
                 }
@@ -337,13 +337,13 @@ class TestTrainedInAllInstances(Experiment):
         return best_model
 
     def select_with_java(self, instance, experiment_name, budget, start_model=0):
-        command = f'java -classpath mtsa.jar MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.DCSForPython -s -i {instance} -e "{experiment_name}" -b {budget} -r {start_model}'
+        command = f'java -classpath mtsa.jar MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.DCSForPython -s -o -i {instance} -e "{experiment_name}" -b {budget} -r {start_model}'
         subprocess.call(command, shell=True)
 
     def test_with_java(self, instance, experiment_name, budget, onnx_path=None):
         if onnx_path is None:
             onnx_path = self.get_best_model(f"./results/selection/{experiment_name}-{instance}.csv")
 
-        command = f'java -classpath mtsa.jar MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.DCSForPython -i {instance} -e "{experiment_name}" -b {budget} -m {onnx_path}'
+        command = f'java -classpath mtsa.jar MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.DCSForPython -o -i {instance} -e "{experiment_name}" -b {budget} -m {onnx_path}'
         subprocess.call(command, shell=True)
 
