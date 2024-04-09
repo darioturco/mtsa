@@ -284,23 +284,22 @@ class InstanceDomainDP extends InstanceDomain{
 
     InstanceDomainDP(DirectedControllerSynthesisBlocking dcs){
         super(dcs);
-        this.customFeatureSize = 5;
-        this.compostateFeatureSize = 1;
+        this.customFeatureSize = 3;
+        this.compostateFeatureSize = 4;
         this.featureMatrix = newFeatureMatrix(size());
         this.actualPhilosofer = 0;
     }
 
     @Override
     public boolean missionFeature(ActionWithFeatures transition){
-        if(transition.has_entity()){
+        if(transition.parent != null && transition.has_entity()){
             int entity = transition.entity;
             // res indicate if the number 'transition.entity' reached his mission
             boolean res = transition.action.toString().contains("release");
-            boolean[] missionRow = (boolean[])featureMatrix.get(0);
             if(res){
-                missionRow[entity] = true;
+                ((boolean []) transition.state.compostateCustomFeatures.get(0))[entity] = true;
             }
-            return missionRow[entity];
+            return ((boolean []) transition.state.compostateCustomFeatures.get(0))[entity];
         }
         return false;
     }
@@ -312,10 +311,10 @@ class InstanceDomainDP extends InstanceDomain{
         int index = ActionWithFeatures.getNumber(label, 2);
         if(entity != -1) {
             if (label.contains("take")) {
-                ((boolean[])newState.compostateCustomFeatures.get(0))[index] = true;
+                ((boolean[])newState.compostateCustomFeatures.get(1))[index] = true;
                 ((boolean[])featureMatrix.get(2))[entity] = true;
             } else if (label.contains("release")) {
-                ((boolean[])newState.compostateCustomFeatures.get(0))[index] = false;
+                ((boolean[])newState.compostateCustomFeatures.get(1))[index] = false;
                 ((boolean[])featureMatrix.get(2))[entity] = false;
             } else if(label.contains("eat")){
                 ((boolean[])featureMatrix.get(1))[entity] = true;
@@ -327,10 +326,10 @@ class InstanceDomainDP extends InstanceDomain{
     public void computeCustomFeature(ActionWithFeatures transition, int i){
         String label = transition.action.toString();
 
-        boolean fork_state = transition.index != -1 && ((boolean[])transition.state.compostateCustomFeatures.get(0))[transition.index];
+        boolean fork_state = transition.index != -1 && ((boolean[])transition.state.compostateCustomFeatures.get(1))[transition.index];
         transition.featureVector[i] = toFloat(fork_state);
 
-        transition.featureVector[i+1] = 0.0f;
+        /*transition.featureVector[i+1] = 0.0f;
         transition.featureVector[i+2] = 0.0f;
         if(dcs.lastExpandedAction != null){
             if(label.contains("step") && dcs.lastExpandedAction.getAction().toString().contains("take")){
@@ -340,12 +339,29 @@ class InstanceDomainDP extends InstanceDomain{
                 transition.featureVector[i+2] = 1.0f;
             }
         }
+         */
 
-        boolean entity_ate = transition.has_entity() && ((boolean[])featureMatrix.get(1))[transition.entity];
-        transition.featureVector[i+3] = toFloat(entity_ate);
+        //boolean entity_ate = transition.has_entity() && ((boolean[])featureMatrix.get(1))[transition.entity];
+        //transition.featureVector[i+3] = toFloat(entity_ate);
 
-        boolean expanding_philosopher = transition.has_entity() && ((boolean[])featureMatrix.get(2))[transition.entity];
-        transition.featureVector[i+4] = toFloat(expanding_philosopher);
+        //boolean expanding_philosopher = transition.has_entity() && ((boolean[])featureMatrix.get(2))[transition.entity];
+        //transition.featureVector[i+4] = toFloat(expanding_philosopher);
+
+        // Local features
+
+        if(transition.has_entity()){
+            if(label.contains("take")){
+                ((boolean []) transition.state.compostateCustomFeatures.get(2))[transition.entity] = true;
+            }
+            if(label.contains("step")){
+                ((boolean []) transition.state.compostateCustomFeatures.get(3))[transition.entity] = true;
+            }
+            transition.featureVector[i+1] = toFloat(((boolean []) transition.state.compostateCustomFeatures.get(2))[transition.entity]);
+            transition.featureVector[i+2] = toFloat(((boolean []) transition.state.compostateCustomFeatures.get(3))[transition.entity]);
+        }else{
+            transition.featureVector[i+1] = 0.0f;
+            transition.featureVector[i+2] = 0.0f;
+        }
     }
 }
 

@@ -234,6 +234,8 @@ public class DCSForPython {
             for(int k=minSize;k<=maxSize;k++){
                 if(res < budget && totalExpansions < expansionLimit){
                     String fsp_path = "./fsp/" + instance + "/" + instance + "-" + n + "-" + k + ".fsp";
+                    //String fsp_path = "../../MTSApy/fsp/" + instance + "/" + instance + "-" + n + "-" + k + ".fsp";
+
 
                     res = DCSForPython.syntetizeWithHeuristic(fsp_path, heuristic, featuresGroup, modelPath, budget, false);
 
@@ -251,11 +253,11 @@ public class DCSForPython {
                     System.out.println("Result of " + instance + "-" + n + "-" + k + ": " + res);
                 }
 
-                if(save){
-                    String csvPath = "./results/csv/" + featuresGroup + "-" + instance + ".csv";
-                    String[] data = {instance, String.valueOf(n), String.valueOf(k), modelPath, String.valueOf(res)};
-                    writeCSV(csvPath, data, testHeader);
-                }
+                //if(save){
+                //    String csvPath = "./results/csv/" + featuresGroup + "-" + instance + ".csv";
+                //    String[] data = {instance, String.valueOf(n), String.valueOf(k), modelPath, String.valueOf(res)};
+                //    writeCSV(csvPath, data, testHeader);
+                //}
             }
         }
         return new Pair<>(solvedInstances, totalExpansions);
@@ -297,6 +299,7 @@ public class DCSForPython {
     // Esta funcion levanta todos los modelos de un experimento para una instancia y los testea con el budget dado
     public static void selectRL(String instance, String experimentName, int budget, int startInModel, boolean onlyBestOptimization){
         String folderPath = "./results/models/" + instance + "/" + experimentName + "/";
+        //String folderPath = "../../MTSApy/results/models/" + instance + "/" + experimentName + "/";
 
         File folder = new File(folderPath);
         Set<File> setOfFiles = new HashSet<>(Arrays.asList(folder.listFiles()));
@@ -386,7 +389,7 @@ public class DCSForPython {
         //String modelPath = "F:\\UBA\\Tesis\\mtsa\\MTSApy\\results\\models\\DP\\2-2\\DP-2-2-690-partial.onnx";
         //String modelPath = "";
 
-        //selectRL("AT", "2-2", 1000, 0, false);
+        //selectRL("DP", "CRL", 1000, 0, false);
 
         //DCSForPython.testHeuristic(1000, "DP", "RL", "2-2", modelPath, false, 1, 15, 2);
 
@@ -406,9 +409,9 @@ public class DCSForPython {
         //String FSP_path = "/home/dario/Documents/Tesis/Learning-Synthesis/fsp/Blocking/ControllableFSPs/GR1Test10.lts";
         //String FSP_path = "/home/dario/Documents/Tesis/mtsa/MTSApy/fsp/" + instance + "/" + instance + "-2-2.fsp";
 
-        String heuristicMode = "Ready";
+        //String heuristicMode = "Ready";
         //String heuristicMode = "Random";
-        //String heuristicMode = "RL";
+        String heuristicMode = "RL";
         //String heuristicMode = "Interactive";
         //String heuristicMode = "BFS";
         //String heuristicMode = "Debugging";
@@ -443,6 +446,7 @@ public class DCSForPython {
             System.out.println("Director's Transitions: " + director.getTransitions().size());
         }
         System.out.println("End Run :)");
+
 
     }
 
