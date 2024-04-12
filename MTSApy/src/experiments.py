@@ -142,7 +142,7 @@ class Experiment(object):
                 "buffer_size": 10000,   # 10000
                 "n_step": 1,
                 "last_epsilon": 0.01,          # 0.01
-                "epsilon_decay_steps": 300000,   # 300000
+                "epsilon_decay_steps": 400000,   # 300000
                 "exp_replay": True,
                 "target_q": True,
                 "reset_target_freq": 10000,      # 10000
@@ -154,7 +154,7 @@ class Experiment(object):
                 #"lambda_warm_up": lambda step: 1.0 if step > 5000 else step * 0.99,
 
                 ### Miscellaneous
-                'freq_save': 25,
+                'freq_save': 5,
                 'seconds': None,
                 'max_steps': 700000,    # 700000
                 "max_eps": 1000000,

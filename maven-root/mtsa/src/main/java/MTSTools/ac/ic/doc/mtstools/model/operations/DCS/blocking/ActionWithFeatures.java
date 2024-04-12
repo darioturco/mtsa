@@ -1,7 +1,6 @@
 package MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking;
 
 import MTSTools.ac.ic.doc.commons.relations.Pair;
-import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.DCSFeatures;
 
 import java.util.Arrays;
 import java.util.LinkedList;
@@ -36,10 +35,10 @@ public class ActionWithFeatures<State, Action> {
         this.expansionStep = dcs.expansionStep;
 
         if(parent == null){
-            state.compostateCustomFeatures = dcs.instanceDomain.newFeatureMatrix(dcs.instanceDomain.compostateFeatureSize);
+            state.customFeaturesMatrix = dcs.instanceDomain.newFeatureMatrix(dcs.instanceDomain.compostateFeatureSize);
             state.entityIndexes.put(action, new int[dcs.n]);
         }else{
-            state.compostateCustomFeatures = dcs.instanceDomain.copyMatrix(parent);
+            state.customFeaturesMatrix = dcs.instanceDomain.copyMatrix(parent);
             state.entityIndexes.put(action, Arrays.copyOf(parent.getLastentityIndex(), dcs.n));
         }
 
@@ -88,6 +87,10 @@ public class ActionWithFeatures<State, Action> {
 
     public boolean has_entity(){
         return entity != -1;
+    }
+
+    public boolean has_index(){
+        return index != -1;
     }
 
     public void updateFeatures(){

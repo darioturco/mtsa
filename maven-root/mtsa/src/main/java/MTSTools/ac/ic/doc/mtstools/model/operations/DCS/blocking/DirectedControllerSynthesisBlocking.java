@@ -347,7 +347,7 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
             n = s.nextInt();
             k = s.nextInt();
 
-            instanceDomain = InstanceDomain.createInstanceDomain(this);
+            //instanceDomain = InstanceDomain.createInstanceDomain(this);
         }catch(Exception e){
             instance = "";
             n = 0;

@@ -24,6 +24,7 @@ public class DCSFeatures<State, Action> {
     DCSFeatures(String featureGroup, RLExplorationHeuristic heuristic){
         this.heuristic = heuristic;
         this.dcs = heuristic.dcs;
+        this.dcs.instanceDomain = InstanceDomain.createInstanceDomain(this.dcs, this);
         this.methodFeatures = new LinkedList<>();
 
         SortedSet<String> labels = new TreeSet<>();
@@ -41,7 +42,7 @@ public class DCSFeatures<State, Action> {
         }
         nactions = labels_idx.size();
 
-        if(featureGroup.equals("2-2")){
+        if(featureGroup.equals("RL")){
             methodFeatures.add(this.action_labels_feature);
             methodFeatures.add(this.state_labels_feature);
             methodFeatures.add(this.controllable_feature);
@@ -51,20 +52,6 @@ public class DCSFeatures<State, Action> {
             methodFeatures.add(this.uncontrollable_neighborhood_feature);
             methodFeatures.add(this.state_child_explored_feature);
             methodFeatures.add(this.just_explored_feature);
-
-        }else if(featureGroup.equals("LRL")){
-            methodFeatures.add(this.action_labels_feature);
-            methodFeatures.add(this.state_labels_feature);
-            methodFeatures.add(this.controllable_feature);
-            methodFeatures.add(this.marked_action_feature);
-            methodFeatures.add(this.context_feature);
-            methodFeatures.add(this.child_status_feature);
-            methodFeatures.add(this.uncontrollable_neighborhood_feature);
-            methodFeatures.add(this.state_child_explored_feature);
-            methodFeatures.add(this.just_explored_feature);
-            methodFeatures.add(this.child_deadlock_feature);
-            methodFeatures.add(this.mission_feature);
-            methodFeatures.add(this.has_entity_feature);
 
         }else if(featureGroup.equals("CRL")){
             methodFeatures.add(this.action_labels_feature);
@@ -76,15 +63,15 @@ public class DCSFeatures<State, Action> {
             methodFeatures.add(this.uncontrollable_neighborhood_feature);
             methodFeatures.add(this.state_child_explored_feature);
             methodFeatures.add(this.just_explored_feature);
-            methodFeatures.add(this.child_deadlock_feature);
-            methodFeatures.add(this.to_error_feature);
-            methodFeatures.add(this.return_to_start_feature);
-            methodFeatures.add(this.mission_feature);
             methodFeatures.add(this.has_entity_feature);
             methodFeatures.add(this.has_index_feature);
+            methodFeatures.add(this.child_deadlock_feature);
+            methodFeatures.add(this.mission_feature);
             methodFeatures.add(this.custom_feature);
 
-        }else if(featureGroup.equals("RRL")){
+        }else if(featureGroup.equals("RRL")){   // RL with random features
+            randomAmount = 100; // Amount of random features to be added
+
             methodFeatures.add(this.action_labels_feature);
             methodFeatures.add(this.state_labels_feature);
             methodFeatures.add(this.controllable_feature);
@@ -94,16 +81,25 @@ public class DCSFeatures<State, Action> {
             methodFeatures.add(this.uncontrollable_neighborhood_feature);
             methodFeatures.add(this.state_child_explored_feature);
             methodFeatures.add(this.just_explored_feature);
-            methodFeatures.add(this.child_deadlock_feature);
-            methodFeatures.add(this.mission_feature);
-            methodFeatures.add(this.has_entity_feature);
             methodFeatures.add(this.random_feature);
         }
 
         setAmountOfFeatures();
     }
 
+
+
+    public void runFeaturesOfListWith(LinkedList<ComputeFeature<State, Action>> list, ActionWithFeatures<State, Action> a, int initial){
+        int i = initial;
+        for (ComputeFeature<State, Action> f : list){
+            f.compute((RLExplorationHeuristic<State, Action>) dcs.heuristic, a, i);
+            i += f.size();
+        }
+    }
+
     public void setAmountOfFeatures(){
+        // TODO: para este punto ya tiene que estar seteado el valor del InstanceDomain, fijarse si eso pasa
+
         int nfeatures = 0;
         for (ComputeFeature<State, Action> f : methodFeatures) {
             nfeatures += f.size();
@@ -114,7 +110,13 @@ public class DCSFeatures<State, Action> {
         this.heuristic.dcs.nfeatures = nfeatures;
     }
 
-
+    public int getCustomFeatureSize(LinkedList<ComputeFeature<State, Action>> list){
+        int res = 0;
+        for(ComputeFeature<State, Action> f : list){
+            res += f.size();
+        }
+        return res;
+    }
 
     interface ComputeFeature<State, Action> {
         void compute(RLExplorationHeuristic<State, Action> h, ActionWithFeatures<State, Action> a, int start_idx);
@@ -251,7 +253,7 @@ public class DCSFeatures<State, Action> {
         }
         public int size() {return 1;}
         public boolean requiresUpdate() { return true; }
-        public String toString(){return "has_index_feature";}
+        public String toString(){return "has_entity_feature";}
     };
 
     private final ComputeFeature<State, Action> has_index_feature = new ComputeFeature<>() {
@@ -318,8 +320,163 @@ public class DCSFeatures<State, Action> {
         public void compute(RLExplorationHeuristic<State, Action> h, ActionWithFeatures<State, Action> a, int i) {
             dcs.instanceDomain.computeCustomFeature(a, i);
         }
-        public int size() {return dcs.instanceDomain.customFeatureSize;}
+        public int size() {return dcs.instanceDomain.size();}
         public boolean requiresUpdate() { return true; }
         public String toString(){return "custom_feature";}
     };
+
+    // Aca van todos los features custom de todas las instancias
+
+    // BWFeatures
+    public final ComputeFeature<State, Action> entity_was_assigned_BW_feature = new ComputeFeature<>() {
+        public void compute(RLExplorationHeuristic<State, Action> h, ActionWithFeatures<State, Action> a, int i) {
+            if(a.has_entity() && a.action.toString().contains("assign")){
+                (a.state.customFeaturesMatrix.get(1))[a.entity] = true;
+            }
+
+            boolean entity_was_assigned = a.has_entity() && (a.state.customFeaturesMatrix.get(1))[a.entity];
+            a.featureVector[i] = toFloat(entity_was_assigned);
+        }
+        public int size() {return 1;}
+        public boolean requiresUpdate() { return true; }
+        public String toString(){return "entity_was_assigned_BW_feature";}
+    };
+
+    public final ComputeFeature<State, Action> entity_was_rejected_BW_feature = new ComputeFeature<>() {
+        public void compute(RLExplorationHeuristic<State, Action> h, ActionWithFeatures<State, Action> a, int i) {
+            if(a.has_entity() && a.action.toString().contains("reject")){
+                (a.state.customFeaturesMatrix.get(2))[a.entity] = true;
+            }
+
+            boolean entity_was_rejected = a.has_entity() && (a.state.customFeaturesMatrix.get(2))[a.entity];
+            a.featureVector[i] = toFloat(entity_was_rejected);
+        }
+        public int size() {return 1;}
+        public boolean requiresUpdate() { return true; }
+        public String toString(){return "entity_was_rejected_BW_feature";}
+    };
+
+    public final ComputeFeature<State, Action> entity_was_accepted_BW_feature = new ComputeFeature<>() {
+        public void compute(RLExplorationHeuristic<State, Action> h, ActionWithFeatures<State, Action> a, int i) {
+            if(a.has_entity() && a.action.toString().contains("accept")){
+                (a.state.customFeaturesMatrix.get(3))[a.entity] = true;
+            }
+
+            boolean entity_was_accepted = a.has_entity() && (a.state.customFeaturesMatrix.get(3))[a.entity];
+            a.featureVector[i] = toFloat(entity_was_accepted);
+        }
+        public int size() {return 1;}
+        public boolean requiresUpdate() { return true; }
+        public String toString(){return "entity_was_accepted_BW_feature";}
+    };
+
+    public final ComputeFeature<State, Action> almost_rejected_BW_feature = new ComputeFeature<>() {
+        public void compute(RLExplorationHeuristic<State, Action> h, ActionWithFeatures<State, Action> a, int i) {
+            a.featureVector[i] = toFloat(a.has_index() && a.index == (dcs.k-1));
+        }
+        public int size() {return 1;}
+        public boolean requiresUpdate() { return true; }
+        public String toString(){return "almost_rejected_BW_feature";}
+    };
+
+    // AT Features
+    public final ComputeFeature<State, Action> actions_AT_feature = new ComputeFeature<>() {
+        public void compute(RLExplorationHeuristic<State, Action> h, ActionWithFeatures<State, Action> a, int i) {
+            if(a.has_entity()){
+                String label = a.action.toString();
+                if(label.contains("descend")) {
+                    (a.state.customFeaturesMatrix.get(1))[a.entity] = true;
+                }else if(label.contains("approach")) {
+                    (a.state.customFeaturesMatrix.get(2))[a.entity] = true;
+                }
+            }
+
+            a.featureVector[i] = toFloat(a.has_entity() && (a.state.customFeaturesMatrix.get(1))[a.entity]);
+            a.featureVector[i+1] = toFloat(a.has_entity() && (a.state.customFeaturesMatrix.get(2))[a.entity]);
+        }
+        public int size() {return 2;}
+        public boolean requiresUpdate() { return true; }
+        public String toString(){return "actions_AT_feature";}
+    };
+
+    public final ComputeFeature<State, Action> first_height_AT_feature = new ComputeFeature<>() {
+        public void compute(RLExplorationHeuristic<State, Action> h, ActionWithFeatures<State, Action> a, int i) {
+            a.featureVector[i] = toFloat(a.index == 0);
+        }
+        public int size() {return 1;}
+        public boolean requiresUpdate() { return true; }
+        public String toString(){return "first_height_AT_feature";}
+    };
+
+    // TA Features
+    public final ComputeFeature<State, Action> actions_TA_feature = new ComputeFeature<>() {
+        public void compute(RLExplorationHeuristic<State, Action> h, ActionWithFeatures<State, Action> a, int i) {
+            if(a.has_entity()){
+                String label = a.action.toString();
+                if(label.contains("commited") && !label.contains("un")){
+                    (a.state.customFeaturesMatrix.get(1))[a.entity] = true;
+                }else if(label.contains("uncommitted")){
+                    (a.state.customFeaturesMatrix.get(2))[a.entity] = true;
+                }
+            }
+
+            a.featureVector[i] = toFloat(a.has_entity() && (a.state.customFeaturesMatrix.get(1))[a.entity]);
+            a.featureVector[i+1] = toFloat(a.has_entity() && (a.state.customFeaturesMatrix.get(2))[a.entity]);
+        }
+        public int size() {return 2;}
+        public boolean requiresUpdate() { return true; }
+        public String toString(){return "actions_TA_feature";}
+    };
+
+    public final ComputeFeature<State, Action> next_entity_TA_feature = new ComputeFeature<>() {
+        public void compute(RLExplorationHeuristic<State, Action> h, ActionWithFeatures<State, Action> a, int i) {
+            a.featureVector[i] = 0.0f;
+            a.featureVector[i+1] = 0.0f;
+
+            if(a.has_entity() && a.action.toString().contains("query") && a.entity-1 >= 0){
+                if(a.state.customFeaturesMatrix.get(4)[a.entity-1])
+                    a.featureVector[i] = 1.0f;
+                if(a.state.customFeaturesMatrix.get(5)[a.entity-1])
+                    a.featureVector[i+1] = 1.0f;
+            }
+        }
+        public int size() {return 2;}
+        public boolean requiresUpdate() { return true; }
+        public String toString(){return "next_entity_TA_feature";}
+    };
+
+    public final ComputeFeature<State, Action> current_service_TA_feature = new ComputeFeature<>() {
+        public void compute(RLExplorationHeuristic<State, Action> h, ActionWithFeatures<State, Action> a, int i) {
+            int service = ((InstanceDomainTA)dcs.instanceDomain).service;
+            boolean entity_is_current_service = a.has_entity() && service == a.entity;
+            a.featureVector[i] = toFloat(entity_is_current_service);
+
+            boolean entity_is_next_service = a.has_entity() && (service == a.entity+1);
+            a.featureVector[i+1] = toFloat(entity_is_next_service);
+
+            boolean entity_is_greater_service = a.has_entity() && (service > a.entity+1);
+            a.featureVector[i+2] = toFloat(entity_is_greater_service);
+        }
+        public int size() {return 3;}
+        public boolean requiresUpdate() { return true; }
+        public String toString(){return "current_service_TA_feature";}
+    };
+
+
+
+    // DP Features
+    public final ComputeFeature<State, Action> philosopher_took_DP_feature = new ComputeFeature<>() {
+        public void compute(RLExplorationHeuristic<State, Action> h, ActionWithFeatures<State, Action> a, int i) {
+            boolean philosopher_took = a.has_entity() && (a.state.customFeaturesMatrix.get(1))[a.entity];
+            a.featureVector[i] = toFloat(philosopher_took);
+        }
+        public int size() {return 1;}
+        public boolean requiresUpdate() { return true; }
+        public String toString(){return "philosopher_took_DP_feature";}
+    };
+
+    // TL Features
+
+    // CM Features
+
 }

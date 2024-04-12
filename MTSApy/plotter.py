@@ -196,9 +196,9 @@ def comparative_bar_plot_data(data, instances, title):
 
 if __name__ == "__main__":
     print("Plotting...")
-    #graph_individual_training_process("2-2", sliding_window=500, save_path='./results/plots', use_steps=True, problems=["DP"])
+    graph_individual_training_process("2-2", sliding_window=500, save_path='./results/plots', use_steps=True, problems=["TA"])
     #graph_individual_training_process("CRL", sliding_window=500, save_path='./results/plots', use_steps=True, problems=["DP"])
-    graph_individual_training_process("CRL", sliding_window=500, save_path='./results/plots', use_steps=True, problems=["DP"])
+    graph_individual_training_process("CRL", sliding_window=500, save_path='./results/plots', use_steps=True, problems=["TA"])
 
 
     #graph_training_process(sliding_window=100, repetitions=5, save_path='./results/plots', use_steps=True)

@@ -31,7 +31,7 @@ public class DCSForPython {
     public int lastEntityExpandedWithoutReset;
     public boolean started_synthesis;
 
-    static String testHeader = "Instance,N,K,Name,Transitions\n";
+    static String testHeader = "Instance,N,K,Name,Transitions,Time\n";
     static String selectionHeader = "Instance,Model,Solved,Expansions\n";
 
     public DCSForPython(String heuristicMode){
@@ -221,6 +221,7 @@ public class DCSForPython {
     public static Pair<Integer, Integer> testHeuristic(int budget, String instance, String heuristic, String featuresGroup, String modelPath, boolean save, int minSize, int maxSize, int expansionLimit, int verbose){
         int solvedInstances = 0;
         int totalExpansions = 0;
+        long time = 0L;
 
         if(verbose >= 1){
             System.out.println("Testing model: " + modelPath);
@@ -234,16 +235,18 @@ public class DCSForPython {
             for(int k=minSize;k<=maxSize;k++){
                 if(res < budget && totalExpansions < expansionLimit){
                     String fsp_path = "./fsp/" + instance + "/" + instance + "-" + n + "-" + k + ".fsp";
-                    //String fsp_path = "../../MTSApy/fsp/" + instance + "/" + instance + "-" + n + "-" + k + ".fsp";
 
-
+                    long startTime = System.currentTimeMillis();
                     res = DCSForPython.syntetizeWithHeuristic(fsp_path, heuristic, featuresGroup, modelPath, budget, false);
+                    time = System.currentTimeMillis() - startTime;
 
                     if(res < budget){
                         solvedInstances += 1;
                     }else{
                         res = budget;
                     }
+                }else{
+                    time = -1L;
                 }
                 totalExpansions += res;
 
@@ -253,11 +256,11 @@ public class DCSForPython {
                     System.out.println("Result of " + instance + "-" + n + "-" + k + ": " + res);
                 }
 
-                //if(save){
-                //    String csvPath = "./results/csv/" + featuresGroup + "-" + instance + ".csv";
-                //    String[] data = {instance, String.valueOf(n), String.valueOf(k), modelPath, String.valueOf(res)};
-                //    writeCSV(csvPath, data, testHeader);
-                //}
+                if(save){
+                    String csvPath = "./results/csv/" + featuresGroup + "-" + instance + ".csv";
+                    String[] data = {instance, String.valueOf(n), String.valueOf(k), modelPath, String.valueOf(res), Long.toString(time)};
+                    writeCSV(csvPath, data, testHeader);
+                }
             }
         }
         return new Pair<>(solvedInstances, totalExpansions);
@@ -291,7 +294,7 @@ public class DCSForPython {
         }
     }
 
-    public static int getModelNumber(String modelName){ // TODO: testear que funque bien
+    public static int getModelNumber(String modelName){
         try{return Integer.valueOf(modelName.split("-")[3]);}
         catch (Exception e){return 0;}
     }
@@ -391,7 +394,13 @@ public class DCSForPython {
 
         //selectRL("DP", "CRL", 1000, 0, false);
 
-        //DCSForPython.testHeuristic(1000, "DP", "RL", "2-2", modelPath, false, 1, 15, 2);
+        /*DCSForPython.testHeuristic(15000, "DP", "Random", "random", modelPath, true, 1, 15, 15000 * 225 + 1, 2);
+        DCSForPython.testHeuristic(15000, "TA", "Random", "random", modelPath, true, 1, 15, 15000 * 225 + 1, 2);
+        DCSForPython.testHeuristic(15000, "AT", "Random", "random", modelPath, true, 1, 15, 15000 * 225 + 1, 2);
+        DCSForPython.testHeuristic(15000, "TL", "Random", "random", modelPath, true, 1, 15, 15000 * 225 + 1, 2);
+        DCSForPython.testHeuristic(15000, "BW", "Random", "random", modelPath, true, 1, 15, 15000 * 225 + 1, 2);
+        DCSForPython.testHeuristic(15000, "CM", "Random", "random", modelPath, true, 1, 15, 15000 * 225 + 1, 2);
+         */
 
         //String fsp_path = "F:\\UBA\\Tesis\\mtsa\\MTSApy\\fsp\\DP\\DP-2-2.fsp";
         //DCSForPython.syntetizeWithHeuristic(fsp_path, "RL", "CRL", modelPath, 1000, true);
@@ -400,7 +409,7 @@ public class DCSForPython {
 
 
         // Acontinuacion un ejemplo de como se deberia usar DCSForPython
-       String instance = "DP";
+        String instance = "TA";
 
         //String FSP_path = "/home/dario/Documents/Tesis/mtsa/maven-root/mtsa/target/test-classes/Blocking/ControllableFSPs/GR1test1.lts"; // Falla porque tiene guiones
         //String FSP_path = "F:\\UBA\\Tesis\\mtsa\\maven-root\\mtsa\\target\\test-classes\\Blocking\\ControllableFSPs\\GR1Test43.lts";
