@@ -133,7 +133,7 @@ class Experiment(object):
     # ltr=False, boolean=True, cbs=False, overwrite=False, max_instance_size=15, nn_size=(20,))
 
     def default_args(self):
-        return {"nn_size": [20],            # [20]
+        return {"nn_size": [24],            # [20]
                 "learning_rate": 1e-5,
                 "momentum": 0.9,
                 "nesterov": True,
@@ -142,7 +142,7 @@ class Experiment(object):
                 "buffer_size": 10000,   # 10000
                 "n_step": 1,
                 "last_epsilon": 0.01,          # 0.01
-                "epsilon_decay_steps": 400000,   # 300000
+                "epsilon_decay_steps": 300000,   # 300000
                 "exp_replay": True,
                 "target_q": True,
                 "reset_target_freq": 10000,      # 10000
@@ -154,7 +154,7 @@ class Experiment(object):
                 #"lambda_warm_up": lambda step: 1.0 if step > 5000 else step * 0.99,
 
                 ### Miscellaneous
-                'freq_save': 5,
+                'freq_save': 1,
                 'seconds': None,
                 'max_steps': 700000,    # 700000
                 "max_eps": 1000000,
@@ -336,8 +336,10 @@ class TestTrainedInAllInstances(Experiment):
 
         return best_model
 
-    def select_with_java(self, instance, experiment_name, budget, start_model=0):
-        command = f'java -classpath mtsa.jar MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.DCSForPython -s -i {instance} -e "{experiment_name}" -b {budget} -r {start_model}'
+    def select_with_java(self, instance, experiment_name, budget):
+        #command = f'java -classpath mtsa.jar MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.DCSForPython -s -i {instance} -e "{experiment_name}" -b {budget}'
+        #command = f'java -classpath mtsa2.jar MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.DCSForPython -s -i {instance} -e "{experiment_name}" -b {budget}'
+        command = f'java -classpath mtsaTA.jar MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.DCSForPython -s -i {instance} -e "{experiment_name}" -b {budget}'
         subprocess.call(command, shell=True)
 
     def test_with_java(self, instance, experiment_name, budget, onnx_path=None):

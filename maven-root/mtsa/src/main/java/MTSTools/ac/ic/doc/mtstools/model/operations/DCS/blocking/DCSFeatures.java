@@ -15,7 +15,6 @@ public class DCSFeatures<State, Action> {
 
     public LinkedList<ComputeFeature<State, Action>> methodFeatures;
     public HashMap<String, Integer> labels_idx = new HashMap<>();
-
     public RLExplorationHeuristic heuristic;
     public DirectedControllerSynthesisBlocking<State, Action> dcs;
 
@@ -98,8 +97,6 @@ public class DCSFeatures<State, Action> {
     }
 
     public void setAmountOfFeatures(){
-        // TODO: para este punto ya tiene que estar seteado el valor del InstanceDomain, fijarse si eso pasa
-
         int nfeatures = 0;
         for (ComputeFeature<State, Action> f : methodFeatures) {
             nfeatures += f.size();
@@ -325,7 +322,7 @@ public class DCSFeatures<State, Action> {
         public String toString(){return "custom_feature";}
     };
 
-    // Aca van todos los features custom de todas las instancias
+    // Here are all the custom features, those are added  in the class InstanceDomiain deppending the instance to solve.
 
     // BWFeatures
     public final ComputeFeature<State, Action> entity_was_assigned_BW_feature = new ComputeFeature<>() {
@@ -462,8 +459,6 @@ public class DCSFeatures<State, Action> {
         public String toString(){return "current_service_TA_feature";}
     };
 
-
-
     // DP Features
     public final ComputeFeature<State, Action> philosopher_took_DP_feature = new ComputeFeature<>() {
         public void compute(RLExplorationHeuristic<State, Action> h, ActionWithFeatures<State, Action> a, int i) {
@@ -476,7 +471,58 @@ public class DCSFeatures<State, Action> {
     };
 
     // TL Features
+    public final ComputeFeature<State, Action> load_machine_TL_feature = new ComputeFeature<>() {
+        public void compute(RLExplorationHeuristic<State, Action> h, ActionWithFeatures<State, Action> a, int i) {
+            String label = a.action.toString();
+            int entity = a.entity;
+            if(label.contains("return") || label.contains("put")){
+                entity -= 1;
+            }
+
+            boolean load_buffer = a.has_entity() && entity < dcs.n && (a.state.customFeaturesMatrix.get(1))[entity];
+            a.featureVector[i] = toFloat(load_buffer);
+        }
+        public int size() {return 1;}
+        public boolean requiresUpdate() { return true; }
+        public String toString(){return "load_machine_TL_feature";}
+    };
+
+    public final ComputeFeature<State, Action> buffer_returned_TL_feature = new ComputeFeature<>() {
+        public void compute(RLExplorationHeuristic<State, Action> h, ActionWithFeatures<State, Action> a, int i) {
+            String label = a.action.toString();
+            int entity = a.entity;
+            if(label.contains("return") || label.contains("put")){
+                entity -= 1;
+            }
+
+            boolean buffer_returned = a.entity >= 0 && entity < dcs.n && (a.state.customFeaturesMatrix.get(2))[entity];
+            a.featureVector[i] = toFloat(buffer_returned);
+        }
+        public int size() {return 1;}
+        public boolean requiresUpdate() { return true; }
+        public String toString(){return "buffer_returned_TL_feature";}
+    };
+
+    public final ComputeFeature<State, Action> last_get_TL_feature = new ComputeFeature<>() {
+        public void compute(RLExplorationHeuristic<State, Action> h, ActionWithFeatures<State, Action> a, int i) {
+            boolean last_get = a.action.toString().contains("get") && a.entity == dcs.n;
+            a.featureVector[i] = toFloat(last_get);
+        }
+        public int size() {return 1;}
+        public boolean requiresUpdate() { return true; }
+        public String toString(){return "last_get_TL_feature";}
+    };
 
     // CM Features
+    public final ComputeFeature<State, Action> mouse_closer_CM_feature = new ComputeFeature<>() {
+        public void compute(RLExplorationHeuristic<State, Action> h, ActionWithFeatures<State, Action> a, int i) {
+            String label = a.action.toString();
 
+            boolean mouse_closer = label.contains("mouse") && label.contains("move") && a.state.mousePositions[a.entity] < (2*dcs.n - a.index);
+            a.featureVector[i] = toFloat(mouse_closer);
+        }
+        public int size() {return 1;}
+        public boolean requiresUpdate() { return true; }
+        public String toString(){return "mouse_closer_CM_feature";}
+    };
 }

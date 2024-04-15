@@ -1,5 +1,7 @@
 import os
-import random
+import io
+import sys
+import contextlib
 
 import torch
 import torch.nn as nn
@@ -14,6 +16,13 @@ from src.agents.agent import Agent
 import onnx
 from onnxruntime import InferenceSession
 from torch.optim.lr_scheduler import LambdaLR
+
+@contextlib.contextmanager
+def nostdout():
+    save_stdout = sys.stdout
+    sys.stdout = io.BytesIO()
+    yield
+    sys.stdout = save_stdout
 
 class Model:
     def __init__(self):
@@ -345,7 +354,7 @@ class DQN(Agent):
                                 idx = -self.freq_save + 1 + i
                                 writer.writerow([self.steps, all_expansions[idx], all_rewards[idx], losses[idx]])
 
-                        print("Partial Saved!")
+
 
                     if transitions_path is not None:
                         with open(transitions_path, 'w') as f:

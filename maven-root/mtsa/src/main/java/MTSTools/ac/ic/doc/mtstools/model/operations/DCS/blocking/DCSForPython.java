@@ -294,13 +294,9 @@ public class DCSForPython {
         }
     }
 
-    public static int getModelNumber(String modelName){
-        try{return Integer.valueOf(modelName.split("-")[3]);}
-        catch (Exception e){return 0;}
-    }
 
     // Esta funcion levanta todos los modelos de un experimento para una instancia y los testea con el budget dado
-    public static void selectRL(String instance, String experimentName, int budget, int startInModel, boolean onlyBestOptimization){
+    public static void selectRL(String instance, String experimentName, int budget, boolean onlyBestOptimization){
         String folderPath = "./results/models/" + instance + "/" + experimentName + "/";
         //String folderPath = "../../MTSApy/results/models/" + instance + "/" + experimentName + "/";
 
@@ -312,9 +308,8 @@ public class DCSForPython {
         for(File f : setOfFiles){
             if(f.isFile()){
                 String fileName = folderPath + f.getName();
-                int modelNumber = getModelNumber(f.getName());
 
-                if(fileName.contains(".onnx") && !setTestedModels.contains(fileName) && startInModel <= modelNumber){
+                if(fileName.contains(".onnx") && !setTestedModels.contains(fileName)){
                     listModels.add(fileName);
                 }
             }
@@ -327,6 +322,7 @@ public class DCSForPython {
 
         System.out.println("Starting selection...");
         for (String modelName : listModels) {
+
             System.out.println("Testing model: " + modelName);
             int expansionLimit = onlyBestOptimization ? bestValue : budget * 225 + 1;
             Pair<Integer, Integer> res = testHeuristic(budget, instance, "RL", experimentName, modelName, false, 1, 9, expansionLimit, 0);
@@ -372,7 +368,6 @@ public class DCSForPython {
         System.out.println(" -i (instance): instance to solve (AT, TA, DP, BW, CM, TL)");
         System.out.println(" -e (experiment): experiment name and also feature group to use.");
         System.out.println(" -b (budget): budget to use.");
-        System.out.println(" -r (startModel): first model to select(only used in selection mode).");
         System.out.println(" -m (model): model to test (only used in testing mode).");
         System.out.println(" -h (help): help flag.");
 
@@ -392,7 +387,7 @@ public class DCSForPython {
         //String modelPath = "F:\\UBA\\Tesis\\mtsa\\MTSApy\\results\\models\\DP\\2-2\\DP-2-2-690-partial.onnx";
         //String modelPath = "";
 
-        //selectRL("DP", "CRL", 1000, 0, false);
+        //selectRL("DP", "CRL", 1000, false);
 
         /*DCSForPython.testHeuristic(15000, "DP", "Random", "random", modelPath, true, 1, 15, 15000 * 225 + 1, 2);
         DCSForPython.testHeuristic(15000, "TA", "Random", "random", modelPath, true, 1, 15, 15000 * 225 + 1, 2);
@@ -409,7 +404,7 @@ public class DCSForPython {
 
 
         // Acontinuacion un ejemplo de como se deberia usar DCSForPython
-        String instance = "TA";
+        String instance = "CM";
 
         //String FSP_path = "/home/dario/Documents/Tesis/mtsa/maven-root/mtsa/target/test-classes/Blocking/ControllableFSPs/GR1test1.lts"; // Falla porque tiene guiones
         //String FSP_path = "F:\\UBA\\Tesis\\mtsa\\maven-root\\mtsa\\target\\test-classes\\Blocking\\ControllableFSPs\\GR1Test43.lts";
@@ -474,7 +469,6 @@ public class DCSForPython {
         CmdLineParser.Option instance_opt = cmdParser.addStringOption('i', "instance");
         CmdLineParser.Option experiment_opt = cmdParser.addStringOption('e', "experiment");
         CmdLineParser.Option budget_opt = cmdParser.addIntegerOption('b', "budget");
-        CmdLineParser.Option start_opt = cmdParser.addIntegerOption('r', "startModel");
 
         CmdLineParser.Option model_opt = cmdParser.addStringOption('m', "model");
 
@@ -498,12 +492,7 @@ public class DCSForPython {
             int budget = (int)cmdParser.getOptionValue(budget_opt);
 
             if(selection){
-                Object startModelObj = cmdParser.getOptionValue(start_opt);
-                int startModel = 0;
-                if(startModelObj != null){
-                    startModel = (int)startModelObj;
-                }
-                selectRL(instance, experiment, budget, startModel, onlyBestOptimization);
+                selectRL(instance, experiment, budget, onlyBestOptimization);
             }else {
                 String modelPath = (String) cmdParser.getOptionValue(model_opt);
                 DCSForPython.testHeuristic(budget, instance, "RL", experiment, modelPath, true, 1, 15, budget * 15 * 15 + 1, 2);

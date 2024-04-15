@@ -22,8 +22,10 @@ public class InstanceDomain<State, Action> {
      * For example the first row is used to feature 'missionComplete' in that row is saved whether a entity completed his mission or don't */
     public List<boolean[]> featureMatrix;   // TODO: cambiar por un boolean[][]
 
+    /** List of Objets ComputeFeature, each object compute a set of features custom for each type of instance */
     public LinkedList<DCSFeatures.ComputeFeature<State, Action>> customFeatureList;
 
+    /** DCSFeatures is the object responasable of calculate all the normal features and the custom features */
     public DCSFeatures featureMaker;
 
     InstanceDomain(DirectedControllerSynthesisBlocking dcs){
@@ -59,33 +61,31 @@ public class InstanceDomain<State, Action> {
         } else if(domain.equals("DP")) {
             return new InstanceDomainDP(dcs, dcsFeatures);
         } else if(domain.equals("CM")) {
-            return new InstanceDomainCM<>(dcs, dcsFeatures);
+            return new InstanceDomainCM(dcs, dcsFeatures);
         } else if(domain.equals("TL")) {
-            return new InstanceDomainTL<>(dcs, dcsFeatures);
+            return new InstanceDomainTL(dcs, dcsFeatures);
         }
         return new InstanceDomain<>(dcs);
     }
 
-    public static float toFloat(boolean b) {
-        return b ? 1.0f : 0.0f;
-    }
+    public void initCompostate(Compostate state, Compostate parent){}
+
     public int size(){return featureMaker.getCustomFeatureSize(customFeatureList); }
 
-    // TODO: todos deberian tener la misma funcion (no habria hacer que se sobreescriba)
     public void computeCustomFeature(ActionWithFeatures transition, int i){
         featureMaker.runFeaturesOfListWith(customFeatureList, transition, i);
     }
 
     // Each new InstanceDomain should overwrite this functions
     public boolean missionFeature(ActionWithFeatures transition){return false;}
-    public void updateMatrixFeature(HAction<Action> action, Compostate<State, Action> newState){}
+    public void updateMatrixFeature(HAction<Action> action, Compostate<State, Action> state){}
 }
 
 class InstanceDomainBW extends InstanceDomain{
     InstanceDomainBW(DirectedControllerSynthesisBlocking dcs, DCSFeatures dcsFeatures){
         super(dcs);
         this.globalCustomFeatureSize = 0;
-        this.compostateFeatureSize = 3;
+        this.compostateFeatureSize = 4;
         this.featureMatrix = newFeatureMatrix(globalCustomFeatureSize);
         this.featureMaker = dcsFeatures;
 
@@ -99,10 +99,8 @@ class InstanceDomainBW extends InstanceDomain{
     public boolean missionFeature(ActionWithFeatures transition){
         String label = transition.action.toString();
         if(transition.has_entity()){
-            // res indicate if the number 'transition.entity' reached his mission
-            boolean res = label.contains("accept") || (label.contains("reject") && transition.index == dcs.k);
             boolean[] missionRow = (boolean[])transition.state.customFeaturesMatrix.get(0);
-            if(res){
+            if(label.contains("accept") || (label.contains("reject") && transition.index == dcs.k)){
                 missionRow[transition.entity] = true;
             }
             return missionRow[transition.entity];
@@ -132,9 +130,8 @@ class InstanceDomainTA extends InstanceDomain{
         String label = transition.action.toString();
         if(transition.has_entity()){
             int entity = transition.entity;
-            boolean res = label.contains("purchase.succ") || label.contains("purchase.fail");
             boolean[] missionRow = (boolean[])transition.state.customFeaturesMatrix.get(0);
-            if(res){
+            if(label.contains("purchase.succ") || label.contains("purchase.fail")){
                 missionRow[entity] = true;
             }
             return missionRow[entity];
@@ -143,7 +140,7 @@ class InstanceDomainTA extends InstanceDomain{
     }
 
     @Override
-    public void updateMatrixFeature(HAction action, Compostate newState){
+    public void updateMatrixFeature(HAction action, Compostate state){
         String label = action.toString();
         int entity = ActionWithFeatures.getNumber(label, 1);
         if(entity != -1) {
@@ -158,8 +155,8 @@ class InstanceDomainTA extends InstanceDomain{
 class InstanceDomainAT extends InstanceDomain{
     InstanceDomainAT(DirectedControllerSynthesisBlocking dcs, DCSFeatures dcsFeatures){
         super(dcs);
-        this.globalCustomFeatureSize = 5;
-        this.compostateFeatureSize = 0;
+        this.globalCustomFeatureSize = 0;
+        this.compostateFeatureSize = 3;
         this.featureMatrix = newFeatureMatrix(globalCustomFeatureSize);
         this.featureMaker = dcsFeatures;
 
@@ -171,12 +168,11 @@ class InstanceDomainAT extends InstanceDomain{
     public boolean missionFeature(ActionWithFeatures transition){
         if(transition.has_entity()){
             int entity = transition.entity;
-            // res indicate if the number 'transition.entity' reached his mission
-            boolean res = transition.action.toString().contains("land");
             boolean[] missionRow = (boolean[])transition.state.customFeaturesMatrix.get(0);
-            if(res){
+            if(transition.action.toString().contains("land")){
                 missionRow[entity] = true;
             }
+
             return missionRow[entity];
         }
         return false;
@@ -201,9 +197,96 @@ class InstanceDomainDP extends InstanceDomain{
     public boolean missionFeature(ActionWithFeatures transition){
         if(transition.parent != null && transition.has_entity()){
             int entity = transition.entity;
-            // res indicate if the number 'transition.entity' reached his mission
-            boolean res = transition.action.toString().contains("release");
-            if(res){
+            if(transition.action.toString().contains("release")){
+                ((boolean []) transition.state.customFeaturesMatrix.get(0))[entity] = true;
+            }
+
+            return ((boolean []) transition.state.customFeaturesMatrix.get(0))[entity];
+        }
+        return false;
+    }
+
+    @Override
+    public void updateMatrixFeature(HAction action, Compostate state){
+        String label = action.toString();
+        int entity = ActionWithFeatures.getNumber(label, 1);
+
+        if(entity != -1 && label.contains("take")){
+            ((boolean[])state.customFeaturesMatrix.get(1))[entity] = true;
+        }
+    }
+}
+
+class InstanceDomainCM extends InstanceDomain{
+    InstanceDomainCM(DirectedControllerSynthesisBlocking dcs, DCSFeatures dcsFeatures){
+        super(dcs);
+        this.globalCustomFeatureSize = 0;
+        this.compostateFeatureSize = 1;
+        this.featureMatrix = newFeatureMatrix(globalCustomFeatureSize);
+        this.featureMaker = dcsFeatures;
+
+        this.customFeatureList.add(featureMaker.mouse_closer_CM_feature);
+    }
+
+    @Override
+    public boolean missionFeature(ActionWithFeatures transition){
+        if(transition.has_entity()){
+            int entity = transition.entity;
+            String label = transition.action.toString();
+            boolean[] missionRow = (boolean[])transition.state.customFeaturesMatrix.get(0);
+            if(label.contains("mouse") && label.contains("move") && transition.index == dcs.k){
+                missionRow[entity] = true;
+            }
+            return missionRow[entity];
+        }
+        return false;
+    }
+
+    @Override
+    public void updateMatrixFeature(HAction action, Compostate state){
+        String label = action.toString();
+
+        if(label.contains("mouse") && label.contains("move")){
+            int entity = ActionWithFeatures.getNumber(label, 1);
+            int index = ActionWithFeatures.getNumber(label, 1);
+            state.mousePositions[entity] = (2*dcs.n - index);
+        }
+    }
+
+    @Override
+    public void initCompostate(Compostate state, Compostate parent){
+        if(parent == null){
+            state.mousePositions = new int[dcs.n];
+        }else{
+            state.mousePositions = Arrays.copyOf(parent.mousePositions, dcs.n);
+        }
+    }
+}
+
+class InstanceDomainTL extends InstanceDomain{
+    InstanceDomainTL(DirectedControllerSynthesisBlocking dcs, DCSFeatures dcsFeatures){
+        super(dcs);
+        this.globalCustomFeatureSize = 0;
+        this.compostateFeatureSize = 3;
+        this.featureMatrix = newFeatureMatrix(globalCustomFeatureSize);
+        this.featureMaker = dcsFeatures;
+
+        this.customFeatureList.add(featureMaker.load_machine_TL_feature);
+        this.customFeatureList.add(featureMaker.buffer_returned_TL_feature);
+        this.customFeatureList.add(featureMaker.last_get_TL_feature);
+    }
+
+    @Override
+    public boolean missionFeature(ActionWithFeatures transition){
+        if(transition.parent != null && transition.has_entity()){
+            int entity = transition.entity;
+            String label = transition.action.toString();
+            if(label.contains("return") || (label.contains("get") && entity == dcs.n)){
+                entity -= 1;
+            }
+
+            if(label.contains("put")){
+                entity -= 1;
                 ((boolean []) transition.state.customFeaturesMatrix.get(0))[entity] = true;
             }
             return ((boolean []) transition.state.customFeaturesMatrix.get(0))[entity];
@@ -216,130 +299,12 @@ class InstanceDomainDP extends InstanceDomain{
         String label = action.toString();
         int entity = ActionWithFeatures.getNumber(label, 1);
 
-        if(entity != -1 && label.contains("take")){
+        if(entity != -1 && entity < dcs.n && label.contains("get")){
             ((boolean[])newState.customFeaturesMatrix.get(1))[entity] = true;
         }
-    }
-}
 
-class InstanceDomainCM<State, Action> extends InstanceDomain{
-    InstanceDomainCM(DirectedControllerSynthesisBlocking dcs, DCSFeatures dcsFeatures){
-        super(dcs);
-        this.globalCustomFeatureSize = 3; // TODO: modificar
-        this.compostateFeatureSize = 0;
-        this.featureMatrix = newFeatureMatrix(globalCustomFeatureSize);
-        this.featureMaker = dcsFeatures;
-    }
-
-    @Override
-    public boolean missionFeature(ActionWithFeatures transition){
-        String label = transition.action.toString();
-        int entity = transition.entity;
-        if(transition.has_entity()){
-            // res indicate if the number 'transition.entity' reached his mission
-            boolean res = label.contains("mouse") && label.contains("move") && transition.index == dcs.k;
-            boolean[] missionRow = (boolean[])featureMatrix.get(0);
-            if(res){
-                missionRow[entity] = true;
-            }
-            return missionRow[entity];
+        if(entity != -1 && label.contains("return")){
+            ((boolean[])newState.customFeaturesMatrix.get(2))[entity-1] = true;
         }
-        return false;
-    }
-
-    @Override
-    public void updateMatrixFeature(HAction action, Compostate newState){
-
-    }
-
-    @Override
-    public void computeCustomFeature(ActionWithFeatures transition, int i){
-
-        /*if(label.contains("mouse") && label.contains("move") && index == dcs.k){
-            state.customFeatures.get(action).get(0)[entity] = true;
-        }
-
-        for(int j=0 ; j<dcs.n ; j++){
-            state.customFeatures.get(action).get(1)[j] = false;
-            state.customFeatures.get(action).get(2)[j] = false;
-        }
-
-        if(label.contains("mouse") && label.contains("move")) {
-            int newIndex = 2 * dcs.k - index;
-            int oldIndex = parent.getLastentityIndex()[entity];
-            state.entityIndexes.get(action)[entity] = newIndex;
-            if (newIndex > oldIndex) {
-                state.customFeatures.get(action).get(1)[entity] = true;
-            }
-            if (newIndex < oldIndex) {
-                state.customFeatures.get(action).get(2)[entity] = true;
-            }
-        }*/
-    }
-}
-
-class InstanceDomainTL<State, Action> extends InstanceDomain{
-    int lastEntity;
-
-    InstanceDomainTL(DirectedControllerSynthesisBlocking dcs, DCSFeatures dcsFeatures){
-        super(dcs);
-        this.lastEntity = -1;
-        this.globalCustomFeatureSize = 3; // TODO: modificar
-        this.compostateFeatureSize = 0;
-        this.featureMatrix = newFeatureMatrix(globalCustomFeatureSize);
-        this.featureMaker = dcsFeatures;
-    }
-
-    @Override
-    public boolean missionFeature(ActionWithFeatures transition){
-        String label = transition.action.toString();
-        int entity = transition.entity;
-        if(transition.entity != -1 && entity < dcs.n){
-            // res indicate if the number 'transition.entity' reached his mission
-            boolean res = label.contains("put");
-            boolean[] missionRow = (boolean[])featureMatrix.get(0);
-            if(res){
-                missionRow[entity] = true;
-            }
-            return missionRow[entity];
-        }
-        return false;
-    }
-
-    @Override
-    public void updateMatrixFeature(HAction action, Compostate newState){
-
-    }
-
-    @Override
-    public void computeCustomFeature(ActionWithFeatures transition, int i){
-
-        /*for(int j=0 ; j<dcs.n ; j++){
-            // reset custom features
-        }
-
-        if(label.contains("put") && (entity < dcs.n)){
-            state.customFeatures.get(action).get(0)[entity] = true;
-        }
-
-        boolean a = entity != 2 && label.contains("get") && (entity == (lastEntity + 1)) && dcs.lastExpandedAction.getAction().toString().contains("put");
-        if(entity < dcs.n){
-            state.customFeatures.get(action).get(1)[entity] = a;
-        }
-
-        boolean b = entity != 2 && label.contains("put") && (entity == (lastEntity + 1)) && dcs.lastExpandedAction.getAction().toString().contains("get");
-        if(entity < dcs.n){
-            state.customFeatures.get(action).get(2)[entity] = b;
-        }
-
-        boolean c = entity != 2 && label.contains("return") && (entity == (lastEntity + 1)) && dcs.lastExpandedAction.getAction().toString().contains("akjghfakjgfhn");
-        if(entity < dcs.n){
-            state.customFeatures.get(action).get(3)[entity] = c;
-        }
-
-        state.customFeatures.get(action).get(4)[0] = firstExpansion;
-
-        lastEntity = entity;
-        firstExpansion = false;*/
     }
 }

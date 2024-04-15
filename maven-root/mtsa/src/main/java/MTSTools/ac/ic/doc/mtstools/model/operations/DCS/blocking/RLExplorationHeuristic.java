@@ -416,6 +416,8 @@ public class RLExplorationHeuristic<State, Action> implements ExplorationHeurist
         if (!allActionsToExplore.contains(state) && state.isStatus(Status.NONE)){
             allActionsToExplore.add(state);
             addTransitionsToFrontier(state, parent);
+
+            dcs.instanceDomain.initCompostate(state, parent);
         }
     }
 

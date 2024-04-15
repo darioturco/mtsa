@@ -377,7 +377,6 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
         lastExpandedAction = action;
 
         Compostate<State, Action> childCompostate = buildCompostate(getChildStates(compostate, action), compostate);
-        //childCompostate.updateMissions(compostate, action);
         statistics.incExpandedTransitions();
         compostate.addChild(action, childCompostate);
         childCompostate.addParent(action, compostate);

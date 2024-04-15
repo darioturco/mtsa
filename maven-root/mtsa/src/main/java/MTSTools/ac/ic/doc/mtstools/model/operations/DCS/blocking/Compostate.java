@@ -140,6 +140,8 @@ public class Compostate<State, Action> implements Comparable<Compostate<State, A
      *  The amount of rows is f and depend of the family of instances */
     public List<boolean[]> customFeaturesMatrix; // TODO: cambiar a boolean[][]
 
+    public int[] mousePositions;
+
     /** For each action the indexes(states) of each entity */
     public Map<HAction<Action>, int[]> entityIndexes;
 

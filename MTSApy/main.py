@@ -8,9 +8,10 @@ if __name__ == "__main__":
     instance = "TA"
 
     TrainSmallInstance().train(instance, 2, 2, experiment_name)
-    TestTrainedInAllInstances().select_with_java(instance, experiment_name, 1000, 1000)
-    #TestTrainedInAllInstances().test_with_java(instance, experiment_name, 15000, None)
+    TestTrainedInAllInstances().select_with_java(instance, experiment_name, 10000)
+    TestTrainedInAllInstances().test_with_java(instance, experiment_name, 15000, None)
 
+    #TestTrainedInAllInstances().select_with_java(instance, experiment_name, 1000)
     #TestTrainedInAllInstances().test_with_java(instance, experiment_name, 10000, "./results/models/TA/CRL/TA-2-2-3370-partial.onnx")
 
 

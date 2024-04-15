@@ -18,7 +18,6 @@ public class ActionWithFeatures<State, Action> {
     public boolean childMarked;
     public int entity;
     public int index;
-    public int amountMissionComplete;
     public int expansionStep;
     public float[] featureVector;
 
