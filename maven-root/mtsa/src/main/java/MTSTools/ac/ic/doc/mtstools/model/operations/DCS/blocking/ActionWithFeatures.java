@@ -68,7 +68,7 @@ public class ActionWithFeatures<State, Action> {
 
     public String toString(){
         return state.toString() + " | " + action.toString();
-        //return state.toString() + " | " + action.toString() + " | " + arrayBoolToString(featureVector);
+        //return state.toString() + " | " + action.toString() + " | " + featureVector.length + " | " + arrayBoolToString(featureVector);
     }
 
     public static int getNumber(String label, int n){
