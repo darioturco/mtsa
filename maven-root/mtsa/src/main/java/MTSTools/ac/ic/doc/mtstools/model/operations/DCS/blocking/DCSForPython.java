@@ -263,6 +263,9 @@ public class DCSForPython {
                 }
             }
         }
+        String csvPath = "./gen/gen-" + instance + ".csv";
+        String[] data = {instance, modelPath, String.valueOf(solvedInstances), String.valueOf(totalExpansions)};
+        writeCSV(csvPath, data, selectionHeader);
         return new Pair<>(solvedInstances, totalExpansions);
     }
     public static void writeCSV(String csvPath, String[] data, String header){
@@ -294,11 +297,14 @@ public class DCSForPython {
         }
     }
 
+    public static int getModelNumber(String modelName){
+        try{return Integer.valueOf(modelName.split("-")[3]);}
+        catch (Exception e){return 0;}
+    }
 
     // Esta funcion levanta todos los modelos de un experimento para una instancia y los testea con el budget dado
     public static void selectRL(String instance, String experimentName, int budget, boolean onlyBestOptimization){
         String folderPath = "./results/models/" + instance + "/" + experimentName + "/";
-        //String folderPath = "../../MTSApy/results/models/" + instance + "/" + experimentName + "/";
 
         File folder = new File(folderPath);
         Set<File> setOfFiles = new HashSet<>(Arrays.asList(folder.listFiles()));
@@ -322,7 +328,6 @@ public class DCSForPython {
 
         System.out.println("Starting selection...");
         for (String modelName : listModels) {
-
             System.out.println("Testing model: " + modelName);
             int expansionLimit = onlyBestOptimization ? bestValue : budget * 225 + 1;
             Pair<Integer, Integer> res = testHeuristic(budget, instance, "RL", experimentName, modelName, false, 1, 9, expansionLimit, 0);
@@ -350,7 +355,6 @@ public class DCSForPython {
         try{
             BufferedReader br = new BufferedReader(new FileReader(folderPath));
             String line = br.readLine();
-            System.out.println(line);
             while (line != null) {
                 String[] cols = line.split(","); // use comma as separator
                 if(cols[1].contains(".onnx")){
@@ -382,36 +386,10 @@ public class DCSForPython {
 
     // This function is for testing purposes only
     public static void testExample(){
-        //String modelPath = "F:\\UBA\\Tesis\\mtsa\\MTSApy\\TA-2-2-10-partial.onnx";
-        //String modelPath = "F:\\UBA\\Tesis\\mtsa\\MTSApy\\DP-2-2-4460-partial.onnx";
-        //String modelPath = "F:\\UBA\\Tesis\\mtsa\\MTSApy\\results\\models\\DP\\2-2\\DP-2-2-690-partial.onnx";
-        //String modelPath = "";
-
-        //selectRL("DP", "CRL", 1000, false);
-
-        /*DCSForPython.testHeuristic(15000, "DP", "Random", "random", modelPath, true, 1, 15, 15000 * 225 + 1, 2);
-        DCSForPython.testHeuristic(15000, "TA", "Random", "random", modelPath, true, 1, 15, 15000 * 225 + 1, 2);
-        DCSForPython.testHeuristic(15000, "AT", "Random", "random", modelPath, true, 1, 15, 15000 * 225 + 1, 2);
-        DCSForPython.testHeuristic(15000, "TL", "Random", "random", modelPath, true, 1, 15, 15000 * 225 + 1, 2);
-        DCSForPython.testHeuristic(15000, "BW", "Random", "random", modelPath, true, 1, 15, 15000 * 225 + 1, 2);
-        DCSForPython.testHeuristic(15000, "CM", "Random", "random", modelPath, true, 1, 15, 15000 * 225 + 1, 2);
-         */
-
-        //String fsp_path = "F:\\UBA\\Tesis\\mtsa\\MTSApy\\fsp\\DP\\DP-2-2.fsp";
-        //DCSForPython.syntetizeWithHeuristic(fsp_path, "RL", "CRL", modelPath, 1000, true);
-
-
-
-
         // Acontinuacion un ejemplo de como se deberia usar DCSForPython
         String instance = "CM";
 
-        //String FSP_path = "/home/dario/Documents/Tesis/mtsa/maven-root/mtsa/target/test-classes/Blocking/ControllableFSPs/GR1test1.lts"; // Falla porque tiene guiones
-        //String FSP_path = "F:\\UBA\\Tesis\\mtsa\\maven-root\\mtsa\\target\\test-classes\\Blocking\\ControllableFSPs\\GR1Test43.lts";
-        //String FSP_path = "F:\\UBA\\Tesis\\mtsa\\maven-root\\mtsa\\target\\test-classes\\Blocking\\NoControllableFSPs\\GR1Test11.lts";
         String FSP_path = "F:\\UBA\\Tesis\\mtsa\\MTSApy\\fsp\\" + instance + "\\" + instance + "-2-2.fsp";
-        //String FSP_path = "/home/dario/Documents/Tesis/Learning-Synthesis/fsp/Blocking/ControllableFSPs/GR1Test10.lts";
-        //String FSP_path = "/home/dario/Documents/Tesis/mtsa/MTSApy/fsp/" + instance + "/" + instance + "-2-2.fsp";
 
         //String heuristicMode = "Ready";
         //String heuristicMode = "Random";
@@ -423,6 +401,7 @@ public class DCSForPython {
         //String heuristicMode = "BWHeuristic";
         DCSForPython env = new DCSForPython(heuristicMode);
         env.setRLParameters("CRL", "");
+
         env.startSynthesis(FSP_path);
 
         List<Integer> list = Arrays.asList();
@@ -431,7 +410,8 @@ public class DCSForPython {
 
         while (!env.isFinished()) {
             System.out.println("----------------------------------: " + (i+1));
-            //env.heuristic.printFrontier();
+            ((RLExplorationHeuristic)env.heuristic).computeFeatures();
+            env.heuristic.printFrontier(); // Ojo, aca aun no actualizo los features
 
             if(i < list.size()){
                 idx = list.get(i);
@@ -450,8 +430,6 @@ public class DCSForPython {
             System.out.println("Director's Transitions: " + director.getTransitions().size());
         }
         System.out.println("End Run :)");
-
-
     }
 
     public static boolean getBoolValue(CmdLineParser cmdParser, CmdLineParser.Option opt){
@@ -493,7 +471,7 @@ public class DCSForPython {
 
             if(selection){
                 selectRL(instance, experiment, budget, onlyBestOptimization);
-            }else {
+            }else{
                 String modelPath = (String) cmdParser.getOptionValue(model_opt);
                 DCSForPython.testHeuristic(budget, instance, "RL", experiment, modelPath, true, 1, 15, budget * 15 * 15 + 1, 2);
             }

@@ -1,12 +1,11 @@
 import matplotlib.pyplot as plt
-from matplotlib.widgets import RadioButtons
 import pandas as pd
 import numpy as np
 import seaborn as sn
 
 OUTPUT_FOLDER = "./results/plots/"
-#BENCHMARK_PROBLEMS = ["AT", "BW", "DP", "TA", "TL", "CM"]
-BENCHMARK_PROBLEMS = ["AT", "BW", "DP", "TA", "TL"]
+BENCHMARK_PROBLEMS = ["AT", "BW", "DP", "TA", "TL", "CM"]
+#BENCHMARK_PROBLEMS = ["AT", "BW", "DP", "TA", "TL"]
 #SCALE = 1
 SCALE = 1000
 
@@ -99,20 +98,9 @@ def check_method_in_instance(instance, method):
     plt.show()
     return instance_matrix
 
-def get_random_info(random_data, instance, budget, instances_solved):
-    random_instance = random_data[random_data["Instance"] == instance]
-    aux = random_instance[(random_instance["Transitions (mean)"] < budget) & (random_instance["Transitions (mean)"] > 0)]
-    solved = aux.count()["Failed"]
-    if instances_solved:
-        return solved
-    else:
-        res = (225 - solved) * budget + int(aux["Transitions (mean)"].sum())
-        return int(res / SCALE)
-
-
-def get_ra_info(ra_data, instance, budget, instances_solved):
-    ra_instance = ra_data[ra_data["Instance"] == instance]
-    aux = ra_instance[ra_instance["Transitions"] < budget]
+def get_data_info(data, instance, budget, instances_solved):
+    ra_instance = data[data["Instance"] == instance]
+    aux = ra_instance[(ra_instance["Transitions"] < budget) & (ra_instance["Transitions"] > 0)]
     solved = aux.count()["Instance"]
     if instances_solved:
         return solved
@@ -121,10 +109,6 @@ def get_ra_info(ra_data, instance, budget, instances_solved):
         return int(res / SCALE)
 
 def get_rl_info(method, instance, budget, instances_solved):
-    # CM no esta corrido aun
-    if instance == "CM":
-        return 18
-
     try:
         rl_data = pd.read_csv(f"./results/csv/{method}-{instance}.csv")
     except FileNotFoundError:
@@ -140,14 +124,17 @@ def get_rl_info(method, instance, budget, instances_solved):
 
 def get_data_for(budget, instances, data, instances_solved):
     random_data = pd.read_csv("./results/csv/random.csv")
-    ra_data = pd.read_csv("./results/csv/Ready Abstraction.csv")
+    ra_data = pd.read_csv("./results/csv/RA.csv")
+    bfs_data = pd.read_csv("./results/csv/BFS.csv")
 
     for instance in instances:
         for method in data.keys():
             if method == "Random":
-                data["Random"][instance] = get_random_info(random_data, instance, budget, instances_solved)
+                data["Random"][instance] = get_data_info(random_data, instance, budget, instances_solved)
             elif method == "RA":
-                data["RA"][instance] = get_ra_info(ra_data, instance, budget, instances_solved)
+                data["RA"][instance] = get_data_info(ra_data, instance, budget, instances_solved)
+            elif method == "BFS":
+                data["BFS"][instance] = get_data_info(bfs_data, instance, budget, instances_solved)
             else:
                 data[method][instance] = get_rl_info(method, instance, budget, instances_solved)
 
@@ -155,11 +142,11 @@ def get_data_for(budget, instances, data, instances_solved):
 
 def comparative_bar_plot(data=None, instances_solved=True):
     instances = BENCHMARK_PROBLEMS[::-1]
-    budgets = [1000, 2500, 5000, 10000]
+    budgets = [1000, 2500, 5000, 10000, 15000]
     if data is None:
         data = []
         for b in budgets:
-            data_schema = {"Random": {}, "2-2": {}, "LRL": {}, "CRL": {}, "RA": {}}
+            data_schema = {"Random": {}, "BFS": {}, "RL": {}, "CRL": {}, "RA": {}}
             data.append((b, get_data_for(b, instances, data_schema, instances_solved)))
     else:
         for _ in budgets:
@@ -196,24 +183,16 @@ def comparative_bar_plot_data(data, instances, title):
 
 if __name__ == "__main__":
     print("Plotting...")
-    graph_individual_training_process("2-2", sliding_window=500, save_path='./results/plots', use_steps=True, problems=["TA"])
+    #graph_individual_training_process("2-2", sliding_window=500, save_path='./results/plots', use_steps=True, problems=["TA"])
     #graph_individual_training_process("CRL", sliding_window=500, save_path='./results/plots', use_steps=True, problems=["DP"])
-    graph_individual_training_process("CRL", sliding_window=500, save_path='./results/plots', use_steps=True, problems=["TA"])
+    #graph_individual_training_process("CRL", sliding_window=500, save_path='./results/plots', use_steps=True, problems=["TA"])
 
 
     #graph_training_process(sliding_window=100, repetitions=5, save_path='./results/plots', use_steps=True)
 
     # Budget of 10000
-    #comparative_bar_plot(data=None, instances_solved=True)
-    #comparative_bar_plot(data=None, instances_solved=False)
-    #comparative_bar_plot(data={"Random": {"AT": 59, "BW": 44, "DP": 62, "TA": 60, "TL": 134, "CM": 18},
-    #                           "2-2": {"AT": 85, "BW": 53, "DP": 101, "TA": 60, "TL": 225, "CM": 18},
-    #                           #"ERL": {"AT": 87, "BW": 57, "DP": 150, "TA": 60, "TL": 225, "CM": 0},
-    #                           #"IERL": {"AT": 90, "BW": 56, "DP": 150, "TA": 60, "TL": 225, "CM": 0},
-    #                           "LRL": {"AT": 90, "BW": 104, "DP": 150, "TA": 60, "TL": 225, "CM": 24},
-    #                           "GRL": {"AT": 80, "BW": 54, "DP": 108, "TA": 60, "TL": 225, "CM": 24},
-    #                           "BFS": {"AT": 53, "BW": 50, "DP": 61, "TA": 60, "TL": 201, "CM": 17},
-    #                           "RA Mejora": {"AT": 68, "BW": 136, "DP": 150, "TA": 60, "TL": 225, "CM": 22}})
+    comparative_bar_plot(data=None, instances_solved=True)
+    comparative_bar_plot(data=None, instances_solved=False)
 
 
 

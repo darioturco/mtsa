@@ -147,6 +147,7 @@ class CompositionAnalyzer:
             self._no_indices_alphabet[i]] = i
         self._fast_no_indices_alphabet_dict = bidict(self._fast_no_indices_alphabet_dict)
 
+        # TODO: esto no deberia ejecutarse si se usan los features de java
         self._feature_methods = self.select_feature_group(self.composition.feature_group)
 
     def select_feature_group(self, feature_group_name):
@@ -157,7 +158,7 @@ class CompositionAnalyzer:
                     self.explored_state_child, self.isLastExpanded, self.child_dealdlock, self.mission_feature,
                     self.has_index]
 
-        elif feature_group_name == "2-2":
+        elif feature_group_name == "RL":
             # Viejos features (2-2)
             return [self.event_label_feature, self.state_label_feature, self.controllable, self.marked_stateOld,
                     self.current_phase, self.child_node_state, self.uncontrollable_neighborhood,

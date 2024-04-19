@@ -133,7 +133,7 @@ class Experiment(object):
     # ltr=False, boolean=True, cbs=False, overwrite=False, max_instance_size=15, nn_size=(20,))
 
     def default_args(self):
-        return {"nn_size": [24],            # [20]
+        return {"nn_size": [22],            # [20]
                 "learning_rate": 1e-5,
                 "momentum": 0.9,
                 "nesterov": True,
@@ -149,7 +149,6 @@ class Experiment(object):
                 "batch_size": 10,
                 "Adam": True,
                 "reward_shaping": False,
-
                 "lambda_warm_up": None,
                 #"lambda_warm_up": lambda step: 1.0 if step > 5000 else step * 0.99,
 
@@ -157,7 +156,7 @@ class Experiment(object):
                 'freq_save': 1,
                 'seconds': None,
                 'max_steps': 700000,    # 700000
-                "max_eps": 1000000,
+                "max_eps": 20000,
                 "compute_python_features": False
                 }
 
@@ -337,9 +336,7 @@ class TestTrainedInAllInstances(Experiment):
         return best_model
 
     def select_with_java(self, instance, experiment_name, budget):
-        #command = f'java -classpath mtsa.jar MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.DCSForPython -s -i {instance} -e "{experiment_name}" -b {budget}'
-        #command = f'java -classpath mtsa2.jar MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.DCSForPython -s -i {instance} -e "{experiment_name}" -b {budget}'
-        command = f'java -classpath mtsaTA.jar MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.DCSForPython -s -i {instance} -e "{experiment_name}" -b {budget}'
+        command = f'java -classpath mtsa.jar MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.DCSForPython -s -i {instance} -e "{experiment_name}" -b {budget}'
         subprocess.call(command, shell=True)
 
     def test_with_java(self, instance, experiment_name, budget, onnx_path=None):

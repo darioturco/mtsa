@@ -1,15 +1,8 @@
- /home/dario/Documents/Tesis/mtsa/maven-root/mtsa/src/main/java/MTSTools/ac/ic/doc/mtstools/model/operations/DCS/blocking/DirectedControllerSynthesisBlocking.java
-/home/dario/Documents/Tesis/mtsa/maven-root/mtsa/target/test-classes/Blocking/ControllableFSPs/GR1Test13.lst
-
 Como compilar el jar:
 	mvn package -Dmaven.test.skip=true
 	
 	te lo deja en la carpeta: /home/dario/Documents/Tesis/mtsa/maven-root/mtsa/target
-	con el nombre "mtsa-1.0-SNAPSHOT.jar"
+	con el nombre "mtsa.jar"
 	
-Como sacar el open Queue de DCS Blocking:
-
-	Antes que nada que ready abstraction funcione bien y pase todos los test.
-	Despues hacer la clase OpenSetExplorationHeuristic
 
 	
