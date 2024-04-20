@@ -1,10 +1,8 @@
 package MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking;
 
 import MTSTools.ac.ic.doc.commons.relations.Pair;
-
 import java.io.*;
 import java.util.*;
-
 import MTSTools.ac.ic.doc.mtstools.model.LTS;
 import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.abstraction.HeuristicMode;
 import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.abstraction.ReadyAbstraction;
@@ -13,7 +11,6 @@ import jargs.gnu.CmdLineParser;
 import ltsa.dispatcher.TransitionSystemDispatcher;
 import ltsa.lts.*;
 import ltsa.ui.StandardOutput;
-
 import static org.junit.Assert.*;
 
 
@@ -165,6 +162,7 @@ public class DCSForPython {
             this.heuristic.somethingLeftToExplore();
         }
     }
+
     public int getActionFronAuxiliarHeuristic(){
         return heuristic.getNextActionIndex();
     }
@@ -199,21 +197,17 @@ public class DCSForPython {
         int idx;
         int i = 0;
         while (!env.isFinished() && i < budget) {
-
             idx = env.getActionFronAuxiliarHeuristic();
             if(verbose){
                 System.out.println("----------------------------------: " + (i+1));
                 env.heuristic.printFrontier();
                 System.out.println("Expanded(" + idx + "): " + env.heuristic.getFrontier().get(idx));
             }
-
             env.expandAction(idx);
             i = i + 1;
         }
 
         env.dcs.notify_end_synthesis();
-
-
         return i;
     }
 
@@ -268,6 +262,7 @@ public class DCSForPython {
         writeCSV(csvPath, data, selectionHeader);
         return new Pair<>(solvedInstances, totalExpansions);
     }
+
     public static void writeCSV(String csvPath, String[] data, String header){
         File file = new File(csvPath);
         boolean exists = file.exists();
@@ -295,11 +290,6 @@ public class DCSForPython {
         }catch (IOException e){
             e.printStackTrace();
         }
-    }
-
-    public static int getModelNumber(String modelName){
-        try{return Integer.valueOf(modelName.split("-")[3]);}
-        catch (Exception e){return 0;}
     }
 
     // Esta funcion levanta todos los modelos de un experimento para una instancia y los testea con el budget dado
@@ -384,62 +374,12 @@ public class DCSForPython {
         System.out.println("java -classpath mtsa.jar MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.DCSForPython -i DP -e \"CRL\" -b 1000 -m ./results/models/DP/CRL/DP-2-2-350-partial.onnx");
     }
 
-    // This function is for testing purposes only
-    public static void testExample(){
-        // Acontinuacion un ejemplo de como se deberia usar DCSForPython
-        String instance = "CM";
-
-        String FSP_path = "F:\\UBA\\Tesis\\mtsa\\MTSApy\\fsp\\" + instance + "\\" + instance + "-2-2.fsp";
-
-        //String heuristicMode = "Ready";
-        //String heuristicMode = "Random";
-        String heuristicMode = "RL";
-        //String heuristicMode = "Interactive";
-        //String heuristicMode = "BFS";
-        //String heuristicMode = "Debugging";
-        //String heuristicMode = "CMHeuristic";
-        //String heuristicMode = "BWHeuristic";
-        DCSForPython env = new DCSForPython(heuristicMode);
-        env.setRLParameters("CRL", "");
-
-        env.startSynthesis(FSP_path);
-
-        List<Integer> list = Arrays.asList();
-        int idx = 0;
-        int i = 0;
-
-        while (!env.isFinished()) {
-            System.out.println("----------------------------------: " + (i+1));
-            ((RLExplorationHeuristic)env.heuristic).computeFeatures();
-            env.heuristic.printFrontier(); // Ojo, aca aun no actualizo los features
-
-            if(i < list.size()){
-                idx = list.get(i);
-            }else{
-                idx = env.getActionFronAuxiliarHeuristic();
-            }
-
-            System.out.println("Expanded(" + idx + "): " + env.heuristic.getFrontier().get(idx));
-            env.expandAction(idx);
-            i = i + 1;
-        }
-
-        System.out.println("Realizable: " + env.realizable);
-        if(env.realizable){
-            LTS<Long, String> director = env.buildControler();
-            System.out.println("Director's Transitions: " + director.getTransitions().size());
-        }
-        System.out.println("End Run :)");
-    }
-
     public static boolean getBoolValue(CmdLineParser cmdParser, CmdLineParser.Option opt){
         Boolean value = (Boolean)cmdParser.getOptionValue(opt);
         return (value != null && value);
     }
 
     public static void main(String[] args) {
-        //testExample();
-
         CmdLineParser cmdParser = new CmdLineParser();
         CmdLineParser.Option selection_opt = cmdParser.addBooleanOption('s', "selection");
         CmdLineParser.Option help_opt = cmdParser.addBooleanOption('h', "help");
@@ -447,7 +387,6 @@ public class DCSForPython {
         CmdLineParser.Option instance_opt = cmdParser.addStringOption('i', "instance");
         CmdLineParser.Option experiment_opt = cmdParser.addStringOption('e', "experiment");
         CmdLineParser.Option budget_opt = cmdParser.addIntegerOption('b', "budget");
-
         CmdLineParser.Option model_opt = cmdParser.addStringOption('m', "model");
 
         try {
