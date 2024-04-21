@@ -2,9 +2,6 @@ import numpy as np
 
 class Environment:
     def __init__(self, context, heuristic_reward):
-        """Environment base class.
-            TODO are contexts actually part of the concept of an RL environment?
-            """
         self.context = context
         self.normalize_reward = False
         self.heuristic_reward = heuristic_reward
@@ -139,6 +136,8 @@ class FeatureEnvironment(object):
 import gymnasium as gym
 from gymnasium.spaces.box import Box
 from gymnasium.spaces.discrete import Discrete
+
+# TODO: Ver si usa y eliminar si no
 class FeatureCompleteEnvironment(gym.Env):
     def __init__(self, context, normalize_reward):
         self.env = Environment(context, normalize_reward)

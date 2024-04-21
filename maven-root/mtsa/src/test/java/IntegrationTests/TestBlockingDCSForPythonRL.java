@@ -10,6 +10,7 @@ import MTSTools.ac.ic.doc.commons.relations.Pair;
 import MTSTools.ac.ic.doc.mtstools.model.LTS;
 import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.*;
 import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.abstraction.Abstraction;
+import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.abstraction.FeatureGroup;
 import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.abstraction.HeuristicMode;
 import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.abstraction.Recommendation;
 import MTSTools.ac.ic.doc.mtstools.model.operations.impl.WeakAlphabetMergeBuilder;
@@ -82,7 +83,7 @@ public class TestBlockingDCSForPythonRL {
 
         String heuristicModeString = "Ready";
         HeuristicMode heuristicMode = HeuristicMode.valueOf(heuristicModeString);
-        ExplorationHeuristic<Long, String> heuristic = dcs.getHeuristic(heuristicMode, "");
+        ExplorationHeuristic<Long, String> heuristic = dcs.getHeuristic(heuristicMode, FeatureGroup.VoidFeature);
         dcs.heuristic = heuristic;
 
 

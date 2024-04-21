@@ -289,7 +289,7 @@ class DQN(Agent):
         csv_path = f"./results/training/{instance}-{experiment_name}.csv"
         os.makedirs(csv_path.rsplit('/', 1)[0], exist_ok=True)
 
-        acumulated_reward = 0
+        accumulated_reward = 0
         expansion_steps = 0
         all_rewards = []
         all_expansions = []
@@ -316,7 +316,7 @@ class DQN(Agent):
 
             obs2, reward, done, info = self.env.step(a)
 
-            acumulated_reward += reward
+            accumulated_reward += reward
             expansion_steps += 1
             if self.args["exp_replay"]:
                 if done:
@@ -335,9 +335,9 @@ class DQN(Agent):
                 loss = self.model.current_loss()
                 losses.append(loss)
 
-                all_rewards.append(acumulated_reward)
+                all_rewards.append(accumulated_reward)
                 all_expansions.append(expansion_steps)
-                print(f"Step: {self.steps} - Epsode: {self.eps} - Expansions: {expansion_steps} - Reward: {acumulated_reward} - Acumulated: {np.mean(all_rewards[-32:])} - Epsilon: {self.epsilon}")
+                print(f"Step: {self.steps} - Epsode: {self.eps} - Expansions: {expansion_steps} - Reward: {accumulated_reward} - Accumulated: {np.mean(all_rewards[-50:])} - Epsilon: {self.epsilon}")
                 if self.freq_save is not None and self.eps % self.freq_save == 0:
                     if pth_path is not None:
                         if len(all_rewards) > 1000:
@@ -361,7 +361,7 @@ class DQN(Agent):
                             f.write(str(self.expanded_transitions))
 
                 obs = self.env.reset()
-                acumulated_reward = 0
+                accumulated_reward = 0
                 expansion_steps = 0
                 self.eps += 1
 

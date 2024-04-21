@@ -4,6 +4,7 @@ import MTSTools.ac.ic.doc.commons.relations.Pair;
 import java.io.*;
 import java.util.*;
 import MTSTools.ac.ic.doc.mtstools.model.LTS;
+import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.abstraction.FeatureGroup;
 import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.abstraction.HeuristicMode;
 import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.abstraction.ReadyAbstraction;
 import ai.onnxruntime.OrtException;
@@ -20,7 +21,7 @@ public class DCSForPython {
     public DirectedControllerSynthesisBlocking<Long, String> dcs;
     public ExplorationHeuristic<Long, String> heuristic;
     public HeuristicMode heuristicMode;
-    public String featureGroup;     // TODO: Cambiar a un enumerate
+    public FeatureGroup featureGroup;
     public String modelPath;
     public boolean realizable;
     public boolean finished;
@@ -38,7 +39,7 @@ public class DCSForPython {
         this.heuristicMode = HeuristicMode.valueOf(heuristicMode);
         this.lastEntityExpanded = -1;
         this.lastEntityExpandedWithoutReset = -1;
-        this.featureGroup = "";
+        this.featureGroup = FeatureGroup.VoidFeature;
     }
 
     public static Pair<CompositeState, LTSOutput> compileFSP(String filename){
@@ -184,7 +185,7 @@ public class DCSForPython {
     }
 
     public void setRLParameters(String featureGroup, String modelPath){
-        this.featureGroup = featureGroup;
+        this.featureGroup = FeatureGroup.valueOf(featureGroup);
         this.modelPath = modelPath;
     }
 
@@ -211,7 +212,7 @@ public class DCSForPython {
         return i;
     }
 
-    // Este metodo corre todas las instancias de una familia con una heuristica dada
+    // Esta funcion corre todas las instancias de una familia con una heuristica dada
     public static Pair<Integer, Integer> testHeuristic(int budget, String instance, String heuristic, String featuresGroup, String modelPath, boolean save, int minSize, int maxSize, int expansionLimit, int verbose){
         int solvedInstances = 0;
         int totalExpansions = 0;
@@ -292,7 +293,7 @@ public class DCSForPython {
         }
     }
 
-    // Esta funcion levanta todos los modelos de un experimento para una instancia y los testea con el budget dado
+    // Esta funcion levanta los modelos de un experimento para una instancia y los testea con el budget dado
     public static void selectRL(String instance, String experimentName, int budget, boolean onlyBestOptimization){
         String folderPath = "./results/models/" + instance + "/" + experimentName + "/";
 

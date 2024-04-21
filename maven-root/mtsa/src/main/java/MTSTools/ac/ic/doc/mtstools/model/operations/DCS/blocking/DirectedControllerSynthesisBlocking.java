@@ -6,6 +6,7 @@ import MTSTools.ac.ic.doc.mtstools.model.LTS;
 import MTSTools.ac.ic.doc.mtstools.model.impl.LTSImpl;
 import MTSTools.ac.ic.doc.mtstools.model.impl.MarkedLTSImpl;
 import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.DirectedControllerSynthesis;
+import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.abstraction.FeatureGroup;
 import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.abstraction.HeuristicMode;
 
 import java.util.*;
@@ -179,7 +180,7 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
         expansionStep = 1;
     }
 
-    public ExplorationHeuristic<State, Action> getHeuristic(HeuristicMode heuristicMode, String featureGroup){
+    public ExplorationHeuristic<State, Action> getHeuristic(HeuristicMode heuristicMode, FeatureGroup featureGroup){
         if(heuristicMode == HeuristicMode.Interactive){
             return new InteractiveExplorationHeuristic<>(this);
         } else if(heuristicMode == HeuristicMode.BFS) {
@@ -220,7 +221,7 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
         setupSynthesis(ltss, controllable, reachability, guarantees, assumptions);
 
         // FIXME, this is only done here until it can be chosen from the FSP instead of hardcoded
-        heuristic = getHeuristic(mode, "");
+        heuristic = getHeuristic(mode, FeatureGroup.VoidFeature);
 
         initial = buildInitialState();
         heuristic.setInitialState(initial);

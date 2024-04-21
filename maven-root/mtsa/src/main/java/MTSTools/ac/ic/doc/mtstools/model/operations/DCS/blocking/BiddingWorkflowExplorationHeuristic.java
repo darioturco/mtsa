@@ -142,11 +142,12 @@ public class BiddingWorkflowExplorationHeuristic<State, Action> implements Explo
     }
 
     public ArrayList<Integer> getOrder(){
-        // TODO: Completar esta funcion
-
         ArrayList<Integer> res = new ArrayList<>();
-        return res;
+        for(int i=0 ; i<actionsToExplore.size() ; i++){
+            res.add(i);
+        }
 
+        return res;
     }
 
     public ActionWithFeatures<State, Action> removeFromFrontier(int idx) {
