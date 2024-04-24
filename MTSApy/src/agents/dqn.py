@@ -257,6 +257,9 @@ class DQN(Agent):
         self.converged = False
         self.freq_save = args['freq_save']
 
+        self.steps = 1
+        self.eps = 1
+
     def get_name(self):
         return self.model.path
 
@@ -337,12 +340,9 @@ class DQN(Agent):
 
                 all_rewards.append(accumulated_reward)
                 all_expansions.append(expansion_steps)
-                print(f"Step: {self.steps} - Epsode: {self.eps} - Expansions: {expansion_steps} - Reward: {accumulated_reward} - Accumulated: {np.mean(all_rewards[-50:])} - Epsilon: {self.epsilon}")
+                print(f"Step: {self.steps} - Episode: {self.eps} - Expansions: {expansion_steps} - Reward: {accumulated_reward} - Accumulated: {np.mean(all_rewards[-50:])} - Epsilon: {self.epsilon}")
                 if self.freq_save is not None and self.eps % self.freq_save == 0:
                     if pth_path is not None:
-                        if len(all_rewards) > 1000:
-                            all_rewards = all_rewards[100:]
-
                         DQN.save(self, f"{pth_path[:-4]}-{self.eps}", partial=True)
                         if not os.path.exists(csv_path):
                             with open(csv_path, 'w') as _:  # Create the file if it doesn't exist
@@ -385,24 +385,13 @@ class DQN(Agent):
         self.model.remove_temp_files()
         return obs.copy()
 
-    # TODO: Arreglar este desorden
-    def get_action(self, s, epsilon, env=None):
+    def get_action(self, s, epsilon):
         """ Gets epsilon-greedy action using self.model """
-        if env is None:
-            env = self.env
 
-        #print(f"State FV: {s}\n - {len(s)}")
-        #env.composite. printFrontier()
-        #env.getJavaEnv().dcs.heuristic.printFrontier()
-
-        res = 0
         if np.random.rand() <= epsilon:
-            res = np.random.randint(len(s))
+            return np.random.randint(len(s))
         else:
-            res = self.model.best(s)
-
-        #print(f"Expanded: {res}")
-        return res
+            return self.model.best(s)
 
     def update(self, obs, action, reward, obs2):
         """ Gets epsilon-greedy action using self.model """

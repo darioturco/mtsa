@@ -1,13 +1,12 @@
 import sys
 import os
 import random
-import datetime
 import subprocess
 import numpy as np
 import pandas as pd
 from src.composition import CompositionGraph, CompositionAnalyzer
-from src.environment import Environment, FeatureEnvironment, FeatureCompleteEnvironment
-from src.agents.dqn import DQN, NeuralNetwork, TorchModel, OnnxModel
+from src.environment import FeatureEnvironment, FeatureCompleteEnvironment
+from src.agents.dqn import DQN, NeuralNetwork, TorchModel
 from src.agents.random import RandomAgent
 import csv
 
@@ -49,7 +48,7 @@ class Experiment(object):
         i = 0
 
         while not finish and i <= budget:
-            idx = agent.get_action(state, 0, env)
+            idx = agent.get_action(state, 0)
             state, reward, finish, info = env.step(idx)
             rewards.append(reward)
             trace.append(idx)
@@ -269,8 +268,6 @@ class TestTrainedInAllInstances(Experiment):
             return set(df["Model"]), min(df["Expansions"])
         except:
             return set(), float('inf')
-
-    #def pre_select_with_only_instance(self, instance, budget, path, amount_of_models=1000, csv_path=None, n, k):
 
     def pre_select(self, instance, experiment_name, budget, amount_of_models=1000, instance_list=None):
         path = f"./results/models/{instance}/{experiment_name}"
