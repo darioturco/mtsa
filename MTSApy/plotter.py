@@ -51,7 +51,7 @@ def graph_individual_training_process(experiment_name, sliding_window=5, save_pa
 
 def check_method_in_instance(instance, method):
     if method == "RA":
-        data = pd.read_csv(f"./results/csv/Ready Abstraction.csv")
+        data = pd.read_csv(f"./results/csv/RA.csv")
     else:
         data = pd.read_csv(f"./results/csv/{method}-{instance}.csv")
 
@@ -106,7 +106,7 @@ def get_rl_info(method, instance, budget, instances_solved):
         return int(res / SCALE)
 
 def get_data_for(budget, instances, data, instances_solved):
-    random_data = pd.read_csv("./results/csv/random.csv")
+    random_data = pd.read_csv("./results/csv/random.csv")  # CAMBIAR
     ra_data = pd.read_csv("./results/csv/RA.csv")
     bfs_data = pd.read_csv("./results/csv/BFS.csv")
 
@@ -121,15 +121,22 @@ def get_data_for(budget, instances, data, instances_solved):
             else:
                 data[method][instance] = get_rl_info(method, instance, budget, instances_solved)
 
+    for instance in instances[::-1]:     # Borrar For
+        print(data[list(data.keys())[0]][instance])
+
     return data
 
-def comparative_bar_plot(data=None, instances_solved=True):
+def comparative_bar_plot(data=None, instances_solved=True, budgets=None):
     instances = BENCHMARK_PROBLEMS[::-1]
-    budgets = [1000, 2500, 5000, 10000, 15000]
+
+    if budgets is None:
+        budgets = [1000, 2500, 5000, 10000, 15000]
+
     if data is None:
         data = []
         for b in budgets:
-            data_schema = {"Random": {}, "BFS": {}, "RL": {}, "CRL": {}, "RA": {}}
+            #data_schema = {"Random": {}, "BFS": {}, "RL": {}, "CRL": {}, "RA": {}}
+            data_schema = {"RA": {}}
             data.append((b, get_data_for(b, instances, data_schema, instances_solved)))
     else:
         for _ in budgets:
@@ -168,7 +175,7 @@ if __name__ == "__main__":
     print("Plotting...")
 
     ### Plot of individual training process
-    graph_individual_training_process("CRL", sliding_window=500, save_path='./results/plots', use_steps=True, problems=["DP"])
+    #graph_individual_training_process("CRL", sliding_window=500, save_path='./results/plots', use_steps=True, problems=["DP"])
     #graph_individual_training_process("CRL", sliding_window=500, save_path='./results/plots', use_steps=True, problems=["AT"])
     #graph_individual_training_process("CRL", sliding_window=500, save_path='./results/plots', use_steps=True, problems=["BW"])
     #graph_individual_training_process("CRL", sliding_window=500, save_path='./results/plots', use_steps=True, problems=["CM"])
@@ -178,16 +185,19 @@ if __name__ == "__main__":
 
 
     ### Plot of comparative add bar plot
-    comparative_bar_plot(data=None, instances_solved=True)  # Based on amount of solved instances
-    comparative_bar_plot(data=None, instances_solved=False) # Based on amount of expansions
+    #comparative_bar_plot(data=None, instances_solved=True, budgets=[15000])  # Based on amount of solved instances
+    #comparative_bar_plot(data=None, instances_solved=False, budgets=[15000]) # Based on amount of expansions
 
 
 
     ### Heatmap for each instance family
-    #for method_name in ["CRL", "RA"]:
-        #check_method_in_instance("BW", method_name)
-        #check_method_in_instance("DP", method_name)
-        #check_method_in_instance("AT", method_name)
-        #check_method_in_instance("TA", method_name)
-        #check_method_in_instance("TL", method_name)
-        #check_method_in_instance("CM", method_name)
+    for method_name in ["CRL", "RA"]:
+        check_method_in_instance("BW", method_name)
+        check_method_in_instance("DP", method_name)
+        check_method_in_instance("AT", method_name)
+        check_method_in_instance("TA", method_name)
+        check_method_in_instance("TL", method_name)
+        check_method_in_instance("CM", method_name)
+
+
+

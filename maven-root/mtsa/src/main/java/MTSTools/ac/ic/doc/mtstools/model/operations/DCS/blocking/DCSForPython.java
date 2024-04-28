@@ -258,9 +258,7 @@ public class DCSForPython {
                 }
             }
         }
-        String csvPath = "./gen/gen-" + instance + ".csv";
-        String[] data = {instance, modelPath, String.valueOf(solvedInstances), String.valueOf(totalExpansions)};
-        writeCSV(csvPath, data, selectionHeader);
+
         return new Pair<>(solvedInstances, totalExpansions);
     }
 
