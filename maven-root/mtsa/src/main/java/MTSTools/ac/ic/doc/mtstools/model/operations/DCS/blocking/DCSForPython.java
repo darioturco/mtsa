@@ -378,40 +378,52 @@ public class DCSForPython {
         return (value != null && value);
     }
 
+    public static void example(){
+        String instancia = "BW";
+        String heuristic = "Random";
+        syntetizeWithHeuristic("./../../MTSApy/fsp/" + instancia + "/" + instancia + "-2-2.fsp", heuristic, "RL", "", 10000, true);
+    }
+
     public static void main(String[] args) {
-        CmdLineParser cmdParser = new CmdLineParser();
-        CmdLineParser.Option selection_opt = cmdParser.addBooleanOption('s', "selection");
-        CmdLineParser.Option help_opt = cmdParser.addBooleanOption('h', "help");
-        CmdLineParser.Option onlyBestOptimization_opt = cmdParser.addBooleanOption('o', "onlyBestOptimization");
-        CmdLineParser.Option instance_opt = cmdParser.addStringOption('i', "instance");
-        CmdLineParser.Option experiment_opt = cmdParser.addStringOption('e', "experiment");
-        CmdLineParser.Option budget_opt = cmdParser.addIntegerOption('b', "budget");
-        CmdLineParser.Option model_opt = cmdParser.addStringOption('m', "model");
+        boolean debug = false;
+        if(debug){
+            System.out.println("Working Directory = " + System.getProperty("user.dir"));
+            example();
+        }else {
+            CmdLineParser cmdParser = new CmdLineParser();
+            CmdLineParser.Option selection_opt = cmdParser.addBooleanOption('s', "selection");
+            CmdLineParser.Option help_opt = cmdParser.addBooleanOption('h', "help");
+            CmdLineParser.Option onlyBestOptimization_opt = cmdParser.addBooleanOption('o', "onlyBestOptimization");
+            CmdLineParser.Option instance_opt = cmdParser.addStringOption('i', "instance");
+            CmdLineParser.Option experiment_opt = cmdParser.addStringOption('e', "experiment");
+            CmdLineParser.Option budget_opt = cmdParser.addIntegerOption('b', "budget");
+            CmdLineParser.Option model_opt = cmdParser.addStringOption('m', "model");
 
-        try {
-            cmdParser.parse(args);
-        } catch (CmdLineParser.OptionException e) {
-            System.out.println("Invalid args: " + e.getMessage() + "\n");
-            DCSForPython.printHelp();
-            System.exit(0);
-        }
+            try {
+                cmdParser.parse(args);
+            } catch (CmdLineParser.OptionException e) {
+                System.out.println("Invalid args: " + e.getMessage() + "\n");
+                DCSForPython.printHelp();
+                System.exit(0);
+            }
 
-        boolean selection = getBoolValue(cmdParser, selection_opt);
-        boolean help = getBoolValue(cmdParser, help_opt);
-        boolean onlyBestOptimization = getBoolValue(cmdParser, onlyBestOptimization_opt);
+            boolean selection = getBoolValue(cmdParser, selection_opt);
+            boolean help = getBoolValue(cmdParser, help_opt);
+            boolean onlyBestOptimization = getBoolValue(cmdParser, onlyBestOptimization_opt);
 
-        if(help){
-            DCSForPython.printHelp();
-        }else{
-            String instance = (String)cmdParser.getOptionValue(instance_opt);
-            String experiment = (String)cmdParser.getOptionValue(experiment_opt);
-            int budget = (int)cmdParser.getOptionValue(budget_opt);
+            if (help) {
+                DCSForPython.printHelp();
+            } else {
+                String instance = (String) cmdParser.getOptionValue(instance_opt);
+                String experiment = (String) cmdParser.getOptionValue(experiment_opt);
+                int budget = (int) cmdParser.getOptionValue(budget_opt);
 
-            if(selection){
-                selectRL(instance, experiment, budget, onlyBestOptimization);
-            }else{
-                String modelPath = (String) cmdParser.getOptionValue(model_opt);
-                DCSForPython.testHeuristic(budget, instance, "RL", experiment, modelPath, true, 1, 15, budget * 15 * 15 + 1, 2);
+                if (selection) {
+                    selectRL(instance, experiment, budget, onlyBestOptimization);
+                } else {
+                    String modelPath = (String) cmdParser.getOptionValue(model_opt);
+                    DCSForPython.testHeuristic(budget, instance, "RL", experiment, modelPath, true, 1, 15, budget * 15 * 15 + 1, 2);
+                }
             }
         }
     }

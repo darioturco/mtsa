@@ -33,12 +33,14 @@ public class ActionWithFeatures<State, Action> {
         this.featureVector = new float[dcs.nfeatures];
         this.expansionStep = dcs.expansionStep;
 
-        if(parent == null){
-            state.customFeaturesMatrix = dcs.instanceDomain.newFeatureMatrix(dcs.instanceDomain.compostateFeatureSize);
-            state.entityIndexes.put(action, new int[dcs.n]);
-        }else{
-            state.customFeaturesMatrix = dcs.instanceDomain.copyMatrix(parent);
-            state.entityIndexes.put(action, Arrays.copyOf(parent.getLastentityIndex(), dcs.n));
+        if(dcs.instanceDomain != null){
+            if(parent == null){
+                state.customFeaturesMatrix = dcs.instanceDomain.newFeatureMatrix(dcs.instanceDomain.compostateFeatureSize);
+                state.entityIndexes.put(action, new int[dcs.n]);
+            }else{
+                state.customFeaturesMatrix = dcs.instanceDomain.copyMatrix(parent);
+                state.entityIndexes.put(action, Arrays.copyOf(parent.getLastentityIndex(), dcs.n));
+            }
         }
 
         this.childMarked = true;
@@ -93,14 +95,16 @@ public class ActionWithFeatures<State, Action> {
     }
 
     public void updateFeatures(){
-        int i = 0;
-        RLExplorationHeuristic heuristic = ((RLExplorationHeuristic) dcs.heuristic);
-        LinkedList<DCSFeatures.ComputeFeature<State, Action>> methods = heuristic.featureMaker.methodFeatures;
-        for(DCSFeatures.ComputeFeature<State, Action> f : methods){
-            if(f.requiresUpdate()){
-                f.compute(heuristic, this, i);
+        if(dcs.heuristic instanceof RLExplorationHeuristic) {
+            RLExplorationHeuristic heuristic = ((RLExplorationHeuristic) dcs.heuristic);
+            LinkedList<DCSFeatures.ComputeFeature<State, Action>> methods = heuristic.featureMaker.methodFeatures;
+            int i = 0;
+            for (DCSFeatures.ComputeFeature<State, Action> f : methods) {
+                if (f.requiresUpdate()) {
+                    f.compute(heuristic, this, i);
+                }
+                i += f.size();
             }
-            i += f.size();
         }
     }
 }
