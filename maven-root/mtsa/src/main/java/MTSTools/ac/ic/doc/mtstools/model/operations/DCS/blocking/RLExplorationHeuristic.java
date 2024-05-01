@@ -129,6 +129,7 @@ public class RLExplorationHeuristic<State, Action> implements ExplorationHeurist
         computeFeatures();
 
         if(session == null){
+            System.out.println("Warning, not valid active session.");
             return 0;
         }
 

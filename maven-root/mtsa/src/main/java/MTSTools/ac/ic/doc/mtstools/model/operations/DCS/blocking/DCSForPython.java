@@ -189,7 +189,16 @@ public class DCSForPython {
         this.modelPath = modelPath;
     }
 
-    public static int syntetizeWithHeuristic(String FSP_path, String heuristic, String featuresGroup, String modelPath, int budget, boolean verbose){
+    public static boolean notReachTimeout(long time, long timeLimit){
+        //return timeLimit == -1 ? true : (System.currentTimeMillis() - time) < timeLimit;
+        if(timeLimit == -1){
+            return true;
+        }else{
+            return (System.currentTimeMillis() - time) < timeLimit;
+        }
+    }
+
+    public static int syntetizeWithHeuristic(String FSP_path, String heuristic, String featuresGroup, String modelPath, int budget, long timeLimit, boolean verbose){
         DCSForPython env = new DCSForPython(heuristic);
         env.setRLParameters(featuresGroup, modelPath);
         env.setFlags(true, true);
@@ -197,9 +206,11 @@ public class DCSForPython {
 
         int idx;
         int i = 0;
-        while (!env.isFinished() && i < budget) {
+        long time = System.currentTimeMillis();
+        while (!env.isFinished() && i < budget && DCSForPython.notReachTimeout(time, timeLimit)) {
             idx = env.getActionFronAuxiliarHeuristic();
             if(verbose){
+                //((RLExplorationHeuristic) env.heuristic).computeFeatures(); // BORRAR
                 System.out.println("----------------------------------: " + (i+1));
                 env.heuristic.printFrontier();
                 System.out.println("Expanded(" + idx + "): " + env.heuristic.getFrontier().get(idx));
@@ -207,13 +218,16 @@ public class DCSForPython {
             env.expandAction(idx);
             i = i + 1;
         }
+        if(verbose && !DCSForPython.notReachTimeout(time, timeLimit)){
+            System.out.println("Time budget exceeded.");
+        }
 
         env.dcs.notify_end_synthesis();
         return i;
     }
 
     // Esta funcion corre todas las instancias de una familia con una heuristica dada
-    public static Pair<Integer, Integer> testHeuristic(int budget, String instance, String heuristic, String featuresGroup, String modelPath, boolean save, int minSize, int maxSize, int expansionLimit, int verbose){
+    public static Pair<Integer, Integer> testHeuristic(int budget, String instance, String heuristic, String featuresGroup, String modelPath, boolean save, int minSize, int maxSize, int expansionLimit, long timeLimit, int verbose){
         int solvedInstances = 0;
         int totalExpansions = 0;
         long time = 0L;
@@ -232,7 +246,7 @@ public class DCSForPython {
                     String fsp_path = "./fsp/" + instance + "/" + instance + "-" + n + "-" + k + ".fsp";
 
                     long startTime = System.currentTimeMillis();
-                    res = DCSForPython.syntetizeWithHeuristic(fsp_path, heuristic, featuresGroup, modelPath, budget, false);
+                    res = DCSForPython.syntetizeWithHeuristic(fsp_path, heuristic, featuresGroup, modelPath, budget, timeLimit, false);
                     time = System.currentTimeMillis() - startTime;
 
                     if(res < budget){
@@ -319,7 +333,7 @@ public class DCSForPython {
         for (String modelName : listModels) {
             System.out.println("Testing model: " + modelName);
             int expansionLimit = onlyBestOptimization ? bestValue : budget * 225 + 1;
-            Pair<Integer, Integer> res = testHeuristic(budget, instance, "RL", experimentName, modelName, false, 1, 9, expansionLimit, 0);
+            Pair<Integer, Integer> res = testHeuristic(budget, instance, "RL", experimentName, modelName, false, 1, 9, expansionLimit, -1, 0);
             int solvedInstances = res.getFirst();
             int totalExpansions = res.getSecond();
 
@@ -378,16 +392,26 @@ public class DCSForPython {
         return (value != null && value);
     }
 
+    public static int getIntValue(CmdLineParser cmdParser, CmdLineParser.Option opt, int defaultValue){
+        Integer value = (Integer)cmdParser.getOptionValue(opt);
+        return value == null ? defaultValue : value;
+    }
+
+    public static long getLongValue(CmdLineParser cmdParser, CmdLineParser.Option opt, long defaultValue){
+        Long value = (Long)cmdParser.getOptionValue(opt);
+        return value == null ? defaultValue : value;
+    }
+
     public static void example(){
         String instancia = "BW";
-        String heuristic = "Random";
-        syntetizeWithHeuristic("./../../MTSApy/fsp/" + instancia + "/" + instancia + "-2-2.fsp", heuristic, "RL", "", 10000, true);
+        String heuristic = "RL";
+        //String heuristic = "Ready";
+        syntetizeWithHeuristic("./../../MTSApy/fsp/" + instancia + "/" + instancia + "-5-5.fsp", heuristic, "CRL", "../../MTSApy/results/final/models final/BW/CRL-BW-1.onnx", 15000, 5000, true);
     }
 
     public static void main(String[] args) {
         boolean debug = false;
         if(debug){
-            System.out.println("Working Directory = " + System.getProperty("user.dir"));
             example();
         }else {
             CmdLineParser cmdParser = new CmdLineParser();
@@ -398,6 +422,7 @@ public class DCSForPython {
             CmdLineParser.Option experiment_opt = cmdParser.addStringOption('e', "experiment");
             CmdLineParser.Option budget_opt = cmdParser.addIntegerOption('b', "budget");
             CmdLineParser.Option model_opt = cmdParser.addStringOption('m', "model");
+            CmdLineParser.Option time_opt = cmdParser.addIntegerOption('t', "time");        // 30m = 1800000
 
             try {
                 cmdParser.parse(args);
@@ -416,13 +441,14 @@ public class DCSForPython {
             } else {
                 String instance = (String) cmdParser.getOptionValue(instance_opt);
                 String experiment = (String) cmdParser.getOptionValue(experiment_opt);
-                int budget = (int) cmdParser.getOptionValue(budget_opt);
+                int budget = getIntValue(cmdParser, budget_opt, 15000);
+                long time = getLongValue(cmdParser, time_opt, -1);
 
                 if (selection) {
                     selectRL(instance, experiment, budget, onlyBestOptimization);
                 } else {
                     String modelPath = (String) cmdParser.getOptionValue(model_opt);
-                    DCSForPython.testHeuristic(budget, instance, "RL", experiment, modelPath, true, 1, 15, budget * 15 * 15 + 1, 2);
+                    DCSForPython.testHeuristic(budget, instance, "RL", experiment, modelPath, true, 1, 15, budget * 15 * 15 + 1, time, 2);
                 }
             }
         }
