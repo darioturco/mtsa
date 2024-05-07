@@ -1,13 +1,12 @@
 import sys
 import os
 import random
-import datetime
 import subprocess
 import numpy as np
 import pandas as pd
 from src.composition import CompositionGraph, CompositionAnalyzer
-from src.environment import Environment, FeatureEnvironment, FeatureCompleteEnvironment
-from src.agents.dqn import DQN, NeuralNetwork, TorchModel, OnnxModel
+from src.environment import FeatureEnvironment, FeatureCompleteEnvironment
+from src.agents.dqn import DQN, NeuralNetwork, TorchModel
 from src.agents.random import RandomAgent
 import csv
 
@@ -49,7 +48,7 @@ class Experiment(object):
         i = 0
 
         while not finish and i <= budget:
-            idx = agent.get_action(state, 0, env)
+            idx = agent.get_action(state, 0)
             state, reward, finish, info = env.step(idx)
             rewards.append(reward)
             trace.append(idx)
@@ -270,8 +269,6 @@ class TestTrainedInAllInstances(Experiment):
         except:
             return set(), float('inf')
 
-    #def pre_select_with_only_instance(self, instance, budget, path, amount_of_models=1000, csv_path=None, n, k):
-
     def pre_select(self, instance, experiment_name, budget, amount_of_models=1000, instance_list=None):
         path = f"./results/models/{instance}/{experiment_name}"
         all_models = {os.path.join(r, file) for r, d, f in os.walk(path) for file in f}
@@ -344,6 +341,13 @@ class TestTrainedInAllInstances(Experiment):
             onnx_path = self.get_best_model(f"./results/selection/{experiment_name}-{instance}.csv")
 
         command = f'java -classpath mtsa.jar MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.DCSForPython -i {instance} -e "{experiment_name}" -b {budget} -m {onnx_path}'
+        subprocess.call(command, shell=True)
+
+    def test_time_with_java(self, instance, experiment_name, time, onnx_path=None):
+        if onnx_path is None:
+            onnx_path = self.get_best_model(f"./results/selection/{experiment_name}-{instance}.csv")
+
+        command = f'java -classpath mtsa.jar MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.DCSForPython -i {instance} -e "{experiment_name}" -b 9999999 -m {onnx_path} -t {time}'
         subprocess.call(command, shell=True)
 
     def get_controller(self, concrete_instance, experiment_name, budget, onnx_path):

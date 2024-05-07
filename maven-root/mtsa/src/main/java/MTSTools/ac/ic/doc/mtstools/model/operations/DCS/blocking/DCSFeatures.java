@@ -1,6 +1,8 @@
 package MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking;
 
 import MTSTools.ac.ic.doc.commons.relations.Pair;
+import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.abstraction.FeatureGroup;
+
 import java.util.*;
 
 public class DCSFeatures<State, Action> {
@@ -20,7 +22,7 @@ public class DCSFeatures<State, Action> {
 
 
 
-    DCSFeatures(String featureGroup, RLExplorationHeuristic heuristic){
+    DCSFeatures(FeatureGroup featureGroup, RLExplorationHeuristic heuristic){
         this.heuristic = heuristic;
         this.dcs = heuristic.dcs;
         this.dcs.instanceDomain = InstanceDomain.createInstanceDomain(this.dcs, this);
@@ -41,7 +43,7 @@ public class DCSFeatures<State, Action> {
         }
         nactions = labels_idx.size();
 
-        if(featureGroup.equals("RL")){
+        if(featureGroup == FeatureGroup.RL){
             methodFeatures.add(this.action_labels_feature);
             methodFeatures.add(this.state_labels_feature);
             methodFeatures.add(this.controllable_feature);
@@ -52,7 +54,7 @@ public class DCSFeatures<State, Action> {
             methodFeatures.add(this.state_child_explored_feature);
             methodFeatures.add(this.just_explored_feature);
 
-        }else if(featureGroup.equals("CRL")){
+        }else if(featureGroup == FeatureGroup.CRL){
             methodFeatures.add(this.action_labels_feature);
             methodFeatures.add(this.state_labels_feature);
             methodFeatures.add(this.controllable_feature);
@@ -68,7 +70,7 @@ public class DCSFeatures<State, Action> {
             methodFeatures.add(this.mission_feature);
             methodFeatures.add(this.custom_feature);
 
-        }else if(featureGroup.equals("RRL")){   // RL with random features
+        }else if(featureGroup == FeatureGroup.RRL){   // RL with random features
             randomAmount = 100; // Amount of random features to be added
 
             methodFeatures.add(this.action_labels_feature);
@@ -328,10 +330,10 @@ public class DCSFeatures<State, Action> {
     public final ComputeFeature<State, Action> entity_was_assigned_BW_feature = new ComputeFeature<>() {
         public void compute(RLExplorationHeuristic<State, Action> h, ActionWithFeatures<State, Action> a, int i) {
             if(a.has_entity() && a.action.toString().contains("assign")){
-                (a.state.customFeaturesMatrix.get(1))[a.entity] = true;
+                a.state.customFeaturesMatrix[1][a.entity] = true;
             }
 
-            boolean entity_was_assigned = a.has_entity() && (a.state.customFeaturesMatrix.get(1))[a.entity];
+            boolean entity_was_assigned = a.has_entity() && a.state.customFeaturesMatrix[1][a.entity];
             a.featureVector[i] = toFloat(entity_was_assigned);
         }
         public int size() {return 1;}
@@ -342,10 +344,10 @@ public class DCSFeatures<State, Action> {
     public final ComputeFeature<State, Action> entity_was_rejected_BW_feature = new ComputeFeature<>() {
         public void compute(RLExplorationHeuristic<State, Action> h, ActionWithFeatures<State, Action> a, int i) {
             if(a.has_entity() && a.action.toString().contains("reject")){
-                (a.state.customFeaturesMatrix.get(2))[a.entity] = true;
+                a.state.customFeaturesMatrix[2][a.entity] = true;
             }
 
-            boolean entity_was_rejected = a.has_entity() && (a.state.customFeaturesMatrix.get(2))[a.entity];
+            boolean entity_was_rejected = a.has_entity() && a.state.customFeaturesMatrix[2][a.entity];
             a.featureVector[i] = toFloat(entity_was_rejected);
         }
         public int size() {return 1;}
@@ -356,10 +358,10 @@ public class DCSFeatures<State, Action> {
     public final ComputeFeature<State, Action> entity_was_accepted_BW_feature = new ComputeFeature<>() {
         public void compute(RLExplorationHeuristic<State, Action> h, ActionWithFeatures<State, Action> a, int i) {
             if(a.has_entity() && a.action.toString().contains("accept")){
-                (a.state.customFeaturesMatrix.get(3))[a.entity] = true;
+                a.state.customFeaturesMatrix[3][a.entity] = true;
             }
 
-            boolean entity_was_accepted = a.has_entity() && (a.state.customFeaturesMatrix.get(3))[a.entity];
+            boolean entity_was_accepted = a.has_entity() && a.state.customFeaturesMatrix[3][a.entity];
             a.featureVector[i] = toFloat(entity_was_accepted);
         }
         public int size() {return 1;}
@@ -382,14 +384,14 @@ public class DCSFeatures<State, Action> {
             if(a.has_entity()){
                 String label = a.action.toString();
                 if(label.contains("descend")) {
-                    (a.state.customFeaturesMatrix.get(1))[a.entity] = true;
+                    a.state.customFeaturesMatrix[1][a.entity] = true;
                 }else if(label.contains("approach")) {
-                    (a.state.customFeaturesMatrix.get(2))[a.entity] = true;
+                    a.state.customFeaturesMatrix[2][a.entity] = true;
                 }
             }
 
-            a.featureVector[i] = toFloat(a.has_entity() && (a.state.customFeaturesMatrix.get(1))[a.entity]);
-            a.featureVector[i+1] = toFloat(a.has_entity() && (a.state.customFeaturesMatrix.get(2))[a.entity]);
+            a.featureVector[i] = toFloat(a.has_entity() && a.state.customFeaturesMatrix[1][a.entity]);
+            a.featureVector[i+1] = toFloat(a.has_entity() && a.state.customFeaturesMatrix[2][a.entity]);
         }
         public int size() {return 2;}
         public boolean requiresUpdate() { return true; }
@@ -411,14 +413,14 @@ public class DCSFeatures<State, Action> {
             if(a.has_entity()){
                 String label = a.action.toString();
                 if(label.contains("commited") && !label.contains("un")){
-                    (a.state.customFeaturesMatrix.get(1))[a.entity] = true;
+                    a.state.customFeaturesMatrix[1][a.entity] = true;
                 }else if(label.contains("uncommitted")){
-                    (a.state.customFeaturesMatrix.get(2))[a.entity] = true;
+                    a.state.customFeaturesMatrix[2][a.entity] = true;
                 }
             }
 
-            a.featureVector[i] = toFloat(a.has_entity() && (a.state.customFeaturesMatrix.get(1))[a.entity]);
-            a.featureVector[i+1] = toFloat(a.has_entity() && (a.state.customFeaturesMatrix.get(2))[a.entity]);
+            a.featureVector[i] = toFloat(a.has_entity() && a.state.customFeaturesMatrix[1][a.entity]);
+            a.featureVector[i+1] = toFloat(a.has_entity() && a.state.customFeaturesMatrix[2][a.entity]);
         }
         public int size() {return 2;}
         public boolean requiresUpdate() { return true; }
@@ -431,9 +433,9 @@ public class DCSFeatures<State, Action> {
             a.featureVector[i+1] = 0.0f;
 
             if(a.has_entity() && a.action.toString().contains("query") && a.entity-1 >= 0){
-                if(a.state.customFeaturesMatrix.get(4)[a.entity-1])
+                if(a.state.customFeaturesMatrix[4][a.entity-1])
                     a.featureVector[i] = 1.0f;
-                if(a.state.customFeaturesMatrix.get(5)[a.entity-1])
+                if(a.state.customFeaturesMatrix[5][a.entity-1])
                     a.featureVector[i+1] = 1.0f;
             }
         }
@@ -462,7 +464,7 @@ public class DCSFeatures<State, Action> {
     // DP Features
     public final ComputeFeature<State, Action> philosopher_took_DP_feature = new ComputeFeature<>() {
         public void compute(RLExplorationHeuristic<State, Action> h, ActionWithFeatures<State, Action> a, int i) {
-            boolean philosopher_took = a.has_entity() && (a.state.customFeaturesMatrix.get(1))[a.entity];
+            boolean philosopher_took = a.has_entity() && a.state.customFeaturesMatrix[1][a.entity];
             a.featureVector[i] = toFloat(philosopher_took);
         }
         public int size() {return 1;}
@@ -479,7 +481,7 @@ public class DCSFeatures<State, Action> {
                 entity -= 1;
             }
 
-            boolean load_buffer = a.has_entity() && entity < dcs.n && (a.state.customFeaturesMatrix.get(1))[entity];
+            boolean load_buffer = a.has_entity() && entity < dcs.n && a.state.customFeaturesMatrix[1][entity];
             a.featureVector[i] = toFloat(load_buffer);
         }
         public int size() {return 1;}
@@ -495,7 +497,7 @@ public class DCSFeatures<State, Action> {
                 entity -= 1;
             }
 
-            boolean buffer_returned = a.entity >= 0 && entity < dcs.n && (a.state.customFeaturesMatrix.get(2))[entity];
+            boolean buffer_returned = a.entity >= 0 && entity < dcs.n && a.state.customFeaturesMatrix[2][entity];
             a.featureVector[i] = toFloat(buffer_returned);
         }
         public int size() {return 1;}

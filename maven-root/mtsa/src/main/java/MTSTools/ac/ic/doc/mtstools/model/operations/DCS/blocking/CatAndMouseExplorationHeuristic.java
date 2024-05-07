@@ -77,7 +77,6 @@ public class CatAndMouseExplorationHeuristic<State, Action> implements Explorati
         int position = -1;
 
         for(int i=actionsToExplore.size()-1;i>=0;i--){
-
             String action = actionsToExplore.get(i).action.toString();
             if(action.contains("safe")){
                 return i; // There is no better option
@@ -108,11 +107,12 @@ public class CatAndMouseExplorationHeuristic<State, Action> implements Explorati
     }
 
     public ArrayList<Integer> getOrder(){
-        // TODO: Completar esta funcion
-
         ArrayList<Integer> res = new ArrayList<>();
-        return res;
+        for(int i=0 ; i<actionsToExplore.size() ; i++){
+            res.add(i);
+        }
 
+        return res;
     }
 
     public ActionWithFeatures<State, Action> removeFromFrontier(int idx) {

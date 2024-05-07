@@ -4,6 +4,7 @@ import MTSTools.ac.ic.doc.commons.collections.BidirectionalMap;
 import MTSTools.ac.ic.doc.commons.collections.InitMap;
 import MTSTools.ac.ic.doc.commons.relations.Pair;
 import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.abstraction.Abstraction;
+import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.abstraction.FeatureGroup;
 import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.abstraction.ReadyAbstraction;
 import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.abstraction.Recommendation;
 import ai.onnxruntime.*;
@@ -63,7 +64,7 @@ public class RLExplorationHeuristic<State, Action> implements ExplorationHeurist
     public ActionWithFeatures<State, Action> lastExpandedStateAction = null;
 
     /** Name of the set of features used by the learner */
-    public String featureGroup;     // TODO: convertirlo a enumerate
+    public FeatureGroup featureGroup;
 
     public OrtEnvironment ortEnv;
     public OrtSession session;
@@ -74,7 +75,7 @@ public class RLExplorationHeuristic<State, Action> implements ExplorationHeurist
     public DCSFeatures featureMaker;
 
     public RLExplorationHeuristic(
-            DirectedControllerSynthesisBlocking<State,Action> dcs, String featureGroup) {
+            DirectedControllerSynthesisBlocking<State,Action> dcs, FeatureGroup featureGroup) {
 
         //LOGGER
         //set logger formatter for more control over logs
@@ -128,6 +129,7 @@ public class RLExplorationHeuristic<State, Action> implements ExplorationHeurist
         computeFeatures();
 
         if(session == null){
+            System.out.println("Warning, not valid active session.");
             return 0;
         }
 

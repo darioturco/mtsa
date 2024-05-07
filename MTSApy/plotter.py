@@ -5,26 +5,24 @@ import seaborn as sn
 
 OUTPUT_FOLDER = "./results/plots/"
 BENCHMARK_PROBLEMS = ["AT", "BW", "DP", "TA", "TL", "CM"]
-#BENCHMARK_PROBLEMS = ["AT", "BW", "DP", "TA", "TL"]
-#SCALE = 1
 SCALE = 1000
 
 def graph_individual_training_process(experiment_name, sliding_window=5, save_path=None, use_steps=False, problems=None, graph_loss=False):
-    #random_data = pd.read_csv("./results/csv/random budget=5000 repetitions=100.csv")
-    random_data = pd.read_csv("./results/csv/random.csv")
-    ra_data = pd.read_csv("./results/csv/Ready Abstraction.csv")
-    limit = 1000000 // 25
+    def get_info_of_instance(rl_path, sliding_window):
+        data_instance = pd.read_csv(rl_path, names=['Step', "Expansion", "Reward", "Loss"])
+        rewards = list(data_instance["Reward"])
+        episodes = range(len(rewards) - sliding_window)
+        steps = [-sum(rewards[:eps]) for eps in range(len(episodes))]
+        rewards_win = [np.mean(rewards[eps: eps + sliding_window]) for eps in episodes]
+        losses = [np.mean(data_instance["Loss"][eps: eps + sliding_window]) for eps in range(len(episodes))]
+        return rewards, episodes, steps, rewards_win, losses
 
     if problems is None:
         problems = BENCHMARK_PROBLEMS
 
     for instance in problems:
         rl_path = f"./results/training/{instance}-{experiment_name}.csv"
-        rewards, episodes, steps, rewards_win, losses = get_info_of_instance(rl_path, sliding_window, limit)
-
-        #random_mean = -int(random_data[(random_data["Instance"] == instance) & (random_data["N"] == 2) & (random_data["K"] == 2)]["Transitions (mean)"])
-        #random_max = -int(random_data[(random_data["Instance"] == instance) & (random_data["N"] == 2) & (random_data["K"] == 2)]["Transitions (min)"])
-        #ra_value = -int(ra_data[(ra_data["Instance"] == instance) & (ra_data["N"] == 2) & (ra_data["K"] == 2)]["Transitions"])
+        rewards, episodes, steps, rewards_win, losses = get_info_of_instance(rl_path, sliding_window)
 
         if use_steps:
             x = steps
@@ -35,9 +33,6 @@ def graph_individual_training_process(experiment_name, sliding_window=5, save_pa
 
         plt.clf()
         plt.plot(x, rewards_win, label="RL")
-        #plt.axhline(y=int(random_mean), color='g', linestyle='--', label="Random Mean")
-        #plt.axhline(y=int(random_max), color='g', linestyle='-', label="Random Max")
-        #plt.axhline(y=int(ra_value), color='red', linestyle='-', label="RA")
         plt.xlabel(x_label)
         plt.ylabel('Reward')
         plt.title(f"{experiment_name} - {instance}")
@@ -54,25 +49,14 @@ def graph_individual_training_process(experiment_name, sliding_window=5, save_pa
             plt.title(f"{experiment_name} - {instance}")
             plt.show()
 
-def get_info_of_instance(rl_path, sliding_window, limit):
-    data_instance = pd.read_csv(rl_path, names=['Step', "Expansion", "Reward", "Loss"])
-    rewards = list(data_instance["Reward"])
-    episodes = range(len(rewards) - sliding_window)
-    steps = [-sum(rewards[:eps]) for eps in range(len(episodes))]
-    rewards_win = [np.mean(rewards[eps: eps + sliding_window]) for eps in episodes]
-    losses = [np.mean(data_instance["Loss"][eps: eps + sliding_window]) for eps in range(len(episodes))]
-    return rewards[:limit], episodes[:limit], steps[:limit], rewards_win[:limit], losses[:limit]
-
-def data_csv(instance, method):
-    if method == "RA":
-        return pd.read_csv(f"./results/csv/Ready Abstraction.csv")
-    else:
-        return pd.read_csv(f"./results/csv/{method}-{instance}.csv")
-
 def check_method_in_instance(instance, method):
-    data = data_csv(instance, method)
+    if method == "RA":
+        data = pd.read_csv(f"./results/csv/RA.csv")
+    else:
+        data = pd.read_csv(f"./results/csv/{method}-{instance}.csv")
 
     instance_matrix = []
+
     for n in range(15, 0, -1):
         row = []
         for k in range(1, 16):
@@ -81,7 +65,6 @@ def check_method_in_instance(instance, method):
             else:
                 value = int(data[(data["N"] == n) & (data["K"] == k)]["Transitions"])
 
-            #print(f"N = {n} - K = {k} -> {method}: {value}")
             row.append(value)
 
         instance_matrix.append(row)
@@ -123,7 +106,7 @@ def get_rl_info(method, instance, budget, instances_solved):
         return int(res / SCALE)
 
 def get_data_for(budget, instances, data, instances_solved):
-    random_data = pd.read_csv("./results/csv/random.csv")
+    random_data = pd.read_csv("./results/csv/random.csv")  # CAMBIAR
     ra_data = pd.read_csv("./results/csv/RA.csv")
     bfs_data = pd.read_csv("./results/csv/BFS.csv")
 
@@ -138,15 +121,22 @@ def get_data_for(budget, instances, data, instances_solved):
             else:
                 data[method][instance] = get_rl_info(method, instance, budget, instances_solved)
 
+    for instance in instances[::-1]:     # Borrar For
+        print(data[list(data.keys())[0]][instance])
+
     return data
 
-def comparative_bar_plot(data=None, instances_solved=True):
+def comparative_bar_plot(data=None, instances_solved=True, budgets=None):
     instances = BENCHMARK_PROBLEMS[::-1]
-    budgets = [1000, 2500, 5000, 10000, 15000]
+
+    if budgets is None:
+        budgets = [1000, 2500, 5000, 10000, 15000]
+
     if data is None:
         data = []
         for b in budgets:
-            data_schema = {"Random": {}, "BFS": {}, "RL": {}, "CRL": {}, "RA": {}}
+            #data_schema = {"Random": {}, "BFS": {}, "RL": {}, "CRL": {}, "RA": {}}
+            data_schema = {"RA": {}}
             data.append((b, get_data_for(b, instances, data_schema, instances_solved)))
     else:
         for _ in budgets:
@@ -183,27 +173,31 @@ def comparative_bar_plot_data(data, instances, title):
 
 if __name__ == "__main__":
     print("Plotting...")
-    #graph_individual_training_process("2-2", sliding_window=500, save_path='./results/plots', use_steps=True, problems=["TA"])
+
+    ### Plot of individual training process
     #graph_individual_training_process("CRL", sliding_window=500, save_path='./results/plots', use_steps=True, problems=["DP"])
+    #graph_individual_training_process("CRL", sliding_window=500, save_path='./results/plots', use_steps=True, problems=["AT"])
+    #graph_individual_training_process("CRL", sliding_window=500, save_path='./results/plots', use_steps=True, problems=["BW"])
+    #graph_individual_training_process("CRL", sliding_window=500, save_path='./results/plots', use_steps=True, problems=["CM"])
+    #graph_individual_training_process("CRL", sliding_window=500, save_path='./results/plots', use_steps=True, problems=["TL"])
     #graph_individual_training_process("CRL", sliding_window=500, save_path='./results/plots', use_steps=True, problems=["TA"])
 
 
-    #graph_training_process(sliding_window=100, repetitions=5, save_path='./results/plots', use_steps=True)
 
-    # Budget of 10000
-    comparative_bar_plot(data=None, instances_solved=True)
-    comparative_bar_plot(data=None, instances_solved=False)
-
+    ### Plot of comparative add bar plot
+    #comparative_bar_plot(data=None, instances_solved=True, budgets=[15000])  # Based on amount of solved instances
+    #comparative_bar_plot(data=None, instances_solved=False, budgets=[15000]) # Based on amount of expansions
 
 
-    #method_name = "CRL"
-    #check_method_in_instance("BW", method_name)
-    #check_method_in_instance("DP", method_name)
-    #check_method_in_instance("AT", method_name)
-    #check_method_in_instance("TA", method_name)
 
-    #method_name = "RA"
-    #check_method_in_instance("BW", method_name)
-    #check_method_in_instance("DP", method_name)
-    #check_method_in_instance("AT", method_name)
-    #check_method_in_instance("TA", method_name)
+    ### Heatmap for each instance family
+    for method_name in ["CRL", "RA"]:
+        check_method_in_instance("BW", method_name)
+        check_method_in_instance("DP", method_name)
+        check_method_in_instance("AT", method_name)
+        check_method_in_instance("TA", method_name)
+        check_method_in_instance("TL", method_name)
+        check_method_in_instance("CM", method_name)
+
+
+

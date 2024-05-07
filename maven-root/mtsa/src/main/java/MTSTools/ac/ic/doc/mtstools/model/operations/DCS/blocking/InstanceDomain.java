@@ -20,7 +20,7 @@ public class InstanceDomain<State, Action> {
 
     /** Matrix where each row is the memory used for a diferent feature
      * For example the first row is used to feature 'missionComplete' in that row is saved whether a entity completed his mission or don't */
-    public List<boolean[]> featureMatrix;   // TODO: cambiar por un boolean[][]
+    public boolean[][] featureMatrix;
 
     /** List of Objets ComputeFeature, each object compute a set of features custom for each type of instance */
     public LinkedList<DCSFeatures.ComputeFeature<State, Action>> customFeatureList;
@@ -34,18 +34,18 @@ public class InstanceDomain<State, Action> {
         this.customFeatureList = new LinkedList<>();
     }
 
-    public List<boolean[]> copyMatrix(Compostate parent){
-        List<boolean[]> res = new ArrayList();
+    public boolean[][] copyMatrix(Compostate parent){
+        boolean[][] res = new boolean[compostateFeatureSize][dcs.n];
         for(int i=0 ; i<compostateFeatureSize ; i++){
-            res.add(Arrays.copyOf((boolean[]) parent.customFeaturesMatrix.get(i), dcs.n));
+            res[i] = Arrays.copyOf(parent.customFeaturesMatrix[i], dcs.n);
         }
         return res;
     }
 
-    public List<boolean[]> newFeatureMatrix(int size) {
-        List<boolean[]> res = new ArrayList();
+    public boolean[][] newFeatureMatrix(int size) {
+        boolean[][] res = new boolean[compostateFeatureSize][dcs.n];
         for(int i=0 ; i<size ; i++){
-            res.add(new boolean[dcs.n]);
+            res[i] = new boolean[dcs.n];
         }
         return res;
     }
@@ -99,7 +99,7 @@ class InstanceDomainBW extends InstanceDomain{
     public boolean missionFeature(ActionWithFeatures transition){
         String label = transition.action.toString();
         if(transition.has_entity()){
-            boolean[] missionRow = (boolean[])transition.state.customFeaturesMatrix.get(0);
+            boolean[] missionRow = transition.state.customFeaturesMatrix[0];
             if(label.contains("accept") || (label.contains("reject") && transition.index == dcs.k)){
                 missionRow[transition.entity] = true;
             }
@@ -130,7 +130,7 @@ class InstanceDomainTA extends InstanceDomain{
         String label = transition.action.toString();
         if(transition.has_entity()){
             int entity = transition.entity;
-            boolean[] missionRow = (boolean[])transition.state.customFeaturesMatrix.get(0);
+            boolean[] missionRow = transition.state.customFeaturesMatrix[0];
             if(label.contains("purchase.succ") || label.contains("purchase.fail")){
                 missionRow[entity] = true;
             }
@@ -144,8 +144,8 @@ class InstanceDomainTA extends InstanceDomain{
         String label = action.toString();
         int entity = ActionWithFeatures.getNumber(label, 1);
         if(entity != -1) {
-            if(!((boolean[]) featureMatrix.get(0))[entity] && label.contains("query")) {
-                ((boolean[]) featureMatrix.get(0))[entity] = true;
+            if(!(featureMatrix[0][entity] && label.contains("query"))) {
+                featureMatrix[0][entity] = true;
                 service += 1;
             }
         }
@@ -168,7 +168,7 @@ class InstanceDomainAT extends InstanceDomain{
     public boolean missionFeature(ActionWithFeatures transition){
         if(transition.has_entity()){
             int entity = transition.entity;
-            boolean[] missionRow = (boolean[])transition.state.customFeaturesMatrix.get(0);
+            boolean[] missionRow = transition.state.customFeaturesMatrix[0];
             if(transition.action.toString().contains("land")){
                 missionRow[entity] = true;
             }
@@ -198,10 +198,10 @@ class InstanceDomainDP extends InstanceDomain{
         if(transition.parent != null && transition.has_entity()){
             int entity = transition.entity;
             if(transition.action.toString().contains("release")){
-                ((boolean []) transition.state.customFeaturesMatrix.get(0))[entity] = true;
+                transition.state.customFeaturesMatrix[0][entity] = true;
             }
 
-            return ((boolean []) transition.state.customFeaturesMatrix.get(0))[entity];
+            return transition.state.customFeaturesMatrix[0][entity];
         }
         return false;
     }
@@ -212,7 +212,7 @@ class InstanceDomainDP extends InstanceDomain{
         int entity = ActionWithFeatures.getNumber(label, 1);
 
         if(entity != -1 && label.contains("take")){
-            ((boolean[])state.customFeaturesMatrix.get(1))[entity] = true;
+            state.customFeaturesMatrix[1][entity] = true;
         }
     }
 }
@@ -233,7 +233,7 @@ class InstanceDomainCM extends InstanceDomain{
         if(transition.has_entity()){
             int entity = transition.entity;
             String label = transition.action.toString();
-            boolean[] missionRow = (boolean[])transition.state.customFeaturesMatrix.get(0);
+            boolean[] missionRow = transition.state.customFeaturesMatrix[0];
             if(label.contains("mouse") && label.contains("move") && transition.index == dcs.k){
                 missionRow[entity] = true;
             }
@@ -287,9 +287,9 @@ class InstanceDomainTL extends InstanceDomain{
 
             if(label.contains("put")){
                 entity -= 1;
-                ((boolean []) transition.state.customFeaturesMatrix.get(0))[entity] = true;
+                transition.state.customFeaturesMatrix[0][entity] = true;
             }
-            return ((boolean []) transition.state.customFeaturesMatrix.get(0))[entity];
+            return transition.state.customFeaturesMatrix[0][entity];
         }
         return false;
     }
@@ -300,11 +300,11 @@ class InstanceDomainTL extends InstanceDomain{
         int entity = ActionWithFeatures.getNumber(label, 1);
 
         if(entity != -1 && entity < dcs.n && label.contains("get")){
-            ((boolean[])newState.customFeaturesMatrix.get(1))[entity] = true;
+            newState.customFeaturesMatrix[1][entity] = true;
         }
 
         if(entity != -1 && label.contains("return")){
-            ((boolean[])newState.customFeaturesMatrix.get(2))[entity-1] = true;
+            newState.customFeaturesMatrix[2][entity-1] = true;
         }
     }
 }

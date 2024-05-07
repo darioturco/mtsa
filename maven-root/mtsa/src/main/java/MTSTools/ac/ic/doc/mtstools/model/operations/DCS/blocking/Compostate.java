@@ -138,7 +138,7 @@ public class Compostate<State, Action> implements Comparable<Compostate<State, A
 
     /** For each action a matrix, each row is the features for the n entities
      *  The amount of rows is f and depend of the family of instances */
-    public List<boolean[]> customFeaturesMatrix; // TODO: cambiar a boolean[][]
+    public boolean[][] customFeaturesMatrix;
 
     public int[] mousePositions;
 
@@ -230,6 +230,7 @@ public class Compostate<State, Action> implements Comparable<Compostate<State, A
             this.depth = depth;
     }
 
+    /**  Check if the compostate is a deadlock */
     public boolean isDeadlock(){
         return getTransitions().isEmpty();
     }
@@ -241,7 +242,7 @@ public class Compostate<State, Action> implements Comparable<Compostate<State, A
 
     /** Sets this state's status. */
     public void setStatus(Status status) {
-//            logger.fine(this.toString() + " status was: " + this.status + " now is: " + status);
+        // logger.fine(this.toString() + " status was: " + this.status + " now is: " + status);
         if (this.status != Status.ERROR || status == Status.ERROR)
             this.status = status;
     }
