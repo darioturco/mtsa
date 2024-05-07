@@ -346,3 +346,7 @@ class TestTrainedInAllInstances(Experiment):
         command = f'java -classpath mtsa.jar MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.DCSForPython -i {instance} -e "{experiment_name}" -b {budget} -m {onnx_path}'
         subprocess.call(command, shell=True)
 
+    def get_controller(self, concrete_instance, experiment_name, budget, onnx_path):
+        command = f'java -classpath mtsa.jar MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.DCSForPython -c {concrete_instance} -e "{experiment_name}" -b {budget} -m {onnx_path}'
+        subprocess.call(command, shell=True)
+

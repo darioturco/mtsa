@@ -6,10 +6,12 @@ import java.io.*;
 import java.util.*;
 
 import MTSTools.ac.ic.doc.mtstools.model.LTS;
+import MTSTools.ac.ic.doc.mtstools.model.impl.MTSAdapter;
 import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.abstraction.HeuristicMode;
 import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.abstraction.ReadyAbstraction;
 import ai.onnxruntime.OrtException;
 import jargs.gnu.CmdLineParser;
+import ltsa.ac.ic.doc.mtstools.util.fsp.MTSToAutomataConverter;
 import ltsa.dispatcher.TransitionSystemDispatcher;
 import ltsa.lts.*;
 import ltsa.ui.StandardOutput;
@@ -190,7 +192,7 @@ public class DCSForPython {
         this.modelPath = modelPath;
     }
 
-    public static int syntetizeWithHeuristic(String FSP_path, String heuristic, String featuresGroup, String modelPath, int budget, boolean verbose){
+    public static int syntetizeWithHeuristic(String FSP_path, String heuristic, String featuresGroup, String modelPath, int budget, boolean verbose, boolean outputController){
         DCSForPython env = new DCSForPython(heuristic);
         env.setRLParameters(featuresGroup, modelPath);
         env.setFlags(true, true);
@@ -212,6 +214,25 @@ public class DCSForPython {
         }
 
         env.dcs.notify_end_synthesis();
+
+        if (outputController){
+            LTS<Long, String> controller = env.dcs.buildController();
+            CompactState compState = MTSToAutomataConverter.getInstance().convert(
+                    new MTSAdapter<Long, String>(controller), "DirectedController");
+
+            PrintTransitions transitions = new PrintTransitions(compState);
+            String fsp = transitions.getFSP(9000);
+            // out to file
+            try {
+                //remove extension
+                String FSP_path_no_extension = FSP_path.substring(0, FSP_path.lastIndexOf('.'));
+                FileWriter fileWriter = new FileWriter(FSP_path_no_extension + "_director.fsp");
+                fileWriter.write(fsp);
+                fileWriter.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
 
 
         return i;
@@ -237,7 +258,7 @@ public class DCSForPython {
                     String fsp_path = "./fsp/" + instance + "/" + instance + "-" + n + "-" + k + ".fsp";
 
                     long startTime = System.currentTimeMillis();
-                    res = DCSForPython.syntetizeWithHeuristic(fsp_path, heuristic, featuresGroup, modelPath, budget, false);
+                    res = DCSForPython.syntetizeWithHeuristic(fsp_path, heuristic, featuresGroup, modelPath, budget, false, false);
                     time = System.currentTimeMillis() - startTime;
 
                     if(res < budget){
@@ -427,6 +448,7 @@ public class DCSForPython {
         System.out.println("Realizable: " + env.realizable);
         if(env.realizable){
             LTS<Long, String> director = env.buildControler();
+
             System.out.println("Director's Transitions: " + director.getTransitions().size());
         }
         System.out.println("End Run :)");
@@ -445,6 +467,7 @@ public class DCSForPython {
         CmdLineParser.Option help_opt = cmdParser.addBooleanOption('h', "help");
         CmdLineParser.Option onlyBestOptimization_opt = cmdParser.addBooleanOption('o', "onlyBestOptimization");
         CmdLineParser.Option instance_opt = cmdParser.addStringOption('i', "instance");
+        CmdLineParser.Option concrete_instance = cmdParser.addStringOption('c', "concreteInstance");
         CmdLineParser.Option experiment_opt = cmdParser.addStringOption('e', "experiment");
         CmdLineParser.Option budget_opt = cmdParser.addIntegerOption('b', "budget");
 
@@ -467,13 +490,19 @@ public class DCSForPython {
         }else{
             String instance = (String)cmdParser.getOptionValue(instance_opt);
             String experiment = (String)cmdParser.getOptionValue(experiment_opt);
+            String concreteInstance = (String)cmdParser.getOptionValue(concrete_instance);
             int budget = (int)cmdParser.getOptionValue(budget_opt);
 
             if(selection){
                 selectRL(instance, experiment, budget, onlyBestOptimization);
             }else{
                 String modelPath = (String) cmdParser.getOptionValue(model_opt);
-                DCSForPython.testHeuristic(budget, instance, "RL", experiment, modelPath, true, 1, 15, budget * 15 * 15 + 1, 2);
+                if(concreteInstance!=null){
+                    DCSForPython.syntetizeWithHeuristic(concreteInstance, "RL", experiment, modelPath, budget, false, true);
+                }else{
+                    DCSForPython.testHeuristic(budget, instance, "RL", experiment, modelPath, true, 1, 15, budget * 15 * 15 + 1, 2);
+                }
+
             }
         }
     }
