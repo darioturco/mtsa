@@ -202,7 +202,7 @@ public class DCSForPython {
         }
     }
 
-    public static int syntetizeWithHeuristic(String FSP_path, String heuristic, String featuresGroup, String modelPath, int budget, long timeLimit, boolean verbose, , boolean outputController){
+    public static int syntetizeWithHeuristic(String FSP_path, String heuristic, String featuresGroup, String modelPath, int budget, long timeLimit, boolean verbose, boolean outputController){
         DCSForPython env = new DCSForPython(heuristic);
         env.setRLParameters(featuresGroup, modelPath);
         env.setFlags(true, true);
@@ -431,7 +431,7 @@ public class DCSForPython {
         String instancia = "BW";
         String heuristic = "RL";
         //String heuristic = "Ready";
-        syntetizeWithHeuristic("./../../MTSApy/fsp/" + instancia + "/" + instancia + "-5-5.fsp", heuristic, "CRL", "../../MTSApy/results/final/models final/BW/CRL-BW-1.onnx", 15000, 5000, true);
+        syntetizeWithHeuristic("./../../MTSApy/fsp/" + instancia + "/" + instancia + "-5-5.fsp", heuristic, "CRL", "../../MTSApy/results/final/models final/BW/CRL-BW-1.onnx", 15000, 5000, true, true);
     }
 
     public static void main(String[] args) {
@@ -469,6 +469,7 @@ public class DCSForPython {
                 String experiment = (String) cmdParser.getOptionValue(experiment_opt);
                 int budget = getIntValue(cmdParser, budget_opt, 15000);
                 long time = getLongValue(cmdParser, time_opt, -1);
+                String concreteInstance = (String)cmdParser.getOptionValue(concrete_instance);
 
                 if (selection) {
                     selectRL(instance, experiment, budget, onlyBestOptimization);
