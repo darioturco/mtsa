@@ -243,21 +243,20 @@ public class DCSForPython {
             }
 
             for(int k=minSize;k<=maxSize;k++){
-                if(res < budget && totalExpansions < expansionLimit && DCSForPython.notReachTimeout(time, timeLimit)){
+                if(res < budget && totalExpansions < expansionLimit && 0 < time){
                     String fsp_path = "./fsp/" + instance + "/" + instance + "-" + n + "-" + k + ".fsp";
 
                     long startTime = System.currentTimeMillis();
-                    System.out.println(timeLimit);
                     res = DCSForPython.syntetizeWithHeuristic(fsp_path, heuristic, featuresGroup, modelPath, budget, timeLimit, false);
                     time = System.currentTimeMillis() - startTime;
 
-                    if(res < budget){
+                    if(res < budget && DCSForPython.notReachTimeout(startTime, timeLimit)){
                         solvedInstances += 1;
                     }else{
                         res = budget;
+                        time = -1;
                     }
-                }else{
-                    time = -1L;
+
                 }
                 totalExpansions += res;
 
@@ -411,9 +410,9 @@ public class DCSForPython {
         String heuristic = "BWHeuristic";
         //String heuristic = "Interactive";
 
-        syntetizeWithHeuristic("./../../MTSApy/fsp/" + instancia + "/" + instancia + "-2-2.fsp", heuristic, "CRL", "../../MTSApy/results/final/models final/BW/CRL-BW-1.onnx", 15000, -1, true);
+        //syntetizeWithHeuristic("./../../MTSApy/fsp/" + instancia + "/" + instancia + "-2-2.fsp", heuristic, "CRL", "../../MTSApy/results/final/models final/BW/CRL-BW-1.onnx", 15000, -1, true);
 
-        //DCSForPython.testHeuristic(999999, "CM", "RL", "CRL", "../../MTSApy/results/final/modelsfinal/CM/CRL-CM-1.onnx", true, 1, 15, 999999 * 15 * 15 + 1, 1800000, 2);
+        DCSForPython.testHeuristic(999999, "CM", "RL", "CRL", "../../MTSApy/results/final/modelsfinal/CM/CRL-CM-1.onnx", true, 1, 15, 999999 * 15 * 15 + 1, 1800000, 2);
     }
 
     public static void main(String[] args) {
