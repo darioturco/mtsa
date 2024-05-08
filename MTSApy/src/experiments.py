@@ -347,6 +347,6 @@ class TestTrainedInAllInstances(Experiment):
         if onnx_path is None:
             onnx_path = self.get_best_model(f"./results/selection/{experiment_name}-{instance}.csv")
 
-        command = f'java -classpath mtsa.jar MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.DCSForPython -i {instance} -e "{experiment_name}" -b 9999999 -m {onnx_path} -t {time}'
+        command = f'java -classpath mtsa.jar MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.DCSForPython -i {instance} -e "{experiment_name}" -b 999999 -m {onnx_path} -t {time}'
         subprocess.call(command, shell=True)
 

@@ -121,9 +121,6 @@ def get_data_for(budget, instances, data, instances_solved):
             else:
                 data[method][instance] = get_rl_info(method, instance, budget, instances_solved)
 
-    for instance in instances[::-1]:     # Borrar For
-        print(data[list(data.keys())[0]][instance])
-
     return data
 
 def comparative_bar_plot(data=None, instances_solved=True, budgets=None):
@@ -132,20 +129,21 @@ def comparative_bar_plot(data=None, instances_solved=True, budgets=None):
     if budgets is None:
         budgets = [1000, 2500, 5000, 10000, 15000]
 
+    data_tuple = []
     if data is None:
-        data = []
         for b in budgets:
-            #data_schema = {"Random": {}, "BFS": {}, "RL": {}, "CRL": {}, "RA": {}}
-            data_schema = {"RA": {}}
-            data.append((b, get_data_for(b, instances, data_schema, instances_solved)))
-    else:
-        for _ in budgets:
-            data.append(data)
+            data_schema = {"Random": {}, "BFS": {}, "RL": {}, "CRL": {}, "RA": {}}
 
-    for b, d in data:
+            data_tuple.append((b, get_data_for(b, instances, data_schema, instances_solved)))
+    else:
+        for b, d in zip(budgets, data):
+            data_tuple.append((b, d))
+
+    box_anchor = None if instances_solved else (0.95, 1.0)
+    for b, d in data_tuple:
         title = f"Budget = {b}"
-        comparative_bar_plot_data(d, instances, title)
-def comparative_bar_plot_data(data, instances, title):
+        comparative_bar_plot_data(d, instances, title, box_anchor)
+def comparative_bar_plot_data(data, instances, title, box_anchor):
     plt.clf()
     heights = []
     for i in instances:
@@ -166,8 +164,25 @@ def comparative_bar_plot_data(data, instances, title):
         plt.text(x, totals[-1]+10, f'{totals[-1]}', ha='center', va='bottom')
 
     plt.title(title)
-    plt.legend()
+    if not instances:
+        plt.legend()
+    else:
+        plt.legend(bbox_to_anchor=box_anchor)
     plt.show()
+
+def get_final_solved_dict():
+    return {"Random": {"CM": 18, "TL": 148, "TA": 60, "DP": 65, "BW": 48, "AT": 63},
+            "BFS":    {"CM": 19, "TL": 214, "TA": 60, "DP": 63, "BW": 54, "AT": 58},
+            "RL":     {"CM": 19, "TL": 225, "TA": 66, "DP": 103, "BW": 49, "AT": 81},
+            "CRL":    {"CM": 19, "TL": 225, "TA": 75, "DP": 159, "BW": 61, "AT": 93},
+            "RA":     {"CM": 23, "TL": 225, "TA": 60, "DP": 165, "BW": 146, "AT": 81}}
+
+def get_final_expansions_dict():
+    return {"Random": {"CM": 3147, "TL": 1431, "TA": 2560, "DP": 2514, "BW": 2750, "AT": 2531},
+            "BFS":    {"CM": 3143, "TL": 709, "TA": 2566, "DP": 2540, "BW": 2708, "AT": 2639},
+            "RL":     {"CM": 3143, "TL": 42, "TA": 2516, "DP": 1960, "BW": 2732, "AT": 2294},
+            "CRL":    {"CM": 3139, "TL": 15, "TA": 2441, "DP": 1300, "BW": 2562, "AT": 2110},
+            "RA":     {"CM": 3064, "TL": 10, "TA": 2545, "DP": 1222, "BW": 1516, "AT": 2244}}
 
 
 
@@ -186,18 +201,22 @@ if __name__ == "__main__":
 
     ### Plot of comparative add bar plot
     #comparative_bar_plot(data=None, instances_solved=True, budgets=[15000])  # Based on amount of solved instances
-    #comparative_bar_plot(data=None, instances_solved=False, budgets=[15000]) # Based on amount of expansions
+    #comparative_bar_plot(data=None, instances_solved=False, budgets=[15000])  # Based on amount of expansions
+
+    comparative_bar_plot(data=[get_final_solved_dict()], instances_solved=True, budgets=[15000])  # Based on amount of solved instances
+    comparative_bar_plot(data=[get_final_expansions_dict()], instances_solved=False, budgets=[15000]) # Based on amount of expansions
+
 
 
 
     ### Heatmap for each instance family
-    for method_name in ["CRL", "RA"]:
-        check_method_in_instance("BW", method_name)
-        check_method_in_instance("DP", method_name)
-        check_method_in_instance("AT", method_name)
-        check_method_in_instance("TA", method_name)
-        check_method_in_instance("TL", method_name)
-        check_method_in_instance("CM", method_name)
+    #for method_name in ["CRL", "RA"]:
+    #    check_method_in_instance("BW", method_name)
+    #    check_method_in_instance("DP", method_name)
+    #    check_method_in_instance("AT", method_name)
+    #    check_method_in_instance("TA", method_name)
+    #    check_method_in_instance("TL", method_name)
+    #    check_method_in_instance("CM", method_name)
 
 
 

@@ -64,6 +64,7 @@ public class InteractiveExplorationHeuristic<State, Action> implements Explorati
     public int getNextActionIndex() {
         int idx = -1;
         while(idx == -1) {
+            //printFrontier();
             System.out.println("Enter a number between 0 and " + (actionsToExplore.size()-1));
             try {
                 String data = scaner.nextLine();
@@ -195,7 +196,8 @@ public class InteractiveExplorationHeuristic<State, Action> implements Explorati
         System.out.println("Frontier: ");
         for(int i = 0 ; i<actionsToExplore.size() ; i++){
             ActionWithFeatures<State, Action> stateAction = actionsToExplore.get(i);
-            System.out.println(i + ": " + stateAction.state.toString() + " | " + stateAction.action.toString());
+            System.out.println(i + ": " + stateAction);
+            //System.out.println(i + ": " + stateAction.state.toString() + " | " + stateAction.action.toString());
         }
     }
 
