@@ -177,7 +177,7 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
         loopID = 1;
         stratY = new HashMap<>();
         stratX = new HashMap<>();
-        expansionStep = 1;
+        expansionStep = 0;
     }
 
     public ExplorationHeuristic<State, Action> getHeuristic(HeuristicMode heuristicMode, FeatureGroup featureGroup){
@@ -376,6 +376,7 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
     Compostate<State, Action> expand(Compostate<State, Action> compostate, HAction<Action> action) {
         compostate.lastExpandedAction = action;
         lastExpandedAction = action;
+        expansionStep += 1;
 
         Compostate<State, Action> childCompostate = buildCompostate(getChildStates(compostate, action), compostate);
         statistics.incExpandedTransitions();
@@ -385,7 +386,7 @@ public class DirectedControllerSynthesisBlocking<State, Action> extends Directed
         heuristic.notifyExpandingState(compostate, action, childCompostate);
         explore(compostate, action, childCompostate);
         childCompostate.setExpanded();
-        expansionStep += 1;
+
         
         if (isError(childCompostate)){
             logger.finer("Expanding child compostate " + childCompostate.toString() + " is an error");

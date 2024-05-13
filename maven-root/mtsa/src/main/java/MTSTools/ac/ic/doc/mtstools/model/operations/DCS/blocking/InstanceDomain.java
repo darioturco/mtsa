@@ -1,9 +1,7 @@
 package MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedList;
-import java.util.List;
 
 public class InstanceDomain<State, Action> {
     /** dcs blocking that keep the curren partial exploration */
@@ -249,16 +247,16 @@ class InstanceDomainCM extends InstanceDomain{
         if(label.contains("mouse") && label.contains("move")){
             int entity = ActionWithFeatures.getNumber(label, 1);
             int index = ActionWithFeatures.getNumber(label, 1);
-            state.mousePositions[entity] = (2*dcs.n - index);
+            state.entityPositions[entity] = (2*dcs.n - index);
         }
     }
 
     @Override
     public void initCompostate(Compostate state, Compostate parent){
         if(parent == null){
-            state.mousePositions = new int[dcs.n];
+            state.entityPositions = new int[dcs.n];
         }else{
-            state.mousePositions = Arrays.copyOf(parent.mousePositions, dcs.n);
+            state.entityPositions = Arrays.copyOf(parent.entityPositions, dcs.n);
         }
     }
 }

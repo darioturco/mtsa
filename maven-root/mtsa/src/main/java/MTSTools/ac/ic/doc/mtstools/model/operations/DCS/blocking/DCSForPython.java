@@ -212,13 +212,13 @@ public class DCSForPython {
         int i = 0;
         long time = System.currentTimeMillis();
         while (!env.isFinished() && i < budget && DCSForPython.notReachTimeout(time, timeLimit)) {
-            idx = env.getActionFronAuxiliarHeuristic();
             if(verbose){
                 //((RLExplorationHeuristic) env.heuristic).computeFeatures(); // BORRAR
                 System.out.println("----------------------------------: " + (i+1));
                 env.heuristic.printFrontier();
-                System.out.println("Expanded(" + idx + "): " + env.heuristic.getFrontier().get(idx));
             }
+            idx = env.getActionFronAuxiliarHeuristic();
+            if(verbose){System.out.println("Expanded(" + idx + "): " + env.heuristic.getFrontier().get(idx));}
             env.expandAction(idx);
             i = i + 1;
         }
@@ -255,7 +255,6 @@ public class DCSForPython {
     public static Pair<Integer, Integer> testHeuristic(int budget, String instance, String heuristic, String featuresGroup, String modelPath, boolean save, int minSize, int maxSize, int expansionLimit, long timeLimit, int verbose){
         int solvedInstances = 0;
         int totalExpansions = 0;
-        long time = 0L;
 
         if(verbose >= 1){
             System.out.println("Testing model: " + modelPath);
@@ -263,24 +262,26 @@ public class DCSForPython {
 
         for(int n=minSize;n<=maxSize;n++){
             int res = 0;
+            long time = System.currentTimeMillis();
             if(expansionLimit < totalExpansions){
                 res = budget;
             }
+
             for(int k=minSize;k<=maxSize;k++){
-                if(res < budget && totalExpansions < expansionLimit){
+                if(res < budget && totalExpansions < expansionLimit && 0 < time){
                     String fsp_path = "./fsp/" + instance + "/" + instance + "-" + n + "-" + k + ".fsp";
 
                     long startTime = System.currentTimeMillis();
                     res = DCSForPython.syntetizeWithHeuristic(fsp_path, heuristic, featuresGroup, modelPath, budget, timeLimit, false, false);
                     time = System.currentTimeMillis() - startTime;
 
-                    if(res < budget){
+                    if(res < budget && DCSForPython.notReachTimeout(startTime, timeLimit)){
                         solvedInstances += 1;
                     }else{
                         res = budget;
+                        time = -1;
                     }
-                }else{
-                    time = -1L;
+
                 }
                 totalExpansions += res;
 
@@ -429,9 +430,14 @@ public class DCSForPython {
 
     public static void example(){
         String instancia = "BW";
-        String heuristic = "RL";
+        //String heuristic = "RL";
         //String heuristic = "Ready";
-        syntetizeWithHeuristic("./../../MTSApy/fsp/" + instancia + "/" + instancia + "-5-5.fsp", heuristic, "CRL", "../../MTSApy/results/final/models final/BW/CRL-BW-1.onnx", 15000, 5000, true, true);
+        String heuristic = "BWHeuristic";
+        //String heuristic = "Interactive";
+
+        //syntetizeWithHeuristic("./../../MTSApy/fsp/" + instancia + "/" + instancia + "-2-2.fsp", heuristic, "CRL", "../../MTSApy/results/final/models final/BW/CRL-BW-1.onnx", 15000, -1, true);
+
+        DCSForPython.testHeuristic(999999, "CM", "RL", "CRL", "../../MTSApy/results/final/modelsfinal/CM/CRL-CM-1.onnx", true, 1, 15, 999999 * 15 * 15 + 1, 1800000, 2);
     }
 
     public static void main(String[] args) {
@@ -448,7 +454,7 @@ public class DCSForPython {
             CmdLineParser.Option experiment_opt = cmdParser.addStringOption('e', "experiment");
             CmdLineParser.Option budget_opt = cmdParser.addIntegerOption('b', "budget");
             CmdLineParser.Option model_opt = cmdParser.addStringOption('m', "model");
-            CmdLineParser.Option time_opt = cmdParser.addIntegerOption('t', "time");        // 30m = 1800000
+            CmdLineParser.Option time_opt = cmdParser.addLongOption('t', "time");        // 30m = 1800000
 
             try {
                 cmdParser.parse(args);

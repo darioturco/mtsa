@@ -520,7 +520,7 @@ public class DCSFeatures<State, Action> {
         public void compute(RLExplorationHeuristic<State, Action> h, ActionWithFeatures<State, Action> a, int i) {
             String label = a.action.toString();
 
-            boolean mouse_closer = label.contains("mouse") && label.contains("move") && a.state.mousePositions[a.entity] < (2*dcs.n - a.index);
+            boolean mouse_closer = label.contains("mouse") && label.contains("move") && a.state.entityPositions[a.entity] < (2*dcs.n - a.index);
             a.featureVector[i] = toFloat(mouse_closer);
         }
         public int size() {return 1;}
