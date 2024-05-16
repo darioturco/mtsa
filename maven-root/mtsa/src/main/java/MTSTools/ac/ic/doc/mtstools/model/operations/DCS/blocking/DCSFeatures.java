@@ -1,6 +1,8 @@
 package MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking;
 
 import MTSTools.ac.ic.doc.commons.relations.Pair;
+import MTSTools.ac.ic.doc.mtstools.model.LTS;
+import MTSTools.ac.ic.doc.mtstools.model.impl.LTSAdapter;
 import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.abstraction.FeatureGroup;
 
 import java.util.*;
@@ -14,6 +16,9 @@ public class DCSFeatures<State, Action> {
 
     /** The amount of random features added of the method group is RRL */
     public int randomAmount = 100;
+
+    /** The amount of roles (max) in the plant: sum(states for each lts) */
+    private final int maxNumberOfRoles;
 
     public LinkedList<ComputeFeature<State, Action>> methodFeatures;
     public HashMap<String, Integer> labels_idx = new HashMap<>();
@@ -42,6 +47,7 @@ public class DCSFeatures<State, Action> {
             i++;
         }
         nactions = labels_idx.size();
+        maxNumberOfRoles = this.countRoles();
 
         if(featureGroup == FeatureGroup.RL){
             methodFeatures.add(this.action_labels_feature);
@@ -83,11 +89,22 @@ public class DCSFeatures<State, Action> {
             methodFeatures.add(this.state_child_explored_feature);
             methodFeatures.add(this.just_explored_feature);
             methodFeatures.add(this.random_feature);
+
+        } else if (featureGroup == FeatureGroup.ROLES) {
+            methodFeatures.add(this.role_binned_count);
+
         }
 
         setAmountOfFeatures();
     }
 
+    private int countRoles() {
+        int res = 0;
+        for (LTS<State, Action> lts : dcs.ltss) {
+            res += lts.getStates().size();
+        }
+        return res;
+    }
 
 
     public void runFeaturesOfListWith(LinkedList<ComputeFeature<State, Action>> list, ActionWithFeatures<State, Action> a, int initial){
@@ -127,6 +144,92 @@ public class DCSFeatures<State, Action> {
     public static float toFloat(boolean b) {
         return b ? 1.0f : 0.0f;
     }
+
+    private final ComputeFeature<State, Action> role_binned_count = new ComputeFeature<>() {
+        public void compute(RLExplorationHeuristic<State, Action> h, ActionWithFeatures<State, Action> a, int i) {
+            // create a map with roles and the ammount of lts that are of that role,
+            // role being the name of the lts between Plant. and (
+            // + some state if it's an interesting state
+            HashMap<String, Integer> roles = new HashMap<>();
+            // fill out the roles with 0s, for Philosopher, Philosopher_ate and Fork_free, Fork_taken
+            // TODO this is hardcoded for DP example
+            roles.put("Philosopher", 0);
+            roles.put("Philosopher_ate", 0);
+            roles.put("Fork_free", 0);
+            roles.put("Fork_taken", 0);
+
+            for (int j = 0; j < a.state.dcs.ltss.size(); j++) {
+                try {
+                    String predicate = ((LTSAdapter<State, Action>) a.state.dcs.ltss.get(j)).name.split("Plant.")[1].split("\\(")[0];
+                    State state = a.state.states.get(j);
+                    // add predicate + state as rol to the roles count map, if already exists increment the count
+                    String role;// = predicate + "_s" + state;
+                    // TODO this is hardcoded for DP example
+                    if(predicate.equals("Monitor")){
+                        continue; // ignore monitors (auxiliary LTS)
+                    }
+                    if(predicate.equals("Philosopher") && state.equals(5L)){ // state is Long
+                        role = predicate + "_ate";
+                    } else if (predicate.equals("Fork")) {
+                        role = state.equals(0L) ? predicate + "_free" : predicate + "_taken";
+                    } else {
+                        role = predicate;
+                    }
+                    if(roles.containsKey(role)){
+                        roles.put(role, roles.get(role)+1);
+                    }else{
+                        roles.put(role, 1);
+                    }
+                }
+                catch (Exception e){
+                    // Marked LTS can not be cast to LTSAdapter, but we don't want to use that for role definition (at least not yet)
+                    //System.out.println("Error: " + e.getMessage());
+                }
+            }
+            // binned roles count originally have three values: {0, 1, >1}
+            for (Map.Entry<String, Integer> entry : roles.entrySet()) {
+                a.featureVector[i] = toFloat(entry.getValue() > 0); // {0, >0}
+                a.featureVector[i+1] = toFloat(entry.getValue() > 1); // {<=1, >1}
+                i+=2;
+            }
+        }
+        public int size() {return 4+4;}
+        public boolean requiresUpdate() { return true; }
+        public String toString(){return "role_binned_count";}
+    };
+
+    private final ComputeFeature<State, Action> lts_states_predicates = new ComputeFeature<State, Action>() {
+        @Override
+        public void compute(RLExplorationHeuristic<State, Action> h, ActionWithFeatures<State, Action> a, int i) {
+            HashMap<String, Integer> roleStateCount = new HashMap<>();
+
+            //TODO en realidad estos deberían ser calculados dsp de los roles (o a la vez) ya que no es count de LTS + State
+            // sino si forall lts que es parte de un rol está en cierto estado o no
+
+            for (int j = 0; j < a.state.dcs.ltss.size(); j++) {
+                try {
+                    String ltsName = ((LTSAdapter<State, Action>) a.state.dcs.ltss.get(j)).name.split("Plant.")[1].split("\\(")[0];
+                    State state = a.state.states.get(j);
+                    String key = ltsName + "_" + state;
+
+//                    if(ltsStateCount.containsKey(key)){
+//                        ltsStateCount.put(key, ltsStateCount.get(key)+1);
+//                    }else{
+//                        ltsStateCount.put(key, 1);
+//                    }
+                } catch (Exception e) {
+                    // Marked LTS can not be cast to LTSAdapter, but we don't want to use that for role definition (at least not yet)
+                    //System.out.println("Error: " + e.getMessage());
+                }
+            }
+        }
+
+        @Override
+        public int size() {return 0;}
+
+        @Override
+        public boolean requiresUpdate() { return true; }
+    };
 
     private final ComputeFeature<State, Action> context_feature = new ComputeFeature<>() {
         public void compute(RLExplorationHeuristic<State, Action> h, ActionWithFeatures<State, Action> a, int i) {

@@ -14,8 +14,9 @@ class Experiment(object):
     def __init__(self, name="Test"):
         self.name = name
         self.platform = sys.platform
-        self.BENCHMARK_PROBLEMS = ["AT", "BW", "DP", "TA", "TL", "CM"]
-        self.set_ranges(1, 15)
+        # self.BENCHMARK_PROBLEMS = ["AT", "BW", "DP", "TA", "TL", "CM"]
+        self.BENCHMARK_PROBLEMS = ["DP"]
+        self.set_ranges(1, 5)
         self.seed = 12
         random.seed(self.seed)
         np.random.seed(self.seed)

@@ -1,0 +1,21 @@
+DirectedController = Q0,
+	Q0	= (assign[0] -> Q1),
+	Q1	= (accept[0] -> Q2
+		  |reject[0][1] -> Q3),
+	Q2	= (assign[1] -> Q4),
+	Q3	= (assign[0] -> Q5),
+	Q4	= (accept[1] -> Q6
+		  |reject[1][1] -> Q7),
+	Q5	= (accept[0] -> Q2
+		  |reject[0][2] -> Q8),
+	Q6	= (approve -> Q9),
+	Q7	= (assign[1] -> Q10),
+	Q8	= (assign[1] -> Q11),
+	Q9	= (assign[0] -> Q1),
+	Q10	= (accept[1] -> Q6
+		  |reject[1][2] -> Q12),
+	Q11	= (accept[1] -> Q13
+		  |reject[1][1] -> Q14),
+	Q12	= (refuse -> Q9),
+	Q13	= (refuse -> Q9),
+	Q14	= (refuse -> Q9).

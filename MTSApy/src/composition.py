@@ -139,7 +139,7 @@ class CompositionAnalyzer:
             # Nuevos features locales mejorados (LRL)
             return [self.event_label_feature, self.state_label_feature, self.controllable, self.marked_state,
                     self.current_phase, self.child_node_state, self.uncontrollable_neighborhood,
-                    self.explored_state_child, self.isLastExpanded, self.child_dealdlock, self.mission_feature,
+                    self.explored_state_child, self.isLastExpanded, self.child_deadlock, self.mission_feature,
                     self.has_index]
 
         elif feature_group_name == "RL":
@@ -151,7 +151,7 @@ class CompositionAnalyzer:
         elif feature_group_name == "CRL":   # CRL: Custom RL (Es LRL pero agregando feature custom de para cada dominio)
             return [self.event_label_feature, self.state_label_feature, self.controllable, self.marked_state,
                     self.current_phase, self.child_node_state, self.uncontrollable_neighborhood,
-                    self.explored_state_child, self.isLastExpanded, self.child_dealdlock,
+                    self.explored_state_child, self.isLastExpanded, self.child_deadlock,
                     self.has_index, self.custom_feature]
 
 
@@ -159,7 +159,13 @@ class CompositionAnalyzer:
             self.r_feature = 100
             return [self.event_label_feature, self.state_label_feature, self.controllable, self.marked_state,
                     self.current_phase, self.child_node_state, self.uncontrollable_neighborhood,
-                    self.explored_state_child, self.isLastExpanded, self.child_dealdlock, self.mission_feature,
+                    self.explored_state_child, self.isLastExpanded, self.child_deadlock, self.mission_feature,
+                    self.has_index, self.random_feature]
+
+        elif feature_group_name == "ROLES":  # por ahora copy + paste del de arriba, en realidad acá no va nada? los roles se calculan en java
+            return [self.event_label_feature, self.state_label_feature, self.controllable, self.marked_state,
+                    self.current_phase, self.child_node_state, self.uncontrollable_neighborhood,
+                    self.explored_state_child, self.isLastExpanded, self.child_deadlock, self.mission_feature,
                     self.has_index, self.random_feature]
 
         #elif feature_group_name == "BWFeatures":
@@ -258,7 +264,7 @@ class CompositionAnalyzer:
         f2 = transition.child is not None and len(self.composition.out_edges(str(transition.child.toString()))) != transition.state.unexploredTransitions
         return [float(f1), float(f2)]
 
-    def child_dealdlock(self, transition):
+    def child_deadlock(self, transition):
         return [float(transition.child is not None and len(transition.child.getTransitions()) == 0)]
 
     def isLastExpanded(self, transition):

@@ -1,0 +1,30 @@
+DirectedController = Q0,
+	Q0	= (think[0] -> Q1
+		  |think[1] -> Q2),
+	Q1	= (think[1] -> Q3),
+	Q2	= (think[0] -> Q3),
+	Q3	= (take[0][0] -> Q4),
+	Q4	= (step[0] -> Q5),
+	Q5	= (step[0] -> Q6),
+	Q6	= (take[0][1] -> Q7),
+	Q7	= (eat[0] -> Q8),
+	Q8	= (release[0][0] -> Q9),
+	Q9	= (release[0][1] -> Q10),
+	Q10	= (think[0] -> Q11),
+	Q11	= (take[1][1] -> Q12),
+	Q12	= (step[1] -> Q13),
+	Q13	= (step[1] -> Q14),
+	Q14	= (take[1][0] -> Q15),
+	Q15	= (eat[1] -> Q16),
+	Q16	= (eat.all -> Q17
+		  |release[1][1] -> Q18),
+	Q17	= (release[1][1] -> Q19),
+	Q18	= (eat.all -> Q20
+		  |release[1][0] -> Q21),
+	Q19	= (release[1][0] -> Q1),
+	Q20	= (release[1][0] -> Q1),
+	Q21	= (eat.all -> Q22
+		  |think[1] -> Q23),
+	Q22	= (think[1] -> Q3),
+	Q23	= (eat.all -> Q24),
+	Q24	= (take[0][0] -> Q4).

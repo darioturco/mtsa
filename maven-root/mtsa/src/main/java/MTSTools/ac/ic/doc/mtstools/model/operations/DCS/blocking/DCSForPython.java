@@ -429,19 +429,25 @@ public class DCSForPython {
     }
 
     public static void example(){
-        String instancia = "BW";
-        //String heuristic = "RL";
+        String instancia = "DP";
+        String heuristic = "RL";
         //String heuristic = "Ready";
-        String heuristic = "BWHeuristic";
+        //String heuristic = "BWHeuristic";
         //String heuristic = "Interactive";
+//        String featuresGroup = "CRL";
+        String featuresGroup = "ROLES";
 
-        //syntetizeWithHeuristic("./../../MTSApy/fsp/" + instancia + "/" + instancia + "-2-2.fsp", heuristic, "CRL", "../../MTSApy/results/final/models final/BW/CRL-BW-1.onnx", 15000, -1, true);
+        syntetizeWithHeuristic("./../../MTSApy/fsp/" + instancia + "/" + instancia + "-2-2.fsp", heuristic,
+                featuresGroup, "src/main/resources/models/CRL-BW-1.onnx",
+                15000, -1, true, true);
 
-        DCSForPython.testHeuristic(999999, "CM", "RL", "CRL", "../../MTSApy/results/final/modelsfinal/CM/CRL-CM-1.onnx", true, 1, 15, 999999 * 15 * 15 + 1, 1800000, 2);
+        //DCSForPython.testHeuristic(999999, "CM", "RL", "ROLES", "../../MTSApy/results/final/modelsfinal/CM/CRL-CM-1.onnx", true, 1, 15, 999999 * 15 * 15 + 1, 1800000, 2);
     }
 
     public static void main(String[] args) {
-        boolean debug = false;
+        // get variable from environment to know if we are in debug mode if it exists false otherwise
+        boolean debug = Boolean.parseBoolean(System.getenv().getOrDefault("DEBUG", "false"));
+
         if(debug){
             example();
         }else {
