@@ -1,6 +1,7 @@
 package MTSTools.ac.ic.doc.mtstools.model.impl;
 
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
@@ -14,6 +15,7 @@ public class LTSAdapter<State, Action> implements LTS<State, Action> {
 	private MTS<State, Action> mts;
 	private TransitionType exposedBehaviour;
 	public String name;
+	public HashMap<Integer, String> stateToSubmachine;
 
 	public LTSAdapter(MTS<State, Action> mts, TransitionType exposedBehaviour, String name) {
 		this.name = name;

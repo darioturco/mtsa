@@ -718,6 +718,7 @@ public class TransitionSystemDispatcher {
         for (CompactState automata : compositeState.getMachines()) {
             LTS<Long, String> lts = new LTSAdapter<>(
                     AutomataToMTSConverter.getInstance().convert(automata), TransitionType.REQUIRED, automata.name);
+            ((LTSAdapter<Long, String>) lts).stateToSubmachine = automata.stateToSubmachine;
             actions.addAll(lts.getActions());
             ltss.add(lts);
         }

@@ -4,6 +4,7 @@ import ltsa.dispatcher.TransitionSystemDispatcher;
 
 import java.math.BigDecimal;
 import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.Vector;
 
@@ -12,6 +13,7 @@ import static ltsa.lts.util.MTSUtils.*;
 
 class StateMachine {
 
+    public HashMap<Integer, String> stateToSubmachine = new HashMap<>();
     String name;
     String kludgeName;
     Hashtable<String, Integer> alphabet = new Hashtable<String, Integer>();
@@ -75,6 +77,33 @@ class StateMachine {
         renumber();
         // compute transitions
         spec.transition(this);
+
+        // states to submachine map
+        //TODO refactor to be built during the parsing or compiling process
+        // specially when creating the Declaration for each state
+        //for each key, value in the explicit states, add the value to the stateToSubmachine map with key as the value
+        for (String key : explicit_states.keySet()) {
+            int value = explicit_states.get(key);
+            if (!stateToSubmachine.containsKey(value)) { // leave the first definition (name) if there are aliases
+                stateToSubmachine.put(value, key);
+            }
+        }
+        // make a copy of transitions
+        Vector<Transition> transitionsCopy = new Vector<>(transitions);
+        while(!transitionsCopy.isEmpty()){
+            Vector<Transition> transitionsAdded = new Vector<>();
+            for(Transition t : transitionsCopy){
+                if(stateToSubmachine.containsKey(t.from)) {
+                    if(!stateToSubmachine.containsKey(t.to)) {
+                        String submachineName = stateToSubmachine.get(t.from);
+                        stateToSubmachine.put(t.to, submachineName);
+                    }
+                    transitionsAdded.add(t);
+                }
+            }
+            transitionsCopy.removeAll(transitionsAdded);
+        }
+
         // alphabet extensions
         spec.addAlphabet(this);
         // alphabet relabels;
@@ -113,6 +142,10 @@ class StateMachine {
             if (s.equals("@")) s = "@" + c.name;
             c.alphabet[j] = s;
         }
+
+        // state to submachine map for rol feature definitions
+        c.stateToSubmachine = stateToSubmachine;
+
         if (!isProperty) {
             c.alphabet = getAlphabetWithMaybes(c.getTransitionsLabels());
             //THIS IS WHERE THE SIN OCCURS ***
@@ -128,8 +161,8 @@ class StateMachine {
 //            c.states = new ProbabilisticEventState[c.maxStates];
 //            compactStateTransitions(c, true);
 //        } else {
-            c.states = new EventState[c.maxStates];
-            compactStateTransitions(c, false);
+        c.states = new EventState[c.maxStates];
+        compactStateTransitions(c, false);
 //        }
 
         if (sequentialInserts != null)
@@ -171,9 +204,9 @@ class StateMachine {
 //        if (isProbabilistic) {
 //            c = convertToProbabilistic(c);
 //        }
-        
+
         c = CompactStateUtils.convertIfProbabilistic(c);
-        return c;    
+        return c;
     }
 
     private void compactStateTransitions(CompactState c, boolean isProbabilistic) {

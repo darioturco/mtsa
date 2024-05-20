@@ -13,10 +13,13 @@ public class CompactState implements Automata {
     public int maxStates;
     public String[] alphabet;
     public EventState[] states; // each state is to a vector of <event, nextstate>
+    public HashMap<Integer, String> stateToSubmachine;
     private String mtsControlProblemAnswer;
 
     /* AMES: Promoted visibility to public. */
     public int endseq = -9999; //number of end of sequence state if any
+    private StateCodec coder;
+    private MyHashStack stateMap; // TODO: refactor
 
     public CompactState() {
     } // null constructor
@@ -44,6 +47,14 @@ public class CompactState implements Automata {
             transitions.next();
         }
         endseq = endSequence;
+    }
+
+    public CompactState(int size, String name, StateMap statemap, MyList transitions, String[] alphabet, int endSequence,
+                        StateCodec coder) {
+        this(size, name, statemap, transitions, alphabet, endSequence);
+        this.coder = coder;
+
+        this.stateMap = (MyHashStack) statemap;
     }
 
     public void removeAtActions(){
@@ -484,6 +495,7 @@ public class CompactState implements Automata {
         System.arraycopy(alphabet, 0, m.alphabet, 0, alphabet.length);
         m.maxStates = maxStates;
         //   m.states = states.clone();
+        m.stateToSubmachine = new HashMap<>(stateToSubmachine);
 
         m.states = new EventState[maxStates];
 //        for (int i = 0; i < states.length; i++) {
@@ -623,7 +635,7 @@ public class CompactState implements Automata {
         }
     }
 
-  /* ---------------------------------------------------------------*/
+    /* ---------------------------------------------------------------*/
 
     private void addtransitions(Relation oni) {
         for (int i = 0; i < states.length; i++) {
@@ -633,7 +645,7 @@ public class CompactState implements Automata {
         }
     }
 
-  /* ---------------------------------------------------------------*/
+    /* ---------------------------------------------------------------*/
 
     public boolean hasLabel(String label) {
         for (int i = 0; i < alphabet.length; ++i)
@@ -649,8 +661,8 @@ public class CompactState implements Automata {
         }
         return false;
     }
-    
-  /* ---------------------------------------------------------------*/
+
+    /* ---------------------------------------------------------------*/
 
     public boolean isSequential() {
         return endseq >= 0;
@@ -659,8 +671,8 @@ public class CompactState implements Automata {
     public boolean isEnd() {
         return maxStates == 1 && endseq == 0;
     }
-    
-  /*----------------------------------------------------------------*/
+
+    /*----------------------------------------------------------------*/
 
     public static CompactState sequentialCompose(Vector<?> seqs) {
         if (seqs == null) return null;
@@ -681,8 +693,8 @@ public class CompactState implements Automata {
         }
         return newMachine;
     }
-   
-   /*----------------------------------------------------------------*/
+
+    /*----------------------------------------------------------------*/
 
     public void expandSequential(Hashtable<?, ?> inserts) {
         int ninserts = inserts.size();
@@ -720,8 +732,8 @@ public class CompactState implements Automata {
 
 
     /*
-    *   compute size of sequential composite
-    */
+     *   compute size of sequential composite
+     */
     private static int seqSize(CompactState[] sm) {
         int length = 0;
         for (int i = 0; i < sm.length; i++)
@@ -745,8 +757,8 @@ public class CompactState implements Automata {
     }
 
     /*
-    * create shared alphabet for machines & renumber acording to that alphabet
-    */
+     * create shared alphabet for machines & renumber acording to that alphabet
+     */
     private static String[] sharedAlphabet(CompactState[] sm) {
         // set up shared alphabet structure
         Counter newLabel = new Counter(0);
@@ -1183,4 +1195,13 @@ public class CompactState implements Automata {
     public String toString() {
         return this.name + " - " + this.getClass();
     }
+
+
+    public int getCompositionStateFrom(int[] simpleMachinesState) {
+        byte[] code = coder.encode(simpleMachinesState);
+        int stateRepr = this.stateMap.get(code);
+        return stateRepr;
+    }
+
+
 }
