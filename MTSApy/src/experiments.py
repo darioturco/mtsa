@@ -152,7 +152,7 @@ class Experiment(object):
                 #"lambda_warm_up": lambda step: 1.0 if step > 5000 else step * 0.99,
 
                 ### Miscellaneous
-                'freq_save': 1,
+                'freq_save': 100,
                 'seconds': None,
                 'max_steps': 700000,    # 700000
                 "max_eps": 20000,
@@ -272,7 +272,9 @@ class TestTrainedInAllInstances(Experiment):
     def pre_select(self, instance, experiment_name, budget, amount_of_models=1000, instance_list=None):
         path = f"./results/models/{instance}/{experiment_name}"
         all_models = {os.path.join(r, file) for r, d, f in os.walk(path) for file in f}
+
         csv_path = f"./results/selection/{experiment_name}-{instance}.csv"
+        os.makedirs(csv_path.rsplit('/', 1)[0], exist_ok=True)
 
         previous_models, best_expansions = self.get_previous_models(csv_path)
         all_models = list(all_models - previous_models)
