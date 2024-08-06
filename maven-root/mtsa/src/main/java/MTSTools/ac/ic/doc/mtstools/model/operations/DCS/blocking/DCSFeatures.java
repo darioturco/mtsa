@@ -1,7 +1,6 @@
 package MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking;
 
 import MTSTools.ac.ic.doc.commons.relations.Pair;
-import MTSTools.ac.ic.doc.mtstools.model.LTS;
 import MTSTools.ac.ic.doc.mtstools.model.impl.LTSAdapter;
 import MTSTools.ac.ic.doc.mtstools.model.operations.DCS.blocking.abstraction.FeatureGroup;
 
@@ -105,9 +104,9 @@ public class DCSFeatures<State, Action> {
         dcs.ltss.forEach(lts -> {
             try {
                 LTSAdapter<State, Action> lts_adapter = (LTSAdapter<State, Action>) lts;
-                String predicate = lts_adapter.name.split("Plant.")[1].split("\\(")[0];
+                String predicate = lts_adapter.name.split("Plant.")[1].split("\\(")[0]; // for debugging
                 lts.getStates().forEach(state -> {
-                    String role = predicate + "_s" + state;
+                    String role = DCSFeatures.getRole(lts_adapter, state);
                     roles.put(role, 0);
                 });
             }
@@ -165,20 +164,22 @@ public class DCSFeatures<State, Action> {
             HashMap<String, Integer> roles = new HashMap<>(allRoles); // all roles with 0 count
 
             for (int j = 0; j < a.state.dcs.ltss.size(); j++) {
+                LTSAdapter<State, Action> lts = null;
                 try {
-                    String predicate = ((LTSAdapter<State, Action>) a.state.dcs.ltss.get(j)).name.split("Plant.")[1].split("\\(")[0];
-                    State state = a.state.states.get(j);
-                    // add predicate + state as rol to the roles count map, if already exists increment the count
-                    String role = predicate + "_s" + state;
-
-                    assert allRoles.containsKey(role);
-                    roles.put(role, roles.get(role)+1);
-
+                    lts = ((LTSAdapter<State, Action>) a.state.dcs.ltss.get(j));
                 }
                 catch (Exception e){
                     // Marked LTS can not be cast to LTSAdapter, but we don't want to use that for role definition (at least not yet)
                     //System.out.println("Error: " + e.getMessage());
                 }
+
+                if (lts == null) continue;
+                String lts_name = lts.name.split("Plant.")[1].split("\\(")[0]; // only for info
+
+                String role = DCSFeatures.getRole(lts, a.state.states.get(j));
+
+                assert allRoles.containsKey(role);
+                roles.put(role, roles.get(role)+1);
             }
             // binned roles count originally have three values: {0, 1, >1}
             for (Map.Entry<String, Integer> entry : roles.entrySet()) {
@@ -191,6 +192,11 @@ public class DCSFeatures<State, Action> {
         public boolean requiresUpdate() { return true; }
         public String toString(){return "role_binned_count";}
     };
+
+    private static <Action, State> String getRole(LTSAdapter<State, Action> lts, State state) {
+        int state_number = ((Long) state).intValue();
+        return lts.stateToSubmachine.get(state_number); // role = submachine
+    }
 
     private final ComputeFeature<State, Action> context_feature = new ComputeFeature<>() {
         public void compute(RLExplorationHeuristic<State, Action> h, ActionWithFeatures<State, Action> a, int i) {

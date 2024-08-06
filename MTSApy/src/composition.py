@@ -162,11 +162,8 @@ class CompositionAnalyzer:
                     self.explored_state_child, self.isLastExpanded, self.child_deadlock, self.mission_feature,
                     self.has_index, self.random_feature]
 
-        elif feature_group_name == "ROLES":  # por ahora copy + paste del de arriba, en realidad acá no va nada? los roles se calculan en java
-            return [self.event_label_feature, self.state_label_feature, self.controllable, self.marked_state,
-                    self.current_phase, self.child_node_state, self.uncontrollable_neighborhood,
-                    self.explored_state_child, self.isLastExpanded, self.child_deadlock, self.mission_feature,
-                    self.has_index, self.random_feature]
+        elif feature_group_name == "ROLES":
+            return []
 
         #elif feature_group_name == "BWFeatures":
             # Es igual a LRL pero con el feature de last expanded (la idea es que BW mejore con esto)

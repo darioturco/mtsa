@@ -84,9 +84,13 @@ class StateMachine {
         //for each key, value in the explicit states, add the value to the stateToSubmachine map with key as the value
         for (String key : explicit_states.keySet()) {
             int value = explicit_states.get(key);
-            if (!stateToSubmachine.containsKey(value)) { // leave the first definition (name) if there are aliases
-                stateToSubmachine.put(value, key);
+            // remove index from indexed submachines
+            String submachineName = spec.name.toString() + "_" + key.split("\\.")[0];
+            if (stateToSubmachine.containsKey(value)) {
+                // leave a sum of the names if there are aliases
+                submachineName += "-" + stateToSubmachine.get(value).split("_")[1]; //remove spec.name
             }
+            stateToSubmachine.put(value, submachineName);
         }
         // make a copy of transitions
         Vector<Transition> transitionsCopy = new Vector<>(transitions);
