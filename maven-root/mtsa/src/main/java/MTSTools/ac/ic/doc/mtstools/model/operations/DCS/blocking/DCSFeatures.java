@@ -90,8 +90,20 @@ public class DCSFeatures<State, Action> {
             methodFeatures.add(this.random_feature);
 
         } else if (featureGroup == FeatureGroup.ROLES) {
-            methodFeatures.add(this.role_binned_count);
+            methodFeatures.add(this.action_labels_feature);
+            methodFeatures.add(this.state_labels_feature);
+            methodFeatures.add(this.controllable_feature);
+            methodFeatures.add(this.marked_action_feature);
+            methodFeatures.add(this.context_feature);
+            methodFeatures.add(this.child_status_feature);
+            methodFeatures.add(this.uncontrollable_neighborhood_feature);
+            methodFeatures.add(this.state_child_explored_feature);
+            methodFeatures.add(this.just_explored_feature);
+            methodFeatures.add(this.has_entity_feature);
+            methodFeatures.add(this.has_index_feature);
+            methodFeatures.add(this.child_deadlock_feature);
 
+            methodFeatures.add(this.role_binned_count);
         }
 
         setAmountOfFeatures();
