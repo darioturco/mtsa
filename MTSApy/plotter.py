@@ -106,25 +106,27 @@ def get_rl_info(method, instance, budget, instances_solved):
         return int(res / SCALE)
 
 def get_data_for(budget, instances, data, instances_solved):
-    random_data = pd.read_csv("./results/csv/random.csv")  # CAMBIAR
-    ra_data = pd.read_csv("./results/csv/RA.csv")
-    bfs_data = pd.read_csv("./results/csv/BFS.csv")
+    # random_data = pd.read_csv("./results/csv/random.csv")  # CAMBIAR
+    # ra_data = pd.read_csv("./results/csv/RA.csv")
+    # bfs_data = pd.read_csv("./results/csv/BFS.csv")
 
     for instance in instances:
         for method in data.keys():
-            if method == "Random":
-                data["Random"][instance] = get_data_info(random_data, instance, budget, instances_solved)
-            elif method == "RA":
-                data["RA"][instance] = get_data_info(ra_data, instance, budget, instances_solved)
-            elif method == "BFS":
-                data["BFS"][instance] = get_data_info(bfs_data, instance, budget, instances_solved)
-            else:
-                data[method][instance] = get_rl_info(method, instance, budget, instances_solved)
+            # if method == "Random":
+            #     data["Random"][instance] = get_data_info(random_data, instance, budget, instances_solved)
+            # elif method == "RA":
+            #     data["RA"][instance] = get_data_info(ra_data, instance, budget, instances_solved)
+            # elif method == "BFS":
+            #     data["BFS"][instance] = get_data_info(bfs_data, instance, budget, instances_solved)
+            # else:
+            data[method][instance] = get_rl_info(method, instance, budget, instances_solved)
 
     return data
 
 def comparative_bar_plot(data=None, instances_solved=True, budgets=None):
     instances = BENCHMARK_PROBLEMS[::-1]
+    instances = ["CM", "TA", "DP", "BW", "AT"]
+    instances = ["TA"]
 
     if budgets is None:
         budgets = [1000, 2500, 5000, 10000, 15000]
@@ -133,6 +135,7 @@ def comparative_bar_plot(data=None, instances_solved=True, budgets=None):
     if data is None:
         for b in budgets:
             data_schema = {"Random": {}, "BFS": {}, "RL": {}, "CRL": {}, "RA": {}}
+            data_schema = {"CRL": {}, "ROLES": {}}
 
             data_tuple.append((b, get_data_for(b, instances, data_schema, instances_solved)))
     else:
@@ -200,11 +203,11 @@ if __name__ == "__main__":
 
 
     ### Plot of comparative add bar plot
-    #comparative_bar_plot(data=None, instances_solved=True, budgets=[15000])  # Based on amount of solved instances
+    comparative_bar_plot(data=None, instances_solved=True, budgets=[15000])  # Based on amount of solved instances
     #comparative_bar_plot(data=None, instances_solved=False, budgets=[15000])  # Based on amount of expansions
 
-    comparative_bar_plot(data=[get_final_solved_dict()], instances_solved=True, budgets=[15000])  # Based on amount of solved instances
-    comparative_bar_plot(data=[get_final_expansions_dict()], instances_solved=False, budgets=[15000]) # Based on amount of expansions
+    # comparative_bar_plot(data=[get_final_solved_dict()], instances_solved=True, budgets=[15000])  # Based on amount of solved instances
+    # comparative_bar_plot(data=[get_final_expansions_dict()], instances_solved=False, budgets=[15000]) # Based on amount of expansions
 
 
 
