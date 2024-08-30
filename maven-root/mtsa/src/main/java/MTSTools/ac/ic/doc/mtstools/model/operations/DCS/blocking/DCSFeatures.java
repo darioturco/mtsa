@@ -121,7 +121,7 @@ public class DCSFeatures<State, Action> {
             // custom
             methodFeatures.add(this.mission_feature);
             methodFeatures.add(this.custom_feature);
-
+            // roles
             methodFeatures.add(this.role_binned_count);
         }
 
@@ -192,7 +192,7 @@ public class DCSFeatures<State, Action> {
         public void compute(RLExplorationHeuristic<State, Action> h, ActionWithFeatures<State, Action> a, int i) {
             // create a map with roles and the amount of lts that are of that role,
             // role being the name of the lts between Plant. and ( combined with the state of the lts
-            HashMap<String, Integer> roles = new HashMap<>(allRoles); // all roles with 0 count
+            HashMap<String, Integer> roles_count = new HashMap<>(allRoles); // all roles with 0 count
 
             for (int j = 0; j < a.state.dcs.ltss.size(); j++) {
                 LTSAdapter<State, Action> lts = null;
@@ -210,16 +210,22 @@ public class DCSFeatures<State, Action> {
                 String role = DCSFeatures.getRole(lts, a.state.states.get(j));
 
                 assert allRoles.containsKey(role);
-                roles.put(role, roles.get(role)+1);
+                roles_count.put(role, roles_count.get(role)+1);
             }
             // binned roles count originally have three values: {0, 1, >1}
-            for (Map.Entry<String, Integer> entry : roles.entrySet()) {
-                a.featureVector[i] = toFloat(entry.getValue() > 0); // {0, >0}
-                a.featureVector[i+1] = toFloat(entry.getValue() > 1); // {<=1, >1}
-                i+=2;
+            for (Map.Entry<String, Integer> entry : roles_count.entrySet()) {
+//                a.featureVector[i] = toFloat(entry.getValue() > 0); // {0, >0} // if uncommented allRoles.size()*2
+//                a.featureVector[i+1] = toFloat(entry.getValue() > 1); // {<=1, >1}
+//                i+=2;
+
+                a.featureVector[i] = toFloat(entry.getValue() > 1); // {<=1, >1}
+                i+=1;
             }
         }
-        public int size() {return allRoles.size()*2;}
+        public int size() {
+            return allRoles.size();
+//            return allRoles.size()*2;
+        }
         public boolean requiresUpdate() { return true; }
         public String toString(){return "role_binned_count";}
     };

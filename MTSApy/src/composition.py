@@ -168,6 +168,12 @@ class CompositionAnalyzer:
                     self.explored_state_child, self.isLastExpanded, self.child_deadlock,
                     self.has_index, self.custom_feature]
 
+        elif feature_group_name == "ROLES_CUSTOM":
+            return [self.event_label_feature, self.state_label_feature, self.controllable, self.marked_state,
+                    self.current_phase, self.child_node_state, self.uncontrollable_neighborhood,
+                    self.explored_state_child, self.isLastExpanded, self.child_deadlock,
+                    self.has_index, self.custom_feature]
+
         #elif feature_group_name == "BWFeatures":
             # Es igual a LRL pero con el feature de last expanded (la idea es que BW mejore con esto)
         #    return [self.event_label_feature, self.state_label_feature, self.controllable, self.marked_state,
