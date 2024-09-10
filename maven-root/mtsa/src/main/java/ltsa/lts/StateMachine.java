@@ -81,8 +81,13 @@ class StateMachine {
         // states to submachine map
         //TODO refactor to be built during the parsing or compiling process
         // specially when creating the Declaration for each state
+        // ROLES:
         //for each key, value in the explicit states, add the value to the stateToSubmachine map with key as the value
         for (String key : explicit_states.keySet()) {
+            // TEST: agrego solo los roles que están marcados como importantes (tienen "_ROLE" en el nombre)
+            if (!key.contains("_ROLE")) {
+                continue;
+            }
             int value = explicit_states.get(key);
             // remove index from indexed submachines
             String submachineName = spec.name.toString() + "_" + key.split("\\.")[0];

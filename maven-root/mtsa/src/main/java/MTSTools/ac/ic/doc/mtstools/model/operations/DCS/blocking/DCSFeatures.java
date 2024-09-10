@@ -105,7 +105,7 @@ public class DCSFeatures<State, Action> {
 
             methodFeatures.add(this.role_binned_count);
 
-        }else if (featureGroup == FeatureGroup.ROLES_CUSTOM) {
+        }else if (featureGroup == FeatureGroup.ROLES_FEW) {
             methodFeatures.add(this.action_labels_feature);
             methodFeatures.add(this.state_labels_feature);
             methodFeatures.add(this.controllable_feature);

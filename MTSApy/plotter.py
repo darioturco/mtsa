@@ -126,7 +126,6 @@ def get_data_for(budget, instances, data, instances_solved):
 def comparative_bar_plot(data=None, instances_solved=True, budgets=None):
     instances = BENCHMARK_PROBLEMS[::-1]
     instances = ["CM", "TA", "DP", "BW", "AT"]
-    instances = ["DP", "TA"]
 
     if budgets is None:
         budgets = [1000, 2500, 5000, 10000, 15000]
@@ -135,7 +134,7 @@ def comparative_bar_plot(data=None, instances_solved=True, budgets=None):
     if data is None:
         for b in budgets:
             data_schema = {"Random": {}, "BFS": {}, "RL": {}, "CRL": {}, "RA": {}}
-            data_schema = {"CRL": {}, "ROLES": {}, "ROLES_CUSTOM_3valued": {}, "ROLES_CUSTOM": {}}
+            data_schema = {"CRL": {}, "ROLES": {}, "ROLES_CUSTOM_3v": {}, "ROLES_CUSTOM": {}}
 
             data_tuple.append((b, get_data_for(b, instances, data_schema, instances_solved)))
     else:
@@ -172,6 +171,9 @@ def comparative_bar_plot_data(data, instances, title, box_anchor):
         plt.legend()
     else:
         plt.legend(bbox_to_anchor=box_anchor)
+
+    plt.gcf().set_size_inches(10, 6)
+
     # plt.show()
     plt.savefig(f"results/{title}.png")
 
