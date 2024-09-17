@@ -79,24 +79,39 @@ class StateMachine {
         spec.transition(this);
 
         // states to submachine map
-        //TODO refactor to be built during the parsing or compiling process
-        // specially when creating the Declaration for each state
-        // ROLES:
+        // information for ROLES feature for ML //TODO refactor!
+        // TODO maybe move to another place, ex. when the transitions are added, to make it more efficient
         //for each key, value in the explicit states, add the value to the stateToSubmachine map with key as the value
         for (String key : explicit_states.keySet()) {
+            String roleName = "DEFAULT";
             // TEST: agrego solo los roles que están marcados como importantes (tienen "_ROLE" en el nombre)
-            if (!key.contains("_ROLE")) {
-                continue;
+            if (key.contains("_ROLE")){
+                roleName = key.split("\\.")[0].replace("_ROLE", "");
             }
+            else{
+                roleName = "DEFAULT";
+            }
+
             int value = explicit_states.get(key);
             // remove index from indexed submachines
-            String submachineName = spec.name.toString() + "_" + key.split("\\.")[0];
+            String submachineName = spec.name.toString() + "_" + roleName;
             if (stateToSubmachine.containsKey(value)) {
-                // leave a sum of the names if there are aliases
-                submachineName += "-" + stateToSubmachine.get(value).split("_")[1]; //remove spec.name
+                String current_name = stateToSubmachine.get(value);
+                if(!roleName.equals("DEFAULT")){
+                    // leave a sum of the names if there are IMPORTANT aliases
+                    //remove the DEFAULT role
+                    current_name = current_name.replace("-DEFAULT", "");
+                    submachineName += "-" + current_name.split("_")[1]; //remove spec.name
+                }else{
+                    // else leave it as it is
+                    submachineName = current_name;
+                }
+//                submachineName += "-" + stateToSubmachine.get(value).split("_")[1]; //remove spec.name
             }
             stateToSubmachine.put(value, submachineName);
         }
+        // add ERROR state (-1)
+        stateToSubmachine.put(Declaration.ERROR, "ERROR");
         // make a copy of transitions
         Vector<Transition> transitionsCopy = new Vector<>(transitions);
         while(!transitionsCopy.isEmpty()){

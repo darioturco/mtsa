@@ -134,7 +134,7 @@ def comparative_bar_plot(data=None, instances_solved=True, budgets=None):
     if data is None:
         for b in budgets:
             data_schema = {"Random": {}, "BFS": {}, "RL": {}, "CRL": {}, "RA": {}}
-            data_schema = {"CRL": {}, "ROLES": {}, "ROLES_CUSTOM_3v": {}, "ROLES_CUSTOM": {}}
+            data_schema = {"CRL": {}, "ROLES_CUSTOM": {}, "ROLES_FEW": {}}
 
             data_tuple.append((b, get_data_for(b, instances, data_schema, instances_solved)))
     else:
