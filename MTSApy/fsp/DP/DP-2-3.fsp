@@ -34,8 +34,8 @@ Philosopher(Pid=0) = Idle,
   Etiquete[0] = Ready,
   Etiquete[s:1..Steps] = (step[Pid] -> Etiquete[s-1]),
   Ready = (
-    take[Pid][RightP(Pid)] -> eat[Pid] -> FinishedEating),
-  FinishedEating = (release[Pid][LeftP(Pid)] -> release[Pid][RightP(Pid)] -> Idle).
+    take[Pid][RightP(Pid)] -> eat[Pid] ->
+      release[Pid][LeftP(Pid)] -> release[Pid][RightP(Pid)] -> Idle).
 
 
 Fork(Fid=0) = OnTable,
@@ -55,11 +55,11 @@ Monitor(Id=0) = (eat[Id] -> Done),
 
 ||Plant = (forall [p:Phil] (Philosopher(p) || Fork(p) || Monitor(p))).
 
-set Take = {take[0][0]}
-set Release = {release[0][0]}
-set Alphabet = {think[p:Phil], step[p:Phil], eat[p:Phil], eat.all,
+set Take = {take[0][0], take[0][1], take[1][1], take[1][0]}
+set Release = {release[0][0], release[0][1], release[1][1], release[1][0]}
+set Allactions = {think[p:Phil], step[p:Phil], eat[p:Phil], eat.all,
                     Take, Release}
-fluent F = <eat.all, Alphabet\{eat.all}>
+fluent F = <eat.all, Allactions\{eat.all}>
 assert A = F
 controllerSpec Goal = {
   controllable = {Take}
