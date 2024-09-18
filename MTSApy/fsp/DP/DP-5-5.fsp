@@ -28,14 +28,14 @@ def RightF(f) = f
 /*****************************************************************************/
 
 
-Philosopher(Pid=0) = Idle_ROLE,
-  Idle_ROLE = (think[Pid] -> Hungry),
+Philosopher(Pid=0) = Idle,
+  Idle = (think[Pid] -> Hungry),
   Hungry = (take[Pid][LeftP(Pid)] -> Etiquete[Steps]),
-  Etiquete[0] = Ready_ROLE,
+  Etiquete[0] = Ready,
   Etiquete[s:1..Steps] = (step[Pid] -> Etiquete[s-1]),
-  Ready_ROLE = (
-    take[Pid][RightP(Pid)] -> eat[Pid] -> FinishedEating_ROLE),
-  FinishedEating_ROLE = (release[Pid][LeftP(Pid)] -> release[Pid][RightP(Pid)] -> Idle_ROLE).
+  Ready = (
+    take[Pid][RightP(Pid)] -> eat[Pid] -> FinishedEating),
+  FinishedEating = (release[Pid][LeftP(Pid)] -> release[Pid][RightP(Pid)] -> Idle).
 
 
 Fork(Fid=0) = OnTable,
@@ -55,8 +55,8 @@ Monitor(Id=0) = (eat[Id] -> Done),
 
 ||Plant = (forall [p:Phil] (Philosopher(p) || Fork(p) || Monitor(p))).
 
-set Take = {take[0][0], take[0][1], take[1][1], take[1][2], take[2][2], take[2][0]}
-set Release = {release[0][0], release[0][1], release[1][1], release[1][2], release[2][2], release[2][0]}
+set Take = {take[0][0]}
+set Release = {release[0][0]}
 set Alphabet = {think[p:Phil], step[p:Phil], eat[p:Phil], eat.all,
                     Take, Release}
 fluent F = <eat.all, Alphabet\{eat.all}>
@@ -70,3 +70,4 @@ assert Check = ([]<>A)
 controller ||MonolithicController = Plant~{Goal}.
 
 heuristic ||DirectedController = Plant~{Goal}.
+
