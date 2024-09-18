@@ -1,14 +1,43 @@
+import threading
+
 import networkx as nx
 import jpype.imports
 from bidict import bidict
 import sys
 import random
 
+from jpype import java, JClass, JProxy
+
 if not jpype.isJVMStarted():
     if "linux" in sys.platform:
         jpype.startJVM(classpath=['mtsa.jar'])  # For Linux
     else:
         jpype.startJVM(f"C:\\Program Files\\Java\\jdk-21\\bin\\server\\jvm.dll", '-ea', classpath=['F:/UBA/Tesis/mtsa/MTSApy/mtsa.jar'])  # For Windows
+
+# ----------- Redirect JVM output to Python's standard output -----------
+
+# Function to read from the Java output stream and print to Python's stdout
+def stream_reader(input_stream, output_stream):
+    while True:
+        byte = input_stream.read()
+        if byte == -1:
+            break
+        output_stream.write(chr(byte))
+        output_stream.flush()
+
+# Create piped streams for stdout
+p_out = java.io.PipedOutputStream()
+p_in = java.io.PipedInputStream(p_out)
+
+# Start a thread to read Java's stdout and send it to Python's stdout
+thread = threading.Thread(target=stream_reader, args=(p_in, sys.stdout), daemon=True)
+thread.start()
+
+# Redirect Java's System.out to the piped output stream
+java.lang.System.setOut(java.io.PrintStream(p_out))
+
+# -----------------------------------------------------------------------
+
 
 NONBLOCKING = False
 if NONBLOCKING:
@@ -71,6 +100,7 @@ class CompositionGraph(nx.DiGraph):
         assert (self.javaEnv is not None)
         self.javaEnv.setRLParameters(self.feature_group, "")
         self.javaEnv.startSynthesis(problem_path)
+
 
         self._initial_state = self.javaEnv.dcs.initial
         self.add_node(str(self._initial_state.toString()))

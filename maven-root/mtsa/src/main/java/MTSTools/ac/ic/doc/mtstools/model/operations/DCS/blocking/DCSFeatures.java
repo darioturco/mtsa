@@ -214,17 +214,17 @@ public class DCSFeatures<State, Action> {
             }
             // binned roles count originally have three values: {0, 1, >1}
             for (Map.Entry<String, Integer> entry : roles_count.entrySet()) {
-//                a.featureVector[i] = toFloat(entry.getValue() > 0); // {0, >0} // if uncommented allRoles.size()*2
-//                a.featureVector[i+1] = toFloat(entry.getValue() > 1); // {<=1, >1}
-//                i+=2;
+                a.featureVector[i] = toFloat(entry.getValue() > 0); // {0, >0} // if uncommented allRoles.size()*2
+                a.featureVector[i+1] = toFloat(entry.getValue() > 1); // {<=1, >1}
+                i+=2;
 
-                a.featureVector[i] = toFloat(entry.getValue() > 1); // {<=1, >1}
-                i+=1;
+//                a.featureVector[i] = toFloat(entry.getValue() > 1); // {<=1, >1}
+//                i+=1;
             }
         }
         public int size() {
-            return allRoles.size();
-//            return allRoles.size()*2;
+            return allRoles.size()*2;
+//            return allRoles.size();
         }
         public boolean requiresUpdate() { return true; }
         public String toString(){return "role_binned_count";}

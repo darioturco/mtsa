@@ -697,16 +697,20 @@ public class TransitionSystemDispatcher {
     public static boolean checkGuaranteesAndAssumptions(ControllerGoal<String> goal, final LTSOutput output){
         if(!goal.getFaults().isEmpty()){
             output.outln("Failure tag is not supported for heuristic analysis.");
+            // fail with a message
+            fail("Failure tag is not supported for heuristic analysis.");
             return true;
         }
 
         if (!(goal.getGuarantees().isEmpty() ^ goal.getMarking().isEmpty())) {
             output.outln("Marking or liveness requirements (only one of them) are required for heuristic analysis.");
+            fail("Marking or liveness requirements (only one of them) are required for heuristic analysis.");
             return true;
         }
 
         if (!goal.getMarking().isEmpty() && goal.getAssumptions().size() > 1) {
             output.outln("Multiple assumptions are not supported by the heuristic analysis when using marking as goals.");
+            fail("Multiple assumptions are not supported by the heuristic analysis when using marking as goals.");
             return true;
         }
         return false;
@@ -950,6 +954,7 @@ public class TransitionSystemDispatcher {
 
         boolean hasInvalidAction = filterActions(compositeState, ltss, assumptions, guarantees, output);
         if(hasInvalidAction){
+            fail("Assumptions and Guarantees cant include actions that are not permited by the plant");
             return null;
         }
 

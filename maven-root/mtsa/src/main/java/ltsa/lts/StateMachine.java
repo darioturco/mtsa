@@ -82,14 +82,15 @@ class StateMachine {
         // information for ROLES feature for ML //TODO refactor!
         // TODO maybe move to another place, ex. when the transitions are added, to make it more efficient
         //for each key, value in the explicit states, add the value to the stateToSubmachine map with key as the value
+        String[] roles_importantes = {"Idle", "Ready", "FinishedEating"};
         for (String key : explicit_states.keySet()) {
             String roleName = "DEFAULT";
-            // TEST: agrego solo los roles que están marcados como importantes (tienen "_ROLE" en el nombre)
-            if (key.contains("_ROLE")){
-                roleName = key.split("\\.")[0].replace("_ROLE", "");
-            }
-            else{
-                roleName = "DEFAULT";
+            // TEST: agrego solo los roles que están marcados como importantes
+            for (String role : roles_importantes) {
+                if (key.contains(role)) {
+                    roleName = role;
+                    break;
+                }
             }
 
             int value = explicit_states.get(key);
